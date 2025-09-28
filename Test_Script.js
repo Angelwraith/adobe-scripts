@@ -3,7 +3,7 @@
 {
   "name": "Meta Test Script",
   "description": "See if metais fucked",
-  "version": "0.9",
+  "version": "1.0",
   "target": "HIYA",
   "tags": ["test"]
 }
