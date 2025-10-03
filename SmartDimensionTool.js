@@ -1,12 +1,3 @@
-/*@METADATA{
-  "name": "Smart Dimensions",
-  "description": "Add dimensions to an array of signs without the fuss",
-  "version": "1.1",
-  "target": "illustrator",
-  "tags": ["Measure", "Smart", "Utility"]
-}@END_METADATA*/
-
-
 // Get character style by name
 function getCharacterStyle(styleName) {
     var doc = app.activeDocument;
@@ -423,18 +414,71 @@ function wouldCollide(dimBounds, allBounds, currentIndex, settings) {
     return false;
 }
 
+// Find the actual visible bounds of an object, accounting for nested clipping masks
+// Based on getVisibleBounds by Josh Duncan (joshbduncan.com)
+function getVisibleBounds(object) {
+    var bounds, clippedItem;
+    if (object.typename == "GroupItem") {
+        // if the object is clipped
+        if (object.clipped) {
+            // check all sub objects to find the clipping path
+            for (var i = 0; i < object.pageItems.length; i++) {
+                if (object.pageItems[i].clipping) {
+                    clippedItem = object.pageItems[i];
+                    break;
+                } else if (object.pageItems[i].typename == "CompoundPathItem") {
+                    if (object.pageItems[i].pathItems[0].clipping) {
+                        clippedItem = object.pageItems[i];
+                        break;
+                    }
+                } else {
+                    clippedItem = object.pageItems[i];
+                    break;
+                }
+            }
+            bounds = clippedItem.geometricBounds;
+        } else {
+            // if the object is not clipped, check for clipped children first
+            var hasClippedChildren = false;
+            for (var i = 0; i < object.pageItems.length; i++) {
+                if (object.pageItems[i].typename == "GroupItem" && object.pageItems[i].clipped) {
+                    // Found a clipped child - use its bounds instead of calculating from all children
+                    bounds = getVisibleBounds(object.pageItems[i]);
+                    hasClippedChildren = true;
+                    break;
+                }
+            }
+            
+            if (!hasClippedChildren) {
+                // if the object is not clipped and has no clipped children
+                var subObjectBounds;
+                var allBoundPoints = [[], [], [], []];
+                // get the bounds of every object in the group
+                for (var i = 0; i < object.pageItems.length; i++) {
+                    subObjectBounds = getVisibleBounds(object.pageItems[i]);
+                    allBoundPoints[0].push(subObjectBounds[0]);
+                    allBoundPoints[1].push(subObjectBounds[1]);
+                    allBoundPoints[2].push(subObjectBounds[2]);
+                    allBoundPoints[3].push(subObjectBounds[3]);
+                }
+                // determine the groups bounds from it sub object bound points
+                bounds = [
+                    Math.min.apply(Math, allBoundPoints[0]),
+                    Math.max.apply(Math, allBoundPoints[1]),
+                    Math.max.apply(Math, allBoundPoints[2]),
+                    Math.min.apply(Math, allBoundPoints[3]),
+                ];
+            }
+        }
+    } else {
+        bounds = object.geometricBounds;
+    }
+    return bounds;
+}
+
 // Add dimensions to a single object
 function addDimensionsToObject(obj, settings, layer, allBounds, currentIndex) {
-    var bounds;
-    
-    // Check if this is a clipping group - if so, use the clipping path bounds
-    if (obj.typename === "GroupItem" && obj.clipped) {
-        // Find the clipping path (it's the first item in the group)
-        var clippingPath = obj.pageItems[0];
-        bounds = clippingPath.geometricBounds;
-    } else {
-        bounds = obj.geometricBounds;
-    }
+    var bounds = getVisibleBounds(obj);
     
     var width = bounds[2] - bounds[0];
     var height = bounds[1] - bounds[3];
