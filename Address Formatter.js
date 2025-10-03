@@ -1,7 +1,7 @@
 /*
 @METADATA
 {
-  "name": "Address Format Corrector",
+  "name": "BROKEN!!!Address Format Corrector",
   "description": "Corrects address formatting to proper postal standards",
   "version": "1.0",
   "target": "illustrator",
