@@ -214,15 +214,16 @@ function runAnalysis(documents, includePPI) {
             var docResult = analyzeDocument(targetDoc, includePPI, scaleFactor);
             var analysisTime = new Date().getTime() - docStartTime;
             
-            // Store individual document results
+			// Store individual document results
             var individualResult = {
                 name: doc.name,
                 analysisTime: analysisTime,
                 rasterCount: docResult.rasterCount,
                 lowResImages: docResult.lowResImages || [],
-                allImageDetails: docResult.allImageDetails || [], // NEW: Store all image details
+                allImageDetails: docResult.allImageDetails || [],
                 cutThroughSizes: docResult.cutThroughSizes || {},
-                totalCutThroughPaths: docResult.totalCutThroughPaths || 0
+                totalCutThroughPaths: docResult.totalCutThroughPaths || 0,
+                scaleFactor: scaleFactor
             };
             individualDocumentResults.push(individualResult);
             
@@ -283,10 +284,10 @@ function runAnalysis(documents, includePPI) {
         
         var totalTime = new Date().getTime() - overallStartTime;
         
-        // Build report text - pass scaleFactor to buildReport
+// Build report text
         var reportText = buildReport(documents.length, documentNames, totalTime, timingReport, 
                                    totalImageCount, allLowResImages, allImageDetails, allCutThroughSizes, 
-                                   totalCutThroughPaths, includePPI, scaleFactor);
+                                   totalCutThroughPaths, includePPI, individualDocumentResults);
         
         // Store analysis data
         var analysisData = {
@@ -309,6 +310,97 @@ function runAnalysis(documents, includePPI) {
 }
 
 function analyzeDocument(doc, includePPI, scaleFactor) {
+    function findPathsWithCutThroughColor(doc) {
+	var originalSelection = doc.selection;
+        
+        var cutThroughSizes = {};
+        var totalPaths = 0;
+        
+        try {
+            var targetSpot = null;
+            for (var i = 0; i < doc.spots.length; i++) {
+                if (doc.spots[i].name == "CutThrough2-Outside") {
+                    targetSpot = doc.spots[i];
+                    break;
+                }
+            }
+            
+            if (!targetSpot) {
+                return {
+                    cutThroughSizes: cutThroughSizes,
+                    totalCutThroughPaths: 0
+                };
+            }
+            
+            var spotColor = new SpotColor();
+            spotColor.spot = targetSpot;
+            
+            doc.selection = null;
+            doc.defaultFillColor = spotColor;
+            app.executeMenuCommand("Find Fill Color menu item");
+            
+            var fillSelection = [];
+            for (var i = 0; i < doc.selection.length; i++) {
+                fillSelection.push(doc.selection[i]);
+            }
+            
+            doc.selection = null;
+            doc.defaultStrokeColor = spotColor;
+            app.executeMenuCommand("Find Stroke Color menu item");
+            
+            var strokeSelection = [];
+            for (var i = 0; i < doc.selection.length; i++) {
+                strokeSelection.push(doc.selection[i]);
+            }
+            
+            var allPaths = [];
+            var processedItems = [];
+            
+            for (var i = 0; i < fillSelection.length; i++) {
+                if (fillSelection[i].typename == "PathItem") {
+                    allPaths.push(fillSelection[i]);
+                    processedItems.push(fillSelection[i]);
+                }
+            }
+            
+            for (var i = 0; i < strokeSelection.length; i++) {
+                if (strokeSelection[i].typename == "PathItem") {
+                    var alreadyAdded = false;
+                    for (var j = 0; j < processedItems.length; j++) {
+                        if (processedItems[j] === strokeSelection[i]) {
+                            alreadyAdded = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyAdded) {
+                        allPaths.push(strokeSelection[i]);
+                    }
+                }
+            }
+            
+            for (var i = 0; i < allPaths.length; i++) {
+                var size = getPathDimensions(allPaths[i]);
+                if (cutThroughSizes[size]) {
+                    cutThroughSizes[size]++;
+                } else {
+                    cutThroughSizes[size] = 1;
+                }
+                totalPaths++;
+            }
+            
+        } catch (e) {
+        } finally {
+			try {
+                doc.selection = originalSelection;
+            } catch (e) {}
+        }
+        
+        return {
+            cutThroughSizes: cutThroughSizes,
+            totalCutThroughPaths: totalPaths
+        };
+    }
+
     function pointsToInches(points, doc) {
         try {
             var scaleFactor = doc.scaleFactor;
@@ -392,12 +484,22 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
         return processedItems;
     }
 
-    // Image analysis - FIXED to show ALL images and better PPI detection
+// Image analysis - FIXED to show ALL images and better PPI detection
     var rasterCount = 0;
     var lowResImages = [];
     var allImageDetails = []; // NEW: Store details for ALL images
     
-    if (includePPI) {
+    // FAST PRE-CHECK: Skip image analysis if document has no images
+    var hasImages = false;
+    try {
+        if (doc.rasterItems.length > 0 || doc.placedItems.length > 0) {
+            hasImages = true;
+        }
+    } catch (e) {
+        hasImages = true;
+    }
+    
+    if (includePPI && hasImages) {
         try {
             var processedItems = [];
 
@@ -569,50 +671,22 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
             // If PPI analysis fails completely, still record that we tried
             allImageDetails.push({text: "PPI Analysis failed: " + e.toString()});
         }
-    } else {
-        // Quick analysis - just count images without PPI
+} else if (hasImages) {
+        // Quick analysis - just count images using built-in collections (INSTANT)
         try {
-            function countImages(items) {
-                for (var i = 0; i < items.length; i++) {
-                    var item = items[i];
-                    if (item.typename == "RasterItem" || item.typename == "PlacedItem") {
-                        rasterCount++;
-                        // Still add basic info even in quick mode
-                        try {
-                            var bounds = item.geometricBounds;
-                            // For Large Canvas: multiply dimensions by scaleFactor to get real size
-                            var docWidthInches = Math.round(((bounds[2] - bounds[0]) / 72 * scaleFactor) * 100) / 100;
-                            var docHeightInches = Math.round(((bounds[1] - bounds[3]) / 72 * scaleFactor) * 100) / 100;
-                            allImageDetails.push({text: 'Img#' + rasterCount + ' (' + item.typename + '): SIZE: ' + docWidthInches + '"x' + docHeightInches + '" [Quick scan]'});
-                        } catch (e) {
-                            allImageDetails.push({text: 'Image ' + rasterCount + ' (' + item.typename + '): Basic info error'});
-                        }
-                    }
-                    if (item.typename == "GroupItem" && item.pageItems.length > 0) {
-                        countImages(item.pageItems);
-                    }
-                }
+            rasterCount = doc.rasterItems.length + doc.placedItems.length;
+            if (rasterCount > 0) {
+                allImageDetails.push({text: "Quick scan found " + rasterCount + " images (no details in quick mode)"});
             }
-            countImages(doc.pageItems);
         } catch (e) {
             allImageDetails.push({text: "Image counting failed: " + e.toString()});
         }
     }
 
-    // CutThrough analysis
-    var cutThroughSizes = {};
-    var totalCutThroughPaths = 0;
-    
-    try {
-        processPageItems(doc.pageItems, cutThroughSizes, []);
-        
-        for (var size in cutThroughSizes) {
-            totalCutThroughPaths += cutThroughSizes[size];
-        }
-    } catch (e) {
-        cutThroughSizes = {};
-        totalCutThroughPaths = 0;
-    }
+// CutThrough analysis - FAST METHOD using Find Color
+    var cutThroughResults = findPathsWithCutThroughColor(doc);
+    var cutThroughSizes = cutThroughResults.cutThroughSizes;
+    var totalCutThroughPaths = cutThroughResults.totalCutThroughPaths;
 
 
     return {
@@ -739,9 +813,9 @@ if (analysisData.hasLowRes) {
     
     detailedText.text = detailedContent;
     
-    // Individual document tabs
+// Individual document tabs
     if (analysisData.individualResults) {
-        for (var d = 0; d < analysisData.individualResults.length && d < 5; d++) { // Limit to 5 tabs
+        for (var d = 0; d < analysisData.individualResults.length; d++) { // Show all documents
             var docResult = analysisData.individualResults[d];
             var docTab = tabGroup.add("tab", undefined, "Doc " + (d + 1));
             docTab.orientation = "column";
@@ -831,15 +905,23 @@ if (analysisData.hasLowRes) {
 
 function buildReport(docCount, documentNames, totalTime, timingReport, 
                     totalImageCount, allLowResImages, allImageDetails, allCutThroughSizes, 
-                    totalCutThroughPaths, includePPI, scaleFactor) {
+                    totalCutThroughPaths, includePPI, individualDocumentResults) {
     var report = [];
     report.push("=== MULTI-DOCUMENT ANALYSIS SUMMARY ===");
     report.push("");
     
-    // Add Large Canvas detection info using passed scaleFactor
-    if (scaleFactor && scaleFactor !== 1) {
-        report.push("*** LARGE CANVAS DETECTED ***");
-        report.push("Scale Factor: " + scaleFactor + " (All measurements and PPI calculations have been corrected)");
+    // Check if any documents are Large Canvas
+    var hasLargeCanvas = false;
+    for (var i = 0; i < individualDocumentResults.length; i++) {
+        if (individualDocumentResults[i].scaleFactor && individualDocumentResults[i].scaleFactor !== 1) {
+            hasLargeCanvas = true;
+            break;
+        }
+    }
+    
+    if (hasLargeCanvas) {
+        report.push("*** LARGE CANVAS DOCUMENTS DETECTED ***");
+        report.push("Some documents use Large Canvas mode. Measurements have been corrected.");
         report.push("");
     }
     
@@ -861,7 +943,44 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
     } else if (includePPI) {
         report.push("Low Resolution Images (< 72 PPI): 0 (All images meet requirements)");
     }
-    report.push("Total CutThrough2-Outside Paths: " + totalCutThroughPaths);
+report.push("Total CutThrough2-Outside Paths: " + totalCutThroughPaths);
+    report.push("");
+    
+// Per-document breakdown
+    report.push("=== PER-DOCUMENT BREAKDOWN ===");
+    
+// Sort documents using localeCompare with numeric option
+    var sortedResults = [];
+    for (var i = 0; i < individualDocumentResults.length; i++) {
+        sortedResults.push(individualDocumentResults[i]);
+    }
+    sortedResults.sort(function(a, b) {
+        return a.name.localeCompare(b.name, undefined, {numeric: true});
+    });
+    
+    for (var i = 0; i < sortedResults.length; i++) {
+        var docResult = sortedResults[i];
+        var docResult = individualDocumentResults[i];
+        report.push("");
+        report.push("Document: " + docResult.name);
+        if (docResult.scaleFactor && docResult.scaleFactor !== 1) {
+            report.push("  ** Large Canvas (Scale Factor: " + docResult.scaleFactor + ") **");
+        }       
+        if (docResult.totalCutThroughPaths > 0) {
+            var docSizes = [];
+            for (var size in docResult.cutThroughSizes) {
+                docSizes.push(size);
+            }
+            docSizes.sort();
+            for (var s = 0; s < docSizes.length; s++) {
+                var size = docSizes[s];
+                var count = docResult.cutThroughSizes[size];
+                report.push("    " + count + " x " + size);
+            }
+        } else {
+            report.push("  No CutThrough paths found");
+        }
+    }
     report.push("");
     
     // NEW: Add all image details to report
