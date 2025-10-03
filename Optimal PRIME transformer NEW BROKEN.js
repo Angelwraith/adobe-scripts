@@ -1,7 +1,7 @@
 /*
 @METADATA
 {
-  "name": "Optimal PRIME Transformer",
+  "name": "BROKEN!!!Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
   "version": "1.4",
   "target": "illustrator",
