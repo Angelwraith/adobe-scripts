@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Image Quality Analysis",
   "description": "Analyze selected images and label them with resolution info",
-  "version": "1.0",
+  "version": "2.0",
   "target": "illustrator",
   "tags": ["image", "quality", "resolution", "PPI"]
 }@END_METADATA*/
@@ -93,11 +93,10 @@ function main() {
     for (var i = 0; i < clippingMasks.length; i++) {
         var clippedGroup = clippingMasks[i];
         
-        // Get the bounds of the clipping path (first item) BEFORE processing
-        var clippingPath = clippedGroup.pageItems[0];
-        var maskBounds = clippingPath.geometricBounds;
+        // Get the VISIBLE bounds using the artboard method
+        var visibleBounds = getVisibleBounds(clippedGroup);
         
-        var result = processClippingMask(clippedGroup, maskBounds, analysisLayer, scaleRatio, scaleFactor);
+        var result = processClippingMask(clippedGroup, visibleBounds, analysisLayer, scaleRatio, scaleFactor);
         if (result) labelsCreated++;
     }
     
@@ -105,6 +104,74 @@ function main() {
         alert("No clipping masks with images found in selection.");
     } else {
         alert("Analysis complete!\n" + labelsCreated + " label(s) created.");
+    }
+}
+
+// Get visible bounds using temporary artboard and Fit to Selected Art
+function getVisibleBounds(obj) {
+    var doc = app.activeDocument;
+    
+    try {
+        // Store the current artboard index
+        var originalArtboardIndex = doc.artboards.getActiveArtboardIndex();
+        
+        // Create a temporary artboard
+        var tempArtboard = doc.artboards.add([0, 0, 100, -100]);
+        var tempArtboardIndex = doc.artboards.length - 1;
+        
+        // Set the temp artboard as active
+        doc.artboards.setActiveArtboardIndex(tempArtboardIndex);
+        
+        // Select only the current object
+        doc.selection = null;
+        obj.selected = true;
+        
+        // Use Fit Artboard to Selected Art menu command
+        app.executeMenuCommand("Fit Artboard to selected Art");
+        
+        // Refresh to ensure artboard has updated
+        app.redraw();
+        
+        // Get the artboard rect AFTER the fit command
+        var artboardRect = doc.artboards[tempArtboardIndex].artboardRect;
+        
+        // Convert artboard rect to bounds format [left, top, right, bottom]
+        var bounds = [
+            artboardRect[0], // left
+            artboardRect[1], // top
+            artboardRect[2], // right
+            artboardRect[3]  // bottom
+        ];
+        
+        // Remove the temporary artboard
+        doc.artboards.remove(tempArtboardIndex);
+        
+        // Restore the original active artboard
+        if (originalArtboardIndex >= 0 && originalArtboardIndex < doc.artboards.length) {
+            doc.artboards.setActiveArtboardIndex(originalArtboardIndex);
+        }
+        
+        // Deselect the object
+        obj.selected = false;
+        
+        return bounds;
+        
+    } catch (e) {
+        // If anything fails, clean up and fall back to geometric bounds
+        try {
+            if (doc.artboards.length > 0) {
+                var lastIndex = doc.artboards.length - 1;
+                doc.artboards.remove(lastIndex);
+            }
+        } catch (cleanupError) {}
+        
+        try {
+            if (originalArtboardIndex >= 0 && originalArtboardIndex < doc.artboards.length) {
+                doc.artboards.setActiveArtboardIndex(originalArtboardIndex);
+            }
+        } catch (cleanupError) {}
+        
+        return obj.geometricBounds;
     }
 }
 
@@ -127,6 +194,11 @@ function collectClippingMasks(items, results) {
     for (var i = 0; i < items.length; i++) {
         var item = items[i];
         
+        // Skip groups named "MAA Symbol ICI"
+        if (item.typename === "GroupItem" && item.name === "MAA Symbol ICI") {
+            continue;
+        }
+        
         if (item.typename === "GroupItem" && item.clipped) {
             // This is a clipping mask - add it
             results.push(item);
@@ -139,9 +211,9 @@ function collectClippingMasks(items, results) {
     }
 }
 
-function processClippingMask(clippedGroup, maskBounds, layer, scaleRatio, scaleFactor) {
+function processClippingMask(clippedGroup, visibleBounds, layer, scaleRatio, scaleFactor) {
     try {
-        // maskBounds is already passed in - it's the clipping path bounds
+        // visibleBounds is already passed in - calculated using artboard method
         
         // Find the first image inside this clipped group
         var imageItem = findFirstImage(clippedGroup);
@@ -174,13 +246,13 @@ function processClippingMask(clippedGroup, maskBounds, layer, scaleRatio, scaleF
         } catch (matrixError) {}
         
         if (estimatedPPI !== "Unknown") {
-            // Use the maskBounds that was passed in
-            createImageLabel(maskBounds, estimatedPPI, isLowRes, layer);
+            // Use the visibleBounds that was passed in
+            createImageLabel(visibleBounds, estimatedPPI, isLowRes, layer);
             return true;
         }
         
     } catch (e) {
-        alert("Error in processClippingMask: " + e.toString());
+        // Silent failure for individual items
     }
     
     return false;
@@ -212,16 +284,20 @@ function createImageLabel(bounds, ppi, isLowRes, layer) {
     // Simple format: just XXXPPI
     label.contents = ppi + 'PPI';
     
-    // Set font
+    // Set font to Myriad Pro Black 30pt
     try {
-        label.textRange.characterAttributes.textFont = app.textFonts.getByName("MyriadPro-Bold");
+        label.textRange.characterAttributes.textFont = app.textFonts.getByName("MyriadPro-Black");
     } catch (e) {
         try {
-            label.textRange.characterAttributes.textFont = app.textFonts.getByName("Myriad-Bold");
-        } catch (e2) {}
+            label.textRange.characterAttributes.textFont = app.textFonts.getByName("Myriad-Black");
+        } catch (e2) {
+            try {
+                label.textRange.characterAttributes.textFont = app.textFonts.getByName("MyriadPro-Bold");
+            } catch (e3) {}
+        }
     }
     
-    label.textRange.characterAttributes.size = 18;
+    label.textRange.characterAttributes.size = 30;
     
     // Set center alignment
     label.textRange.paragraphAttributes.justification = Justification.CENTER;
