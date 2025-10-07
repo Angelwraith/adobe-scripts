@@ -2,8 +2,8 @@
 @METADATA
 {
   "name": "CUT Mover",
-  "description": "Moves CUT Files to PRINT File Positions",
-  "version": "1.0",
+  "description": "Moves CUT Files to PRINT File Positions and Layer Order",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["CUT", "mover", "utility"]
 }
@@ -147,8 +147,18 @@
         var cutItem = pair.cut.item;
 
         try {
-            // Move CUT item to same position as PRINT item
-            cutItem.position = [printItem.position[0], printItem.position[1]];
+            // Store the position before moving
+            var targetPosition = [printItem.position[0], printItem.position[1]];
+            
+            // Get the layer where the PRINT item is located
+            var targetLayer = printItem.layer;
+            
+            // Move CUT item to the same layer as PRINT item
+            cutItem.move(targetLayer, ElementPlacement.PLACEATBEGINNING);
+            
+            // Set position after moving to new layer
+            cutItem.position = targetPosition;
+            
             processedCount++;
 
         } catch (e) {
@@ -161,7 +171,8 @@
     if (processedCount > 0) {
         alert("Script completed successfully!\n\n" +
               "Processed " + processedCount + " PRINT/CUT pairs:\n" +
-              "- Moved CUT files to match PRINT file positions");
+              "- Moved CUT files to match PRINT file positions\n" +
+              "- Moved CUT files above PRINT files in layer order");
     } else {
         alert("No pairs could be processed. Please check that:\n" +
               "- Files have matching names with _PRINT_ and _CUT_ patterns\n" +
