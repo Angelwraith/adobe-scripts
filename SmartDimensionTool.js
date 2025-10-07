@@ -1,3 +1,14 @@
+// Illustrator Script: Auto-Dimension Tool v3
+// Uses offset path + unite method for reliable bounds detection
+
+/*@METADATA{
+  "name": "Smart Dimension Tool",
+  "description": "Add dimensions to an array of signs without the fuss",
+  "version": "3.0",
+  "target": "illustrator",
+  "tags": ["Measure", "Smart", "Utility"]
+}@END_METADATA*/
+
 // Get character style by name
 function getCharacterStyle(styleName) {
     var doc = app.activeDocument;
@@ -88,16 +99,7 @@ function addScaleTextToArtboard(artboardIndex, settings, layer) {
     // Position the text (center it at the specified coordinates)
     scaleText.top = y;
     scaleText.left = x - (scaleText.width / 2);
-}// Illustrator Script: Auto-Dimension Tool v2
-// Automatically add dimension annotations with smart collision detection
-
-/*@METADATA{
-  "name": "Smart Dimension Tool",
-  "description": "Add dimensions to an array of signs without the fuss",
-  "version": "1.0",
-  "target": "illustrator",
-  "tags": ["Measure", "Smart", "Utility"]
-}@END_METADATA*/
+}
 
 function main() {
     if (app.documents.length === 0) {
@@ -272,11 +274,11 @@ function main() {
         scaleText = customScaleNumerator.text + ":" + customScaleDenominator.text;
         var num = parseFloat(customScaleNumerator.text) || 1;
         var denom = parseFloat(customScaleDenominator.text) || 1;
-        scaleRatio = denom / num; // For 1:10, this gives 10/1 = 10
+        scaleRatio = denom / num;
     } else {
         scaleText = scaleDropdown.selection.text;
         var parts = scaleText.split(":");
-        scaleRatio = parseFloat(parts[1]) / parseFloat(parts[0]); // For 1:10, this gives 10/1 = 10
+        scaleRatio = parseFloat(parts[1]) / parseFloat(parts[0]);
     }
     
     // Get rounding increment
@@ -301,19 +303,19 @@ function main() {
         addHeight: checkHeight.value,
         widthPos: widthPosDropdown.selection.text,
         heightPos: heightPosDropdown.selection.text,
-        offset: parseFloat(offsetInput.text) * 72 || 9, // Convert inches to points
+        offset: parseFloat(offsetInput.text) * 72 || 9,
         scale: scaleText,
-        scaleRatio: scaleRatio, // The multiplier to apply to dimensions
-        precision: precisionDropdown.selection.index, // 0, 1, 2, or 3 decimal places
-        roundingIncrement: roundingIncrement, // Rounding increment in inches
-        scaleTextPosition: scaleTextDropdown.selection.text, // None, On Proof, or Outside Proof
-        lineColor: colorDropdown.selection.text, // Black, White, or Red (user-friendly names)
+        scaleRatio: scaleRatio,
+        precision: precisionDropdown.selection.index,
+        roundingIncrement: roundingIncrement,
+        scaleTextPosition: scaleTextDropdown.selection.text,
+        lineColor: colorDropdown.selection.text,
         lineWeight: 1,
-        extensionLength: 0.125 * 72, // Fixed at 0.125 inches
-        extensionOffset: 0.069 * 72, // Fixed at 0.069 inches
+        extensionLength: 0.125 * 72,
+        extensionOffset: 0.069 * 72,
         fontName: fontDropdown.selection.text,
         fontSize: parseFloat(fontSizeInput.text) || 18,
-        textOffset: parseFloat(textOffsetInput.text) * 72 || 9, // Convert inches to points
+        textOffset: parseFloat(textOffsetInput.text) * 72 || 9,
         checkCollision: checkCollision.value,
         useNewLayer: checkNewLayer.value,
         layerName: layerNameInput.text || "Dimensions"
@@ -340,10 +342,11 @@ function main() {
         dimLayer = doc.activeLayer;
     }
     
-    // Get all object bounds for collision detection
+    // Get all object bounds for collision detection using the new method
     var allBounds = [];
     for (var i = 0; i < sel.length; i++) {
-        allBounds.push(sel[i].geometricBounds);
+        var simplifiedBounds = getSimplifiedBounds(sel[i], null);
+        allBounds.push(simplifiedBounds);
     }
     
     // Process each selected object
@@ -373,6 +376,79 @@ function main() {
     alert(message);
 }
 
+// NEW METHOD: Get bounds using temporary artboard and Fit to Selected Art
+function getSimplifiedBounds(obj, tempLayer) {
+    var doc = app.activeDocument;
+    
+    try {
+        // Store the current artboard index
+        var originalArtboardIndex = doc.artboards.getActiveArtboardIndex();
+        
+        // Create a temporary artboard (just needs to exist, size doesn't matter initially)
+        var tempArtboard = doc.artboards.add([0, 0, 100, -100]);
+        var tempArtboardIndex = doc.artboards.length - 1;
+        
+        // Set the temp artboard as active
+        doc.artboards.setActiveArtboardIndex(tempArtboardIndex);
+        
+        // Select only the current object
+        doc.selection = null;
+        obj.selected = true;
+        
+        // Use Fit Artboard to Selected Art menu command
+        // This will resize the artboard to match the selected object's bounds
+        app.executeMenuCommand("Fit Artboard to selected Art");
+        
+        // Refresh to ensure artboard has updated
+        app.redraw();
+        
+        // Get the artboard rect AFTER the fit command (this is now the bounds of our object)
+        var artboardRect = doc.artboards[tempArtboardIndex].artboardRect;
+        
+        // Convert artboard rect to bounds format [left, top, right, bottom]
+        var bounds = [
+            artboardRect[0], // left
+            artboardRect[1], // top
+            artboardRect[2], // right
+            artboardRect[3]  // bottom
+        ];
+        
+        // Remove the temporary artboard
+        doc.artboards.remove(tempArtboardIndex);
+        
+        // Restore the original active artboard
+        if (originalArtboardIndex >= 0 && originalArtboardIndex < doc.artboards.length) {
+            doc.artboards.setActiveArtboardIndex(originalArtboardIndex);
+        }
+        
+        // Deselect the object
+        obj.selected = false;
+        
+        return bounds;
+        
+    } catch (e) {
+        // If anything fails, clean up and fall back to geometric bounds
+        try {
+            // Try to remove temp artboard if it exists
+            if (doc.artboards.length > 0) {
+                var lastIndex = doc.artboards.length - 1;
+                doc.artboards.remove(lastIndex);
+            }
+        } catch (cleanupError) {}
+        
+        try {
+            // Restore original artboard if needed
+            if (originalArtboardIndex >= 0 && originalArtboardIndex < doc.artboards.length) {
+                doc.artboards.setActiveArtboardIndex(originalArtboardIndex);
+            }
+        } catch (cleanupError) {}
+        
+        return obj.geometricBounds;
+    }
+}
+
+
+
 // Get or create layer
 function getOrCreateLayer(layerName) {
     var doc = app.activeDocument;
@@ -392,17 +468,16 @@ function getOrCreateLayer(layerName) {
 // Check if two rectangles overlap
 function boundsOverlap(bounds1, bounds2, buffer) {
     buffer = buffer || 0;
-    return !(bounds1[2] + buffer < bounds2[0] || // right < left
-             bounds1[0] - buffer > bounds2[2] || // left > right
-             bounds1[3] + buffer > bounds2[1] || // bottom > top
-             bounds1[1] - buffer < bounds2[3]);  // top < bottom
+    return !(bounds1[2] + buffer < bounds2[0] ||
+             bounds1[0] - buffer > bounds2[2] ||
+             bounds1[3] + buffer > bounds2[1] ||
+             bounds1[1] - buffer < bounds2[3]);
 }
 
 // Check if dimension would collide with any objects
 function wouldCollide(dimBounds, allBounds, currentIndex, settings) {
     if (!settings.checkCollision) return false;
     
-    // Add a larger buffer for better collision detection
     var buffer = 5;
     
     for (var i = 0; i < allBounds.length; i++) {
@@ -414,71 +489,9 @@ function wouldCollide(dimBounds, allBounds, currentIndex, settings) {
     return false;
 }
 
-// Find the actual visible bounds of an object, accounting for nested clipping masks
-// Based on getVisibleBounds by Josh Duncan (joshbduncan.com)
-function getVisibleBounds(object) {
-    var bounds, clippedItem;
-    if (object.typename == "GroupItem") {
-        // if the object is clipped
-        if (object.clipped) {
-            // check all sub objects to find the clipping path
-            for (var i = 0; i < object.pageItems.length; i++) {
-                if (object.pageItems[i].clipping) {
-                    clippedItem = object.pageItems[i];
-                    break;
-                } else if (object.pageItems[i].typename == "CompoundPathItem") {
-                    if (object.pageItems[i].pathItems[0].clipping) {
-                        clippedItem = object.pageItems[i];
-                        break;
-                    }
-                } else {
-                    clippedItem = object.pageItems[i];
-                    break;
-                }
-            }
-            bounds = clippedItem.geometricBounds;
-        } else {
-            // if the object is not clipped, check for clipped children first
-            var hasClippedChildren = false;
-            for (var i = 0; i < object.pageItems.length; i++) {
-                if (object.pageItems[i].typename == "GroupItem" && object.pageItems[i].clipped) {
-                    // Found a clipped child - use its bounds instead of calculating from all children
-                    bounds = getVisibleBounds(object.pageItems[i]);
-                    hasClippedChildren = true;
-                    break;
-                }
-            }
-            
-            if (!hasClippedChildren) {
-                // if the object is not clipped and has no clipped children
-                var subObjectBounds;
-                var allBoundPoints = [[], [], [], []];
-                // get the bounds of every object in the group
-                for (var i = 0; i < object.pageItems.length; i++) {
-                    subObjectBounds = getVisibleBounds(object.pageItems[i]);
-                    allBoundPoints[0].push(subObjectBounds[0]);
-                    allBoundPoints[1].push(subObjectBounds[1]);
-                    allBoundPoints[2].push(subObjectBounds[2]);
-                    allBoundPoints[3].push(subObjectBounds[3]);
-                }
-                // determine the groups bounds from it sub object bound points
-                bounds = [
-                    Math.min.apply(Math, allBoundPoints[0]),
-                    Math.max.apply(Math, allBoundPoints[1]),
-                    Math.max.apply(Math, allBoundPoints[2]),
-                    Math.min.apply(Math, allBoundPoints[3]),
-                ];
-            }
-        }
-    } else {
-        bounds = object.geometricBounds;
-    }
-    return bounds;
-}
-
 // Add dimensions to a single object
 function addDimensionsToObject(obj, settings, layer, allBounds, currentIndex) {
-    var bounds = getVisibleBounds(obj);
+    var bounds = allBounds[currentIndex]; // Use the pre-calculated simplified bounds
     
     var width = bounds[2] - bounds[0];
     var height = bounds[1] - bounds[3];
@@ -518,8 +531,8 @@ function addDimensionsToObject(obj, settings, layer, allBounds, currentIndex) {
                 bounds[0], widthY,
                 bounds[2], widthY,
                 widthInches,
-                true, // horizontal
-                settings.widthPos, // pass position setting
+                true,
+                settings.widthPos,
                 settings,
                 layer
             );
@@ -557,8 +570,8 @@ function addDimensionsToObject(obj, settings, layer, allBounds, currentIndex) {
                 heightX, bounds[1],
                 heightX, bounds[3],
                 heightInches,
-                false, // vertical
-                settings.heightPos, // pass position setting
+                false,
+                settings.heightPos,
                 settings,
                 layer
             );
@@ -589,7 +602,7 @@ function getTextColor(styleName) {
     var color;
     if (styleName === "Dim-Wht") {
         color = new GrayColor();
-        color.gray = 0; // White text = 0 gray value
+        color.gray = 0;
     } else if (styleName === "Dim-Red") {
         color = new CMYKColor();
         color.cyan = 0;
@@ -598,7 +611,7 @@ function getTextColor(styleName) {
         color.black = 0;
     } else { // Dim-Blk
         color = new GrayColor();
-        color.gray = 100; // Black text = 100 gray value
+        color.gray = 100;
     }
     return color;
 }
@@ -623,21 +636,17 @@ function createDimension(x1, y1, x2, y2, value, isHorizontal, position, settings
     var extLine1, extLine2;
     if (isHorizontal) {
         if (position === "Above") {
-            // Above: extension lines go up from the object
             extLine1 = createPlainLine(x1, y1 - settings.extensionOffset, x1, y1 + settings.extensionLength, color, dimGroup);
             extLine2 = createPlainLine(x2, y1 - settings.extensionOffset, x2, y1 + settings.extensionLength, color, dimGroup);
         } else {
-            // Below: extension lines go down from the object
             extLine1 = createPlainLine(x1, y1 + settings.extensionOffset, x1, y1 - settings.extensionLength, color, dimGroup);
             extLine2 = createPlainLine(x2, y1 + settings.extensionOffset, x2, y1 - settings.extensionLength, color, dimGroup);
         }
     } else {
         if (position === "Right") {
-            // Right: extension lines go right from the object
             extLine1 = createPlainLine(x1 - settings.extensionOffset, y1, x1 + settings.extensionLength, y1, color, dimGroup);
             extLine2 = createPlainLine(x1 - settings.extensionOffset, y2, x1 + settings.extensionLength, y2, color, dimGroup);
         } else {
-            // Left: extension lines go left from the object
             extLine1 = createPlainLine(x1 + settings.extensionOffset, y1, x1 - settings.extensionLength, y1, color, dimGroup);
             extLine2 = createPlainLine(x1 + settings.extensionOffset, y2, x1 - settings.extensionLength, y2, color, dimGroup);
         }
@@ -660,7 +669,6 @@ function createDimension(x1, y1, x2, y2, value, isHorizontal, position, settings
     
     // Format the value with precision, then remove trailing zeros
     var formattedValue = roundedValue.toFixed(settings.precision);
-    // Remove trailing zeros after decimal point
     if (formattedValue.indexOf('.') > -1) {
         formattedValue = formattedValue.replace(/\.?0+$/, '');
     }
