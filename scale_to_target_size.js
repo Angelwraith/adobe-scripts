@@ -1,6 +1,14 @@
-// Illustrator Script: Scale Selection to Target Size
-// Select a key object, enter target dimensions, and scale everything proportionally
-
+/*
+@METADATA
+{
+  "name": "Scale Selection to Target Size",
+  "description": "Select a key object, enter target dimensions, and scale everything proportionally",
+  "version": "1.0",
+  "target": "illustrator",
+  "tags": ["scale", "size", "processors"]
+}
+@END_METADATA
+*/
 function main() {
     if (app.documents.length === 0) {
         alert("Please open a document first.");
