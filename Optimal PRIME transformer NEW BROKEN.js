@@ -2,7 +2,7 @@
 @METADATA
 {
   "name": "BROKEN!!!Optimal PRIME Transformer",
-  "description": "Generate Production Files From a PRIME",
+  "description": "This does not work, but has the beginning code to handle double sided signs",
   "version": "1.4",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
