@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.0",
+  "version": "3.1",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -585,10 +585,10 @@ function createArtboards(config) {
         var startX, startY;
         
         if (scale !== 1) {
-            startX = 100;
+            startX = 10; // Moved closer to left edge for more horizontal space
             startY = 1000;
         } else {
-            startX = 10;
+            startX = 5; // Moved closer to left edge for more horizontal space
             startY = 100;
         }
         
@@ -598,6 +598,12 @@ function createArtboards(config) {
         startY = (startY * 72) / scale;
         
         $.writeln("Starting position (points): X=" + startX + ", Y=" + startY);
+        
+        // Calculate maximum X position (leave buffer for future additions)
+        var maxCanvasX = 16383; // Illustrator's maximum canvas width in points
+        var bufferSpace = (50 * 72) / scale; // Reserve 50" for future additions
+        var maxUsableX = maxCanvasX - bufferSpace;
+        $.writeln("Max usable X position: " + maxUsableX + " (with buffer)");
         
         var currentY = startY;
         var spacing = (10 * 72) / scale;
@@ -703,8 +709,23 @@ function createArtboards(config) {
             
             $.writeln("Artboard dimensions (points): " + artboardWidth + "x" + artboardHeight);
             
+            var rowStartY = currentY; // Track the Y position for this material's row
+            var maxHeightInRow = artboardHeight; // Track tallest artboard in current row
+            
             for (var q = 0; q < spec.quantity; q++) {
                 $.writeln("Creating artboard " + (q+1) + " of " + spec.quantity);
+                
+                // Check if next artboard would exceed canvas width
+                var nextArtboardRightEdge = currentX + artboardWidth;
+                
+                if (nextArtboardRightEdge > maxUsableX) {
+                    $.writeln("Approaching canvas edge, wrapping to next row");
+                    // Wrap to next row
+                    currentX = startX;
+                    currentY = rowStartY - maxHeightInRow - spacing;
+                    rowStartY = currentY;
+                    $.writeln("New row position: X=" + currentX + ", Y=" + currentY);
+                }
                 
                 var artboardName;
                 var partNumber = spec.startingPartNumber ? spec.startingPartNumber + q : q + 1;
@@ -739,8 +760,9 @@ function createArtboards(config) {
                 $.writeln("Next X position: " + currentX);
             }
             
-            currentY -= artboardHeight + spacing;
-            $.writeln("Next Y position: " + currentY);
+            // Move to next vertical position for next material (after all rows of this material)
+            currentY = rowStartY - maxHeightInRow - spacing;
+            $.writeln("Next material Y position: " + currentY);
         }
         
         if (hadInitialArtboard && doc.artboards.length > 1) {
