@@ -2,7 +2,7 @@
 @METADATA
 {
   "name": "CUT Mover",
-  "description": "Moves CUT Files to PRINT File Positions and Layer Order",
+  "description": "For after naming files, this script aligns CUT files to PRINT File position and layer orders",
   "version": "1.1",
   "target": "illustrator",
   "tags": ["CUT", "mover", "utility"]
