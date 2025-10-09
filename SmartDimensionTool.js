@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "3.0",
+  "version": "3.2",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -98,6 +98,64 @@ function addScaleTextToArtboard(artboardIndex, settings, layer) {
     scaleText.left = x - (scaleText.width / 2);
 }
 
+// Show font customization dialog
+function showFontCustomizationDialog(currentFontName, currentFontSize) {
+    var fontDialog = new Window("dialog", "Font Settings");
+    fontDialog.alignChildren = "fill";
+    
+    var fontPanel = fontDialog.add("panel", undefined, "Font Customization");
+    fontPanel.alignChildren = "left";
+    
+    var fontRow = fontPanel.add("group");
+    var fontLabel = fontRow.add("statictext", undefined, "Font:");
+    fontLabel.preferredSize.width = 35;
+    var fontDropdown = fontRow.add("dropdownlist", undefined, []);
+    fontDropdown.preferredSize.width = 250;
+    
+    var sizeRow = fontPanel.add("group");
+    var sizeLabel = sizeRow.add("statictext", undefined, "Size:");
+    sizeLabel.preferredSize.width = 35;
+    var fontSizeInput = sizeRow.add("edittext", undefined, currentFontSize.toString());
+    fontSizeInput.characters = 4;
+    
+    // Populate font list
+    var fonts = app.textFonts;
+    var fontNames = [];
+    for (var i = 0; i < fonts.length; i++) {
+        fontNames.push(fonts[i].name);
+    }
+    fontNames.sort();
+    
+    for (var i = 0; i < fontNames.length; i++) {
+        fontDropdown.add("item", fontNames[i]);
+    }
+    
+    // Select the current font
+    for (var i = 0; i < fontDropdown.items.length; i++) {
+        if (fontDropdown.items[i].text === currentFontName) {
+            fontDropdown.selection = i;
+            break;
+        }
+    }
+    if (!fontDropdown.selection && fontDropdown.items.length > 0) {
+        fontDropdown.selection = 0;
+    }
+    
+    // Buttons
+    var buttonGroup = fontDialog.add("group");
+    buttonGroup.add("button", undefined, "OK", {name: "ok"});
+    buttonGroup.add("button", undefined, "Cancel", {name: "cancel"});
+    
+    if (fontDialog.show() == 1) {
+        return {
+            fontName: fontDropdown.selection.text,
+            fontSize: parseFloat(fontSizeInput.text) || 18
+        };
+    }
+    
+    return null;
+}
+
 function main() {
     if (app.documents.length === 0) {
         alert("Please open a document first.");
@@ -110,6 +168,37 @@ function main() {
     if (sel.length === 0) {
         alert("Please select one or more objects to dimension.");
         return;
+    }
+    
+    // Default font settings
+    var currentFontName = "MyriadPro-Semibold";
+    var currentFontSize = 18;
+    
+    // Try to find default font in available fonts
+    var fonts = app.textFonts;
+    var defaultFound = false;
+    for (var i = 0; i < fonts.length; i++) {
+        if (fonts[i].name === currentFontName) {
+            defaultFound = true;
+            break;
+        }
+    }
+    
+    // If default not found, try alternate naming
+    if (!defaultFound) {
+        for (var i = 0; i < fonts.length; i++) {
+            if (fonts[i].name.indexOf("Myriad") > -1 && 
+                fonts[i].name.indexOf("Semibold") > -1) {
+                currentFontName = fonts[i].name;
+                defaultFound = true;
+                break;
+            }
+        }
+    }
+    
+    // If still not found, use first available font
+    if (!defaultFound && fonts.length > 0) {
+        currentFontName = fonts[0].name;
     }
     
     // Create configuration dialog
@@ -190,50 +279,20 @@ function main() {
     var colorDropdown = colorGroup.add("dropdownlist", undefined, ["Black", "White", "Red"]);
     colorDropdown.selection = 0;
     
-    var fontRow = stylePanel.add("group");
-    var fontLabel = fontRow.add("statictext", undefined, "Font:");
-    fontLabel.preferredSize.width = 35;
-    var fontDropdown = fontRow.add("dropdownlist", undefined, []);
-    fontDropdown.preferredSize.width = 180;
+    // Font customization button
+    var fontButtonGroup = stylePanel.add("group");
+    var fontInfoText = fontButtonGroup.add("statictext", undefined, "Font: " + currentFontName + " (" + currentFontSize + "pt)");
+    fontInfoText.preferredSize.width = 250;
+    var fontCustomizeButton = fontButtonGroup.add("button", undefined, "Customize...");
     
-    var sizeLabel = fontRow.add("statictext", undefined, "Size:");
-    sizeLabel.preferredSize.width = 32;
-    var fontSizeInput = fontRow.add("edittext", undefined, "18");
-    fontSizeInput.characters = 4;
-    
-    // Populate font list
-    var fonts = app.textFonts;
-    var fontNames = [];
-    for (var i = 0; i < fonts.length; i++) {
-        fontNames.push(fonts[i].name);
-    }
-    fontNames.sort();
-    
-    for (var i = 0; i < fontNames.length; i++) {
-        fontDropdown.add("item", fontNames[i]);
-    }
-    
-    // Try to select Myriad Pro Semibold as default
-    var defaultFont = "MyriadPro-Semibold";
-    for (var i = 0; i < fontDropdown.items.length; i++) {
-        if (fontDropdown.items[i].text === defaultFont) {
-            fontDropdown.selection = i;
-            break;
+    fontCustomizeButton.onClick = function() {
+        var result = showFontCustomizationDialog(currentFontName, currentFontSize);
+        if (result) {
+            currentFontName = result.fontName;
+            currentFontSize = result.fontSize;
+            fontInfoText.text = "Font: " + currentFontName + " (" + currentFontSize + "pt)";
         }
-    }
-    // If not found, try alternate naming
-    if (!fontDropdown.selection) {
-        for (var i = 0; i < fontDropdown.items.length; i++) {
-            if (fontDropdown.items[i].text.indexOf("Myriad") > -1 && 
-                fontDropdown.items[i].text.indexOf("Semibold") > -1) {
-                fontDropdown.selection = i;
-                break;
-            }
-        }
-    }
-    if (!fontDropdown.selection) {
-        fontDropdown.selection = 0;
-    }
+    };
     
     var textOffsetGroup = stylePanel.add("group");
     textOffsetGroup.add("statictext", undefined, "Text Offset from Line (inches):");
@@ -310,13 +369,40 @@ function main() {
         lineWeight: 1,
         extensionLength: 0.125 * 72,
         extensionOffset: 0.069 * 72,
-        fontName: fontDropdown.selection.text,
-        fontSize: parseFloat(fontSizeInput.text) || 18,
+        fontName: currentFontName,
+        fontSize: currentFontSize,
         textOffset: parseFloat(textOffsetInput.text) * 72 || 9,
         checkCollision: checkCollision.value,
         useNewLayer: checkNewLayer.value,
-        layerName: layerNameInput.text || "Dimensions"
+        layerName: layerNameInput.text || "Dimensions",
+        useArrowheads: true // Default to true, will be set to false if styles missing
     };
+    
+    // Map user-friendly color names to graphic style names
+    var colorToStyleMap = {
+        "Black": "Dim-Blk",
+        "White": "Dim-Wht",
+        "Red": "Dim-Red"
+    };
+    settings.graphicStyleName = colorToStyleMap[settings.lineColor];
+    
+    // Check if the required graphic style exists
+    var styleExists = getGraphicStyle(settings.graphicStyleName) !== null;
+    
+    if (!styleExists) {
+        var confirmDialog = confirm(
+            "The graphic style '" + settings.graphicStyleName + "' was not found in this document.\n\n" +
+            "Dimensions will be created WITHOUT arrowheads.\n\n" +
+            "Click OK to continue without arrowheads, or Cancel to stop.\n\n" +
+            "(To use arrowheads, you need to have the dimension graphic styles in your document.)"
+        );
+        
+        if (!confirmDialog) {
+            return; // User cancelled
+        }
+        
+        settings.useArrowheads = false;
+    }
     
     // Map user-friendly color names to graphic style names
     var colorToStyleMap = {
@@ -329,6 +415,24 @@ function main() {
     if (!settings.addWidth && !settings.addHeight) {
         alert("Please select at least one dimension type to add.");
         return;
+    }
+    
+    // Check if the required graphic style exists
+    var styleExists = getGraphicStyle(settings.graphicStyleName) !== null;
+    
+    if (!styleExists) {
+        var confirmDialog = confirm(
+            "The graphic style '" + settings.graphicStyleName + "' was not found in this document.\n\n" +
+            "Dimensions will be created WITHOUT arrowheads.\n\n" +
+            "Click OK to continue without arrowheads, or Cancel to stop.\n\n" +
+            "(To use arrowheads, you need to have the dimension graphic styles in your document.)"
+        );
+        
+        if (!confirmDialog) {
+            return; // User cancelled
+        }
+        
+        settings.useArrowheads = false;
     }
     
     // Create or get dimension layer
@@ -581,7 +685,61 @@ function addDimensionsToObject(obj, settings, layer, allBounds, currentIndex) {
     return { added: added, skipped: skipped };
 }
 
-// Get graphic style by name
+// Apply dimension line styling directly (with arrowheads)
+function applyDimensionStyling(line, styleName) {
+    // Determine color based on style name
+    var strokeColor;
+    if (styleName === "Dim-Wht") {
+        strokeColor = new CMYKColor();
+        strokeColor.cyan = 0;
+        strokeColor.magenta = 0;
+        strokeColor.yellow = 0;
+        strokeColor.black = 0;
+    } else if (styleName === "Dim-Red") {
+        strokeColor = new CMYKColor();
+        strokeColor.cyan = 0;
+        strokeColor.magenta = 100;
+        strokeColor.yellow = 100;
+        strokeColor.black = 0;
+    } else { // Dim-Blk
+        strokeColor = new CMYKColor();
+        strokeColor.cyan = 0;
+        strokeColor.magenta = 0;
+        strokeColor.yellow = 0;
+        strokeColor.black = 100;
+    }
+    
+    // Apply basic stroke properties
+    line.stroked = true;
+    line.filled = false;
+    line.strokeWidth = 1;
+    line.strokeColor = strokeColor;
+    
+    // Try to apply arrowheads - wrap in try/catch to not break if it fails
+    try {
+        // Check if arrowhead properties exist
+        if (typeof line.strokeArrowStart !== 'undefined') {
+            var arrowStart = app.arrowheadsStartList;
+            var arrowEnd = app.arrowheadsEndList;
+            
+            // Arrow 7 is at index 6
+            if (arrowStart && arrowStart.length > 6) {
+                line.strokeArrowStart = arrowStart[6];
+                line.strokeArrowStartScale = 70;
+            }
+            if (arrowEnd && arrowEnd.length > 6) {
+                line.strokeArrowEnd = arrowEnd[6];
+                line.strokeArrowEndScale = 70;
+            }
+        }
+    } catch (e) {
+        // Silently continue if arrowheads fail - line will still be created
+    }
+    
+    return line;
+}
+
+// Get graphic style by name, or return null if not found
 function getGraphicStyle(styleName) {
     var doc = app.activeDocument;
     try {
@@ -598,8 +756,11 @@ function getGraphicStyle(styleName) {
 function getTextColor(styleName) {
     var color;
     if (styleName === "Dim-Wht") {
-        color = new GrayColor();
-        color.gray = 0;
+        color = new CMYKColor();
+        color.cyan = 0;
+        color.magenta = 0;
+        color.yellow = 0;
+        color.black = 0;
     } else if (styleName === "Dim-Red") {
         color = new CMYKColor();
         color.cyan = 0;
@@ -607,8 +768,11 @@ function getTextColor(styleName) {
         color.yellow = 100;
         color.black = 0;
     } else { // Dim-Blk
-        color = new GrayColor();
-        color.gray = 100;
+        color = new CMYKColor();
+        color.cyan = 0;
+        color.magenta = 0;
+        color.yellow = 0;
+        color.black = 100;
     }
     return color;
 }
@@ -616,107 +780,125 @@ function getTextColor(styleName) {
 // Create a dimension line with text
 function createDimension(x1, y1, x2, y2, value, isHorizontal, position, settings, layer) {
     var doc = app.activeDocument;
-    var dimGroup = layer.groupItems.add();
-    dimGroup.name = "Dimension";
-    
-    // Get the graphic style
-    var graphicStyle = getGraphicStyle(settings.graphicStyleName);
-    if (!graphicStyle) {
-        alert("Graphic style '" + settings.graphicStyleName + "' not found. Please create it first.");
-        return;
-    }
-    
-    // Get color based on graphic style for both text and extension lines
-    var color = getTextColor(settings.graphicStyleName);
-    
-    // Create extension lines (plain lines without arrowheads)
-    var extLine1, extLine2;
-    if (isHorizontal) {
-        if (position === "Above") {
-            extLine1 = createPlainLine(x1, y1 - settings.extensionOffset, x1, y1 + settings.extensionLength, color, dimGroup);
-            extLine2 = createPlainLine(x2, y1 - settings.extensionOffset, x2, y1 + settings.extensionLength, color, dimGroup);
-        } else {
-            extLine1 = createPlainLine(x1, y1 + settings.extensionOffset, x1, y1 - settings.extensionLength, color, dimGroup);
-            extLine2 = createPlainLine(x2, y1 + settings.extensionOffset, x2, y1 - settings.extensionLength, color, dimGroup);
-        }
-    } else {
-        if (position === "Right") {
-            extLine1 = createPlainLine(x1 - settings.extensionOffset, y1, x1 + settings.extensionLength, y1, color, dimGroup);
-            extLine2 = createPlainLine(x1 - settings.extensionOffset, y2, x1 + settings.extensionLength, y2, color, dimGroup);
-        } else {
-            extLine1 = createPlainLine(x1 + settings.extensionOffset, y1, x1 - settings.extensionLength, y1, color, dimGroup);
-            extLine2 = createPlainLine(x1 + settings.extensionOffset, y2, x1 - settings.extensionLength, y2, color, dimGroup);
-        }
-    }
-    
-    // Create dimension line (this will get arrowheads from graphic style)
-    var dimLine = createSimpleLine(x1, y1, x2, y2, dimGroup);
-    
-    // Apply graphic style to dimension line only (this has the arrowheads)
-    graphicStyle.applyTo(dimLine);
-    
-    // Create text with matching color
-    var text = dimGroup.textFrames.add();
-    
-    // Round to the specified increment if not "None"
-    var roundedValue = value;
-    if (settings.roundingIncrement > 0) {
-        roundedValue = Math.round(value / settings.roundingIncrement) * settings.roundingIncrement;
-    }
-    
-    // Format the value with precision, then remove trailing zeros
-    var formattedValue = roundedValue.toFixed(settings.precision);
-    if (formattedValue.indexOf('.') > -1) {
-        formattedValue = formattedValue.replace(/\.?0+$/, '');
-    }
-    
-    text.contents = formattedValue + '"';
     
     try {
-        text.textRange.characterAttributes.textFont = app.textFonts.getByName(settings.fontName);
+        var dimGroup = layer.groupItems.add();
+        dimGroup.name = "Dimension";
+        
+        // Get the graphic style if it exists
+        var graphicStyle = getGraphicStyle(settings.graphicStyleName);
+        
+        // Get color based on graphic style for both text and extension lines
+        var color = getTextColor(settings.graphicStyleName);
+        
+        // Create extension lines (plain lines without arrowheads)
+        var extLine1, extLine2;
+        if (isHorizontal) {
+            if (position === "Above") {
+                extLine1 = createPlainLine(x1, y1 - settings.extensionOffset, x1, y1 + settings.extensionLength, color, dimGroup);
+                extLine2 = createPlainLine(x2, y1 - settings.extensionOffset, x2, y1 + settings.extensionLength, color, dimGroup);
+            } else {
+                extLine1 = createPlainLine(x1, y1 + settings.extensionOffset, x1, y1 - settings.extensionLength, color, dimGroup);
+                extLine2 = createPlainLine(x2, y1 + settings.extensionOffset, x2, y1 - settings.extensionLength, color, dimGroup);
+            }
+        } else {
+            if (position === "Right") {
+                extLine1 = createPlainLine(x1 - settings.extensionOffset, y1, x1 + settings.extensionLength, y1, color, dimGroup);
+                extLine2 = createPlainLine(x1 - settings.extensionOffset, y2, x1 + settings.extensionLength, y2, color, dimGroup);
+            } else {
+                extLine1 = createPlainLine(x1 + settings.extensionOffset, y1, x1 - settings.extensionLength, y1, color, dimGroup);
+                extLine2 = createPlainLine(x1 + settings.extensionOffset, y2, x1 - settings.extensionLength, y2, color, dimGroup);
+            }
+        }
+        
+        // Create dimension line (this will get arrowheads)
+        var dimLine = createSimpleLine(x1, y1, x2, y2, dimGroup);
+        
+        // Apply graphic style if it exists and arrowheads are enabled, otherwise apply styling directly
+        if (settings.useArrowheads && graphicStyle) {
+            try {
+                graphicStyle.applyTo(dimLine);
+            } catch (e) {
+                // If style application fails, apply basic styling without arrowheads
+                dimLine.stroked = true;
+                dimLine.filled = false;
+                dimLine.strokeWidth = 1;
+                dimLine.strokeColor = color;
+            }
+        } else {
+            // No arrowheads - just apply basic line styling
+            dimLine.stroked = true;
+            dimLine.filled = false;
+            dimLine.strokeWidth = 1;
+            dimLine.strokeColor = color;
+        }
+        
+        // Create text with matching color
+        var text = dimGroup.textFrames.add();
+        
+        // Round to the specified increment if not "None"
+        var roundedValue = value;
+        if (settings.roundingIncrement > 0) {
+            roundedValue = Math.round(value / settings.roundingIncrement) * settings.roundingIncrement;
+        }
+        
+        // Format the value with precision, then remove trailing zeros
+        var formattedValue = roundedValue.toFixed(settings.precision);
+        if (formattedValue.indexOf('.') > -1) {
+            formattedValue = formattedValue.replace(/\.?0+$/, '');
+        }
+        
+        text.contents = formattedValue + '"';
+        
+        try {
+            text.textRange.characterAttributes.textFont = app.textFonts.getByName(settings.fontName);
+        } catch (e) {
+            // Use default font if specified font not found
+        }
+        
+        text.textRange.characterAttributes.size = settings.fontSize;
+        text.textRange.characterAttributes.fillColor = color;
+        
+        // Set text to center alignment for better editability
+        text.textRange.paragraphAttributes.justification = Justification.CENTER;
+        
+        // Position text based on whether it's horizontal or vertical
+        var centerX = (x1 + x2) / 2;
+        var centerY = (y1 + y2) / 2;
+        
+        if (isHorizontal) {
+            // Horizontal dimension - center horizontally over the line
+            text.left = centerX - (text.width / 2);
+            
+            // Position above or below the dimension line with consistent offset measurement
+            if (position === "Below") {
+                // Below: text top edge is offset distance below the line
+                text.top = y1 - settings.textOffset;
+            } else { // "Above"
+                // Above: text bottom edge is offset distance above the line
+                text.top = y1 + settings.textOffset + text.height;
+            }
+        } else {
+            // Vertical dimension - rotate first, then position
+            // Rotate the text 90 degrees
+            text.rotate(90);
+            
+            // After rotation, width and height are swapped
+            // Center along the dimension line
+            text.top = centerY + (text.height / 2);
+            
+            // Position left or right with consistent offset measurement
+            if (position === "Left") {
+                // Left: text right edge is offset distance left of the line
+                text.left = x1 - settings.textOffset - text.width;
+            } else { // "Right"
+                // Right: text left edge is offset distance right of the line
+                text.left = x1 + settings.textOffset;
+            }
+        }
     } catch (e) {
-        // Use default font if specified font not found
-    }
-    
-    text.textRange.characterAttributes.size = settings.fontSize;
-    text.textRange.characterAttributes.fillColor = color;
-    
-    // Set text to center alignment for better editability
-    text.textRange.paragraphAttributes.justification = Justification.CENTER;
-    
-    // Position text based on whether it's horizontal or vertical
-    var centerX = (x1 + x2) / 2;
-    var centerY = (y1 + y2) / 2;
-    
-    if (isHorizontal) {
-        // Horizontal dimension - center horizontally over the line
-        text.left = centerX - (text.width / 2);
-        
-        // Position above or below the dimension line with consistent offset measurement
-        if (position === "Below") {
-            // Below: text top edge is offset distance below the line
-            text.top = y1 - settings.textOffset;
-        } else { // "Above"
-            // Above: text bottom edge is offset distance above the line
-            text.top = y1 + settings.textOffset + text.height;
-        }
-    } else {
-        // Vertical dimension - rotate first, then position
-        // Rotate the text 90 degrees
-        text.rotate(90);
-        
-        // After rotation, width and height are swapped
-        // Center along the dimension line
-        text.top = centerY + (text.height / 2);
-        
-        // Position left or right with consistent offset measurement
-        if (position === "Left") {
-            // Left: text right edge is offset distance left of the line
-            text.left = x1 - settings.textOffset - text.width;
-        } else { // "Right"
-            // Right: text left edge is offset distance right of the line
-            text.left = x1 + settings.textOffset;
-        }
+        // If anything fails in dimension creation, log it but don't stop the script
+        // alert("Error creating dimension: " + e.toString());
     }
 }
 
