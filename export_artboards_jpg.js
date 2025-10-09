@@ -1,11 +1,11 @@
 #target illustrator
 
 /*@METADATA{
-  "name": "Export Wrap Proofs or Prints",
-  "description": "Exports Wrap Proofs or Prints from artboards as high-quality JPGs",
-  "version": "4.0",
+  "name": "Export Artboards - Proof or Print",
+  "description": "Exports artboards as proofs (72 PPI) or prints (720 PPI) to respective folders",
+  "version": "5.0",
   "target": "illustrator",
-  "tags": ["export", "artboards", "jpg"]
+  "tags": ["export", "artboards", "jpg", "proof", "print"]
 }@END_METADATA*/
 
 // ============================================================================
@@ -217,30 +217,35 @@ function processDocuments(documents, mode, folderName, resolution) {
         var totalExported = 0;
         var exportSummary = [];
         
-        // Store original active document
-        var originalActiveDoc = app.activeDocument;
+        // Store document file paths instead of references (since references can become stale)
+        var docPaths = [];
+        for (var i = 0; i < documents.length; i++) {
+            if (documents[i].saved && documents[i].fullName.toString() !== "") {
+                docPaths.push({
+                    path: documents[i].fullName.fsName,
+                    name: documents[i].name
+                });
+            }
+        }
         
-        // Process each document
-        for (var docIndex = 0; docIndex < documents.length; docIndex++) {
-            var doc = documents[docIndex];
+        // Process each document by path
+        for (var docIndex = 0; docIndex < docPaths.length; docIndex++) {
+            var docInfo = docPaths[docIndex];
             
             var docStartTime = new Date().getTime();
             
-            // Activate document for processing
-            var documentActivated = false;
+            // Find and activate document by full path
             var targetDoc = null;
-            
-            for (var activateIndex = 0; activateIndex < app.documents.length; activateIndex++) {
-                if (app.documents[activateIndex].name === doc.name) {
-                    targetDoc = app.documents[activateIndex];
+            for (var searchIndex = 0; searchIndex < app.documents.length; searchIndex++) {
+                if (app.documents[searchIndex].fullName.fsName === docInfo.path) {
+                    targetDoc = app.documents[searchIndex];
                     app.activeDocument = targetDoc;
-                    documentActivated = true;
                     break;
                 }
             }
             
-            if (!documentActivated) {
-                alert("ERROR: Could not activate document: " + doc.name);
+            if (!targetDoc) {
+                alert("ERROR: Could not find document: " + docInfo.name);
                 continue;
             }
             
@@ -252,30 +257,28 @@ function processDocuments(documents, mode, folderName, resolution) {
             var exportResult = processDocument(targetDoc, mode, folderName, resolution);
             if (exportResult && exportResult.count > 0) {
                 totalExported += exportResult.count;
-                exportSummary.push(doc.name + ": " + exportResult.count + " artboards exported");
+                exportSummary.push(docInfo.name + ": " + exportResult.count + " artboards exported");
             }
             
-            var analysisTime = new Date().getTime() - docStartTime;
+            // Save the document after export to prevent "unsaved" state issues
+            // Use save() instead of saveAs() to keep original format and settings
+            try {
+                if (!targetDoc.saved) {
+                    targetDoc.save();
+                }
+            } catch (saveError) {
+                alert("Warning: Could not save document '" + docInfo.name + "' after export.\n" + saveError.toString());
+            }
             
             // Cleanup between documents
-            if (docIndex < documents.length - 1) {
+            if (docIndex < docPaths.length - 1) {
                 try {
-                    for (var cleanupIndex = 0; cleanupIndex < app.documents.length; cleanupIndex++) {
-                        try {
-                            app.documents[cleanupIndex].selection = null;
-                        } catch (e) {}
-                    }
                     app.redraw();
                     $.gc();
-                    $.sleep(200);
+                    $.sleep(300);
                 } catch (cleanupError) {}
             }
         }
-        
-        // Restore original active document
-        try {
-            app.activeDocument = originalActiveDoc;
-        } catch (e) {}
         
         var totalTime = new Date().getTime() - overallStartTime;
         
@@ -296,16 +299,17 @@ function processDocuments(documents, mode, folderName, resolution) {
 // ============================================================================
 function processDocument(doc, mode, folderName, resolution) {
     try {
-        // Check if document is saved
+        // Double-check document is saved (should be, but verify)
         if (!doc.saved || doc.fullName.toString() === "") {
-            alert("Document '" + doc.name + "' must be saved before exporting.\nSkipping this document.");
+            alert("Document '" + doc.name + "' is not saved. Skipping.");
             return { count: 0 };
         }
         
-        // Get document path and name
+        // Get document path and name - store these before any exports
         var docPath = doc.fullName;
         var docFolder = docPath.parent;
         var docName = doc.name.replace(/\.[^\.]+$/, ''); // Remove extension
+        var docFullPath = doc.fullName.fsName; // Store full path for re-finding document
         
         // Navigate to export folder
         var exportFolder;
@@ -327,35 +331,66 @@ function processDocument(doc, mode, folderName, resolution) {
         // Disable subfolder creation for Export for Screens
         app.preferences.setIntegerPreference('plugin/SmartExportUI/CreateFoldersPreference', 0);
         
-        // Export each artboard individually
-        var exportCount = 0;
-        
+        // Collect artboards to export BEFORE doing any exports
+        var artboardsToExport = [];
         for (var i = 0; i < doc.artboards.length; i++) {
             var artboard = doc.artboards[i];
             var artboardName = artboard.name;
             
             if (mode === "proof") {
                 // For proof mode, only export artboards with "proof" in the name (case-insensitive)
-                if (artboardName.toLowerCase().indexOf("proof") === -1) {
-                    continue;
+                if (artboardName.toLowerCase().indexOf("proof") !== -1) {
+                    artboardsToExport.push({
+                        index: i,
+                        name: artboardName
+                    });
                 }
             } else if (mode === "print") {
                 // For print mode, skip artboards with "proof" in the name (case-insensitive)
-                if (artboardName.toLowerCase().indexOf("proof") !== -1) {
-                    continue;
+                if (artboardName.toLowerCase().indexOf("proof") === -1) {
+                    artboardsToExport.push({
+                        index: i,
+                        name: artboardName
+                    });
                 }
             }
-            
-            // Export this artboard
-            exportArtboard(doc, i, artboardName, docName, exportFolder, resolution);
-            exportCount++;
         }
         
-        if (exportCount === 0) {
-            if (mode === "print") {
+        if (artboardsToExport.length === 0) {
+            if (mode === "proof") {
+                alert("No proof artboards to export in '" + doc.name + "'.\nSkipping this document.");
+            } else {
                 alert("No artboards to export in '" + doc.name + "' (all contain 'proof').\nSkipping this document.");
             }
             return { count: 0 };
+        }
+        
+        // Export each artboard
+        var exportCount = 0;
+        for (var j = 0; j < artboardsToExport.length; j++) {
+            var artboardInfo = artboardsToExport[j];
+            
+            // Re-find document before each export (in case reference becomes stale)
+            var currentDoc = null;
+            for (var findIndex = 0; findIndex < app.documents.length; findIndex++) {
+                if (app.documents[findIndex].fullName.fsName === docFullPath) {
+                    currentDoc = app.documents[findIndex];
+                    app.activeDocument = currentDoc;
+                    break;
+                }
+            }
+            
+            if (!currentDoc) {
+                alert("ERROR: Lost reference to document during export.");
+                break;
+            }
+            
+            // Export this artboard
+            exportArtboard(currentDoc, artboardInfo.index, artboardInfo.name, docName, exportFolder, resolution);
+            exportCount++;
+            
+            // Small delay between artboards to let Illustrator catch up
+            $.sleep(100);
         }
         
         return { count: exportCount };
