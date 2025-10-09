@@ -1,6 +1,19 @@
 // Illustrator Script: Sort Cuts Inside to Outside
 // Assigns spot colors based on path nesting level
 
+/*
+@METADATA
+{
+  "name": "Inside / Outside cut labeler",
+  "description": "Detects and sets spot colors for inside and outside cuts on ungrouped outlined copy",
+  "version": "1.0",
+  "target": "illustrator",
+  "tags": ["sort", "processor", "Spot", "Colors"]
+}
+@END_METADATA
+*/
+
+
 // Create or get spot colors
 function getOrCreateSpotColor(name, c, m, y, k) {
     // Check if spot already exists
