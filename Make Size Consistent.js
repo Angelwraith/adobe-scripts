@@ -3,6 +3,18 @@
 
 #target illustrator
 
+/*
+@METADATA
+{
+  "name": "Make Size Consistent",
+  "description": "Resize All Selected Objects to Same Size",
+  "version": "1.0",
+  "target": "illustrator",
+  "tags": ["resize", "processors"]
+}
+@END_METADATA
+*/
+
 function resizeSelectedObjects() {
     // Check if there's an active document
     if (app.documents.length === 0) {
