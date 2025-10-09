@@ -1,6 +1,3 @@
-// Illustrator Script: Auto-Dimension Tool v3
-// Uses offset path + unite method for reliable bounds detection
-
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
