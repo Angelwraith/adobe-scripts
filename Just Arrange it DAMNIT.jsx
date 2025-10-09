@@ -1,3 +1,15 @@
+/*
+@METADATA
+{
+  "name": "Just Arrange it DAMNIT",
+  "description": "Poorly arranges objects on artboards.",
+  "version": "2.0",
+  "target": "illustrator",
+  "tags": ["Arrange", "pack", "processors"]
+}
+@END_METADATA
+*/
+
 // Adobe Illustrator Script: Arrange Selected Groups on Artboard
 // This script rearranges selected groups onto the active artboard with user-defined spacing
 // Prioritizes fitting maximum groups by rotating as needed, selects groups that don't fit
