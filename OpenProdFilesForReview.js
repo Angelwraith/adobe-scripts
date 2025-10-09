@@ -1,5 +1,14 @@
-// Illustrator Print/Cut File Processor Script
-// Save this as a .jsx file and run from File > Scripts > Other Script in Illustrator
+/*
+@METADATA
+{
+  "name": "Open Production Files and organize for review",
+  "description": "Open print and cut files, organize them together and tile the view to show them all",
+  "version": "1.0",
+  "target": "illustrator",
+  "tags": ["review", "check", "file""]
+}
+@END_METADATA
+*/
 
 (function() {
     // Create dialog window
