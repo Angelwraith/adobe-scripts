@@ -1,7 +1,16 @@
 #target illustrator
 
-// Illustrator Script: Organize Selected Objects by Sequential File Names
-// Save as .jsx file and run in Adobe Illustrator
+/*
+@METADATA
+{
+  "name": "File Name Sorter",
+  "description": "Organize Selected Objects by Sequential File Names",
+  "version": "1.0",
+  "target": "illustrator",
+  "tags": ["Sorter", "processors", "name"]
+}
+@END_METADATA
+*/
 
 function getObjectDisplayName(obj) {
     try {
