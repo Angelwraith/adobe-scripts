@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "Export Artboards - Proof or Print",
   "description": "Exports artboards as proofs (72 PPI) or prints (720 PPI) to respective folders",
-  "version": "5.0",
+  "version": "5.1",
   "target": "illustrator",
   "tags": ["export", "artboards", "jpg", "proof", "print"]
 }@END_METADATA*/
@@ -164,6 +164,21 @@ function showDocumentSelectionDialog(mode, resolution) {
     
     dialog.add("panel");
     
+    // After export options
+    var afterExportGroup = dialog.add("group");
+    afterExportGroup.orientation = "column";
+    afterExportGroup.alignChildren = "left";
+    afterExportGroup.spacing = 5;
+    
+    var afterExportLabel = afterExportGroup.add("statictext", undefined, "After export:");
+    afterExportLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
+    
+    var closeRadio = afterExportGroup.add("radiobutton", undefined, "Close without saving");
+    closeRadio.value = true; // Default
+    var keepOpenRadio = afterExportGroup.add("radiobutton", undefined, "Keep the files open");
+    
+    dialog.add("panel");
+    
     // Action buttons
     var buttonGroup = dialog.add("group");
     buttonGroup.alignment = "center";
@@ -192,11 +207,71 @@ function showDocumentSelectionDialog(mode, resolution) {
             return;
         }
         
+        // Check if any documents are unsaved
+        var unsavedDocs = [];
+        for (var i = 0; i < selectedDocuments.length; i++) {
+            if (!selectedDocuments[i].saved) {
+                unsavedDocs.push(selectedDocuments[i].name);
+            }
+        }
+        
+        if (unsavedDocs.length > 0) {
+            var unsavedDialog = new Window("dialog", "Unsaved Documents");
+            unsavedDialog.orientation = "column";
+            unsavedDialog.alignChildren = "center";
+            unsavedDialog.spacing = 15;
+            unsavedDialog.margins = 20;
+            
+            var msg = unsavedDialog.add("statictext", undefined, "The following documents are not saved:", {multiline: true});
+            msg.preferredSize.width = 300;
+            
+            var listText = unsavedDialog.add("statictext", undefined, unsavedDocs.join("\n"), {multiline: true});
+            listText.preferredSize.width = 300;
+            
+            var btnGroup = unsavedDialog.add("group");
+            btnGroup.orientation = "row";
+            btnGroup.spacing = 10;
+            
+            var saveFirstBtn = btnGroup.add("button", undefined, "Save First");
+            var cancelBtn = btnGroup.add("button", undefined, "Cancel");
+            
+            var saveChoice = null;
+            
+            saveFirstBtn.onClick = function() {
+                saveChoice = "save";
+                unsavedDialog.close();
+            };
+            
+            cancelBtn.onClick = function() {
+                saveChoice = null;
+                unsavedDialog.close();
+            };
+            
+            unsavedDialog.show();
+            
+            if (saveChoice === "save") {
+                // Save all unsaved documents
+                for (var i = 0; i < selectedDocuments.length; i++) {
+                    if (!selectedDocuments[i].saved) {
+                        var saveResult = saveDocument(selectedDocuments[i]);
+                        if (!saveResult.success) {
+                            alert("Could not save " + selectedDocuments[i].name + ":\n" + saveResult.error + "\n\nExport cancelled.");
+                            return;
+                        }
+                    }
+                }
+            } else {
+                // User cancelled
+                return;
+            }
+        }
+        
         result = {
             documents: selectedDocuments,
             mode: mode,
             folderName: folderName,
-            resolution: resolution
+            resolution: resolution,
+            closeAfterExport: closeRadio.value
         };
         dialog.close();
     };
@@ -204,14 +279,14 @@ function showDocumentSelectionDialog(mode, resolution) {
     dialog.show();
     
     if (result && result.documents && result.documents.length > 0) {
-        processDocuments(result.documents, result.mode, result.folderName, result.resolution);
+        processDocuments(result.documents, result.mode, result.folderName, result.resolution, result.closeAfterExport);
     }
 }
 
 // ============================================================================
 // DOCUMENT PROCESSING LOOP
 // ============================================================================
-function processDocuments(documents, mode, folderName, resolution) {
+function processDocuments(documents, mode, folderName, resolution, closeAfterExport) {
     try {
         var overallStartTime = new Date().getTime();
         var totalExported = 0;
@@ -260,14 +335,16 @@ function processDocuments(documents, mode, folderName, resolution) {
                 exportSummary.push(docInfo.name + ": " + exportResult.count + " artboards exported");
             }
             
-            // Save the document after export to prevent "unsaved" state issues
-            // Use save() instead of saveAs() to keep original format and settings
-            try {
-                if (!targetDoc.saved) {
-                    targetDoc.save();
+            // Handle post-export actions
+            if (closeAfterExport) {
+                // Close without saving
+                try {
+                    targetDoc.close(SaveOptions.DONOTSAVECHANGES);
+                } catch (closeError) {
+                    alert("Warning: Could not close document '" + docInfo.name + "'.\n" + closeError.toString());
                 }
-            } catch (saveError) {
-                alert("Warning: Could not save document '" + docInfo.name + "' after export.\n" + saveError.toString());
+            } else {
+                // Keep open - no need to save since we're not closing
             }
             
             // Cleanup between documents
@@ -399,6 +476,45 @@ function processDocument(doc, mode, folderName, resolution) {
         alert("Error processing document '" + doc.name + "':\n" + error.toString());
         return { count: 0 };
     }
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+// Save document in its original format
+function saveDocument(doc) {
+    var result = {
+        success: false,
+        error: ""
+    };
+    
+    try {
+        // Check if document has been saved before
+        if (doc.path) {
+            // Document has a path - determine format and save
+            var docName = doc.name.toLowerCase();
+            
+            if (docName.indexOf(".pdf") !== -1) {
+                // Save as PDF using Illustrator Default preset
+                var pdfFile = new File(doc.fullName.fsName);
+                var pdfSaveOptions = new PDFSaveOptions();
+                pdfSaveOptions.pdfPreset = "[Illustrator Default]";
+                doc.saveAs(pdfFile, pdfSaveOptions);
+            } else {
+                // Save as AI or whatever original format
+                doc.save();
+            }
+            result.success = true;
+        } else {
+            // Document has never been saved - can't proceed
+            result.error = "Document has never been saved. Please save it manually first.";
+        }
+    } catch (error) {
+        result.error = error.message;
+    }
+    
+    return result;
 }
 
 // ============================================================================
