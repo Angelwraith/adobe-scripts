@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.1",
+  "version": "3.3",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -343,9 +343,18 @@ function showSetupDialog(docChoice) {
         };
         
         var qtyDropdown = rowGroup.add("dropdownlist", undefined, 
-            ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']);
+            ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','Custom']);
         qtyDropdown.selection = material ? Math.min(material.maxPart, 20) - 1 : 0;
         qtyDropdown.preferredSize.width = 80;
+        
+        var customQtyField = rowGroup.add("edittext", undefined, "");
+        customQtyField.preferredSize.width = 60;
+        customQtyField.visible = false;
+        
+        qtyDropdown.onChange = function() {
+            customQtyField.visible = (qtyDropdown.selection && qtyDropdown.selection.index === 20);
+            dialog.layout.layout(true);
+        };
         
         var rowData = {
             group: rowGroup,
@@ -355,7 +364,8 @@ function showSetupDialog(docChoice) {
             customW: customW,
             customH: customH,
             customGroup: customGroup,
-            qty: qtyDropdown
+            qty: qtyDropdown,
+            customQty: customQtyField
         };
         
         rows.push(rowData);
@@ -373,9 +383,7 @@ function showSetupDialog(docChoice) {
             createRow(existingMaterials[i]);
         }
     } else {
-        createRow();
-        createRow();
-        createRow();
+        createRow(); // Start with just 1 row
     }
     
     var tableButtonGroup = dialog.add("group");
@@ -468,7 +476,17 @@ function showSetupDialog(docChoice) {
             }
             usedCombos[comboKey] = true;
             
-            var requestedQty = parseInt(row.qty.selection.text);
+            var requestedQty;
+            if (row.qty.selection.index === 20) {
+                // Custom quantity
+                requestedQty = parseInt(row.customQty.text);
+                if (isNaN(requestedQty) || requestedQty <= 0) {
+                    alert("Please enter a valid custom quantity for: " + mat);
+                    return;
+                }
+            } else {
+                requestedQty = parseInt(row.qty.selection.text);
+            }
             
             // In add mode, calculate how many NEW artboards to create
             var qtyToCreate = requestedQty;
@@ -528,6 +546,34 @@ function showSetupDialog(docChoice) {
     }
 }
 
+function calculateSpaceNeeded(specs, scale) {
+    var spacing = (10 * 72) / scale;
+    var maxSingleArtboardWidth = 0;
+    var totalArea = 0;
+    var rowCount = 0;
+    
+    for (var i = 0; i < specs.length; i++) {
+        var spec = specs[i];
+        var artboardWidth = (spec.width * 72) / scale;
+        var artboardHeight = (spec.height * 72) / scale;
+        
+        // Track the largest single artboard (this must fit)
+        if (artboardWidth > maxSingleArtboardWidth) {
+            maxSingleArtboardWidth = artboardWidth;
+        }
+        
+        totalArea += (artboardWidth * artboardHeight * spec.quantity);
+        rowCount++;
+    }
+    
+    // Only check if a SINGLE artboard fits (wrapping handles multiple)
+    return {
+        maxRowWidth: maxSingleArtboardWidth,
+        totalArea: totalArea,
+        estimatedRows: rowCount
+    };
+}
+
 function createArtboards(config) {
     $.writeln("=== START ARTBOARD CREATION ===");
     
@@ -582,28 +628,170 @@ function createArtboards(config) {
         var hadInitialArtboard = (doc.artboards.length > 0 && config.docChoice.mode === "new");
         $.writeln("Had initial artboard: " + hadInitialArtboard);
         
+        // FIXED: Define canvas boundaries based on actual test results
+        $.writeln("\n=== CANVAS BOUNDARIES ===");
+        
+        var canvasBounds;
+        if (scale !== 1) {
+            // Large Canvas boundaries from your test images
+            canvasBounds = {
+                minX: -6912,      // From Image 6: left=-6912
+                maxX: 9007.2,     // From Image 4: right=9007.2
+                minY: -6775.2,    // From Image 6: bottom=-6775.2
+                maxY: 9072        // From Image 4: top=9072
+            };
+        } else {
+            // Standard Canvas boundaries from your test images
+            canvasBounds = {
+                minX: -7632,      // From Image 7/8: left=-7632
+                maxX: 8136,       // From Image 9/10: right=8136
+                minY: -7416,      // From Image 8/9: bottom=-7416
+                maxY: 8352        // From Image 7/10: top=8352
+            };
+        }
+        
+        $.writeln("Canvas X range: " + canvasBounds.minX + " to " + canvasBounds.maxX);
+        $.writeln("Canvas Y range: " + canvasBounds.minY + " to " + canvasBounds.maxY);
+        $.writeln("Canvas width: " + (canvasBounds.maxX - canvasBounds.minX) + " points");
+        $.writeln("Canvas height: " + (canvasBounds.maxY - canvasBounds.minY) + " points");
+        
+        // Add buffer space
+        var bufferSpace = (10 * 72) / scale;
+        var usableMinX = canvasBounds.minX + bufferSpace;
+        var usableMaxX = canvasBounds.maxX - bufferSpace;
+        var usableMinY = canvasBounds.minY + bufferSpace;
+        var usableMaxY = canvasBounds.maxY - bufferSpace;
+        
+        $.writeln("Usable X range: " + usableMinX + " to " + usableMaxX);
+        $.writeln("Usable Y range: " + usableMinY + " to " + usableMaxY);
+        
+        // Calculate total space needed and do comprehensive fit check
+        var totalSpaceNeeded = calculateSpaceNeeded(config.specs, scale);
+        $.writeln("\n=== SPACE REQUIREMENTS ===");
+        $.writeln("Total area needed: " + totalSpaceNeeded.totalArea + " sq points");
+        $.writeln("Estimated rows needed: " + totalSpaceNeeded.estimatedRows);
+        $.writeln("Max single artboard width: " + totalSpaceNeeded.maxRowWidth + " points");
+        
+        var usableWidth = usableMaxX - usableMinX;
+        var usableHeight = usableMaxY - usableMinY;
+        
+        $.writeln("Usable width: " + usableWidth + " points");
+        $.writeln("Usable height: " + usableHeight + " points");
+        
+        // Check if artboards will fit - need to simulate the layout
+        var willFit = true;
+        var fitCheckStartX = (scale !== 1) ? -6840 : -6120;
+        var fitCheckStartY = (scale !== 1) ? 7704 : 4464;
+        var fitCheckCurrentY = fitCheckStartY;
+        var spacing = (10 * 72) / scale;
+        
+        $.writeln("\n=== CHECKING IF LAYOUT WILL FIT ===");
+        
+        for (var i = 0; i < config.specs.length; i++) {
+            var spec = config.specs[i];
+            var artboardWidth = (spec.width * 72) / scale;
+            var artboardHeight = (spec.height * 72) / scale;
+            
+            var fitCheckCurrentX = fitCheckStartX;
+            var rowStartY = fitCheckCurrentY;
+            
+            for (var q = 0; q < spec.quantity; q++) {
+                var artboardLeft = fitCheckCurrentX;
+                var artboardRight = fitCheckCurrentX + artboardWidth;
+                var artboardTop = fitCheckCurrentY;
+                var artboardBottom = fitCheckCurrentY - artboardHeight;
+                
+                // Check if we need to wrap
+                if (artboardRight > usableMaxX && q > 0) {
+                    fitCheckCurrentX = fitCheckStartX;
+                    fitCheckCurrentY = rowStartY - artboardHeight - spacing;
+                    rowStartY = fitCheckCurrentY;
+                    
+                    // Recalculate
+                    artboardLeft = fitCheckCurrentX;
+                    artboardRight = fitCheckCurrentX + artboardWidth;
+                    artboardTop = fitCheckCurrentY;
+                    artboardBottom = fitCheckCurrentY - artboardHeight;
+                }
+                
+                // Check boundaries
+                if (artboardLeft < usableMinX || artboardRight > usableMaxX || 
+                    artboardBottom < usableMinY || artboardTop > usableMaxY) {
+                    willFit = false;
+                    $.writeln("Layout will NOT fit - artboard " + (q+1) + " of material " + spec.material + " exceeds bounds");
+                    break;
+                }
+                
+                fitCheckCurrentX += artboardWidth + spacing;
+            }
+            
+            if (!willFit) break;
+            
+            fitCheckCurrentY = rowStartY - artboardHeight - spacing;
+        }
+        
+        if (!willFit) {
+            $.writeln("ERROR: Layout will not fit in available space!");
+            
+            if (scale === 1 && config.docChoice.mode === "new") {
+                // Offer to switch to Large Canvas
+                var switchToLarge = confirm(
+                    "The artboards will not fit in Standard Canvas.\n\n" +
+                    "Switch to Large Canvas mode?\n\n" +
+                    "(Large Canvas provides 10x more space)"
+                );
+                
+                if (switchToLarge) {
+                    $.writeln("User chose to switch to Large Canvas, restarting...");
+                    config.canvasType = "Large";
+                    doc.close(SaveOptions.DONOTSAVECHANGES);
+                    createArtboards(config);
+                    return;
+                } else {
+                    $.writeln("User cancelled");
+                    alert("Operation cancelled. Artboards do not fit in available space.");
+                    if (doc && config.docChoice.mode === "new") {
+                        doc.close(SaveOptions.DONOTSAVECHANGES);
+                    }
+                    return;
+                }
+            } else if (scale !== 1) {
+                alert(
+                    "Cannot fit artboards in available space.\n\n" +
+                    "Even in Large Canvas mode, the layout exceeds maximum dimensions.\n\n" +
+                    "Please reduce the number of artboards or use smaller sizes."
+                );
+                if (doc && config.docChoice.mode === "new") {
+                    doc.close(SaveOptions.DONOTSAVECHANGES);
+                }
+                return;
+            } else {
+                // Add mode - just show error
+                alert("Cannot fit artboards in available space.\n\nPlease reduce the number of artboards or use smaller sizes.");
+                return;
+            }
+        }
+        
+        $.writeln("Layout check passed - all artboards will fit!");
+        
+        // FIXED: Use confirmed starting positions from your test images
         var startX, startY;
         
         if (scale !== 1) {
-            startX = 10; // Moved closer to left edge for more horizontal space
-            startY = 1000;
+            // Large Canvas: confirmed from Image 2
+            startX = -6840;
+            startY = 7704;
+            $.writeln("Large Canvas starting position (confirmed)");
         } else {
-            startX = 5; // Moved closer to left edge for more horizontal space
-            startY = 100;
+            // Standard Canvas: confirmed from Image 1
+            startX = -6120;
+            startY = 4464;
+            $.writeln("Standard Canvas starting position (confirmed)");
         }
         
-        $.writeln("Starting position (inches): X=" + startX + ", Y=" + startY);
-        
-        startX = (startX * 72) / scale;
-        startY = (startY * 72) / scale;
-        
-        $.writeln("Starting position (points): X=" + startX + ", Y=" + startY);
-        
-        // Calculate maximum X position (leave buffer for future additions)
-        var maxCanvasX = 16383; // Illustrator's maximum canvas width in points
-        var bufferSpace = (50 * 72) / scale; // Reserve 50" for future additions
-        var maxUsableX = maxCanvasX - bufferSpace;
-        $.writeln("Max usable X position: " + maxUsableX + " (with buffer)");
+        $.writeln("Starting position:");
+        $.writeln("  startX: " + startX + " points");
+        $.writeln("  startY: " + startY + " points");
         
         var currentY = startY;
         var spacing = (10 * 72) / scale;
@@ -660,6 +848,7 @@ function createArtboards(config) {
                         materialPositions[matName] = {
                             rightmost: rightEdge,
                             bottom: bottomEdge,
+                            top: bounds[1],
                             height: bounds[1] - bounds[3]
                         };
                     } else {
@@ -691,7 +880,7 @@ function createArtboards(config) {
             if (config.docChoice.mode === "add" && materialPositions[spec.material]) {
                 // Adding to existing material - continue to the right
                 currentX = materialPositions[spec.material].rightmost + spacing;
-                currentY = materialPositions[spec.material].bottom + materialPositions[spec.material].height;
+                currentY = materialPositions[spec.material].top;
                 $.writeln("Continuing existing material at X=" + currentX + ", Y=" + currentY);
             } else if (config.docChoice.mode === "add") {
                 // New material in add mode - place below existing
@@ -709,22 +898,56 @@ function createArtboards(config) {
             
             $.writeln("Artboard dimensions (points): " + artboardWidth + "x" + artboardHeight);
             
-            var rowStartY = currentY; // Track the Y position for this material's row
-            var maxHeightInRow = artboardHeight; // Track tallest artboard in current row
+            var rowStartY = currentY;
+            var maxHeightInRow = artboardHeight;
             
             for (var q = 0; q < spec.quantity; q++) {
                 $.writeln("Creating artboard " + (q+1) + " of " + spec.quantity);
                 
-                // Check if next artboard would exceed canvas width
-                var nextArtboardRightEdge = currentX + artboardWidth;
+                // Calculate where this artboard would be placed
+                var artboardLeft = currentX;
+                var artboardRight = currentX + artboardWidth;
+                var artboardTop = currentY;
+                var artboardBottom = currentY - artboardHeight;
                 
-                if (nextArtboardRightEdge > maxUsableX) {
-                    $.writeln("Approaching canvas edge, wrapping to next row");
-                    // Wrap to next row
+                $.writeln("Proposed position:");
+                $.writeln("  Left: " + artboardLeft + " (min: " + usableMinX + ")");
+                $.writeln("  Right: " + artboardRight + " (max: " + usableMaxX + ")");
+                $.writeln("  Top: " + artboardTop + " (max: " + usableMaxY + ")");
+                $.writeln("  Bottom: " + artboardBottom + " (min: " + usableMinY + ")");
+                
+                // Check if we need to wrap to next row
+                if (artboardRight > usableMaxX && q > 0) {
+                    $.writeln("Would exceed right boundary, wrapping to next row");
                     currentX = startX;
                     currentY = rowStartY - maxHeightInRow - spacing;
                     rowStartY = currentY;
-                    $.writeln("New row position: X=" + currentX + ", Y=" + currentY);
+                    
+                    // Recalculate positions
+                    artboardLeft = currentX;
+                    artboardRight = currentX + artboardWidth;
+                    artboardTop = currentY;
+                    artboardBottom = currentY - artboardHeight;
+                    
+                    $.writeln("Wrapped position:");
+                    $.writeln("  Left: " + artboardLeft);
+                    $.writeln("  Right: " + artboardRight);
+                    $.writeln("  Top: " + artboardTop);
+                    $.writeln("  Bottom: " + artboardBottom);
+                }
+                
+                // Final boundary check
+                if (artboardLeft < usableMinX || artboardRight > usableMaxX || 
+                    artboardBottom < usableMinY || artboardTop > usableMaxY) {
+                    
+                    var errorMsg = "Cannot create artboard - exceeds canvas boundaries:\n";
+                    if (artboardLeft < usableMinX) errorMsg += "  Left edge too far left\n";
+                    if (artboardRight > usableMaxX) errorMsg += "  Right edge too far right\n";
+                    if (artboardBottom < usableMinY) errorMsg += "  Bottom edge too low\n";
+                    if (artboardTop > usableMaxY) errorMsg += "  Top edge too high\n";
+                    
+                    $.writeln("ERROR: " + errorMsg);
+                    throw new Error(errorMsg);
                 }
                 
                 var artboardName;
@@ -739,10 +962,10 @@ function createArtboards(config) {
                     artboardName = spec.material + "_Pt" + partNumber;
                 }
                 
-                $.writeln("Artboard name: " + artboardName);
-                $.writeln("Position: [" + currentX + ", " + currentY + ", " + (currentX + artboardWidth) + ", " + (currentY - artboardHeight) + "]");
+                $.writeln("Creating artboard: " + artboardName);
+                $.writeln("Final position: [" + artboardLeft + ", " + artboardTop + ", " + artboardRight + ", " + artboardBottom + "]");
                 
-                var ab = doc.artboards.add([currentX, currentY, currentX + artboardWidth, currentY - artboardHeight]);
+                var ab = doc.artboards.add([artboardLeft, artboardTop, artboardRight, artboardBottom]);
                 ab.name = artboardName;
                 
                 $.writeln("Artboard created successfully!");
