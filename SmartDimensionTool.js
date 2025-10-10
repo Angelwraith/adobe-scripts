@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "3.2",
+  "version": "3.3",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -253,7 +253,7 @@ function main() {
     var checkHeight = dimRow.add("checkbox", undefined, "Add Height");
     checkHeight.value = true;
     var heightPosDropdown = dimRow.add("dropdownlist", undefined, ["Left", "Right"]);
-    heightPosDropdown.selection = 1;
+    heightPosDropdown.selection = 0; // Default to Left
     
     var offsetGroup = dimPanel.add("group");
     offsetGroup.add("statictext", undefined, "Offset from object (inches):");
