@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.3",
+  "version": "1.5",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -52,10 +52,10 @@
             }
             
             message += "It is recommended to run the Cut Path Separator script first to:\n";
-            message += "â€¢ Organize cut/print data into proper layers\n";
-            message += "â€¢ Standardize stroke weights\n";
-            message += "â€¢ Check for duplicate paths\n";
-            message += "â€¢ Enable overprint settings\n\n";
+            message += "- Organize cut/print data into proper layers\n";
+            message += "- Standardize stroke weights\n";
+            message += "- Check for duplicate paths\n";
+            message += "- Enable overprint settings\n\n";
             message += "Do you want to continue anyway?";
             
             var continueProcessing = confirm(message);
@@ -85,12 +85,12 @@
             var materialValidation = validateMaterialNaming();
             
             if (!materialValidation.isValid) {
-                var errorMessage = "âš ï¸ ARTBOARD NAMING ISSUES DETECTED:\n\n";
+                var errorMessage = "*** ARTBOARD NAMING ISSUES DETECTED:\n\n";
                 errorMessage += materialValidation.errors.join("\n") + "\n\n";
                 errorMessage += "Correct format: 'Material_PtX' where:\n";
-                errorMessage += "â€¢ Material can contain letters, numbers, spaces, and underscores\n";
-                errorMessage += "â€¢ _PtX is optional for single parts (X can be any number)\n";
-                errorMessage += "â€¢ Part numbers must be unique for each material\n\n";
+                errorMessage += "- Material can contain letters, numbers, spaces, and underscores\n";
+                errorMessage += "- _PtX is optional for single parts (X can be any number)\n";
+                errorMessage += "- Part numbers must be unique for each material\n\n";
                 errorMessage += "Please fix the artboard names before running the script again.";
                 
                 alert(errorMessage);
@@ -145,9 +145,9 @@
         var materialsText = "";
         for (var materialName in materialValidation) {
             var count = materialValidation[materialName].artboards.length;
-            materialsText += "â€¢ " + materialName + ": " + count + " part" + (count > 1 ? "s" : "") + "\n";
+            materialsText += "- " + materialName + ": " + count + " part" + (count > 1 ? "s" : "") + "\n";
             if (count > 10 && !materialUsesCutContour(materialName)) {
-                materialsText += "  â†’ Will create PRINT and CUT subfolders\n";
+                materialsText += "  > Will create PRINT and CUT subfolders\n";
             }
         }
         materialsList.text = materialsText;
@@ -936,7 +936,7 @@ function isolateArtboard(artboardIndex) {
                         saveFile = new File(materialFolder + "/" + fileName);
                     }
                 } else {
-                    // This material has â‰¤10 parts, no subfolders needed
+                    // This material has <=10 parts, no subfolders needed
                     saveFile = new File(materialFolder + "/" + fileName);
                 }
             }
@@ -1049,7 +1049,7 @@ function isolateArtboard(artboardIndex) {
 						saveFile = new File(materialFolder + "/" + fileName);
 					}
 				} else {
-					// This material has â‰¤10 parts or uses CutContour, no subfolders needed
+					// This material has <=10 parts or uses CutContour, no subfolders needed
 					// ALL files go directly in the material folder
 					saveFile = new File(materialFolder + "/" + fileName);
 				}
