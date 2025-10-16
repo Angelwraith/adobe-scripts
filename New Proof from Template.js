@@ -3,7 +3,7 @@
 {
   "name": "New Proof From Template",
   "description": "Create a blank proof from a Sheet file",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -14,7 +14,10 @@
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
-var TEMPLATE_PATH = "D:/COMMON TEMPLATES/1_PROOF_60pg.ait"; // Change this path as needed
+// Automatically detect OS and set appropriate template path
+var TEMPLATE_PATH = ($.os.indexOf("Windows") !== -1) 
+    ? "D:/COMMON TEMPLATES/1_PROOF_60pg.ait"  // Windows path
+    : "/Users/Jenny/Desktop/DPS/_Templates/Proofs/1_PROOF_60pg.ait";  // Mac path
 
 // =============================================================================
 // MAIN SCRIPT
