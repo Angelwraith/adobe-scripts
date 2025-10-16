@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "3.3",
+  "version": "3.4",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -480,10 +480,12 @@ function main() {
 // NEW METHOD: Get bounds using temporary artboard and Fit to Selected Art
 function getSimplifiedBounds(obj, tempLayer) {
     var doc = app.activeDocument;
+    var originalArtboardIndex = -1;
+    var artboardCountBefore = doc.artboards.length;
     
     try {
         // Store the current artboard index
-        var originalArtboardIndex = doc.artboards.getActiveArtboardIndex();
+        originalArtboardIndex = doc.artboards.getActiveArtboardIndex();
         
         // Create a temporary artboard (just needs to exist, size doesn't matter initially)
         var tempArtboard = doc.artboards.add([0, 0, 100, -100]);
@@ -527,13 +529,12 @@ function getSimplifiedBounds(obj, tempLayer) {
         
         return bounds;
         
-    } catch (e) {
+} catch (e) {
         // If anything fails, clean up and fall back to geometric bounds
         try {
             // Try to remove temp artboard if it exists
-            if (doc.artboards.length > 0) {
-                var lastIndex = doc.artboards.length - 1;
-                doc.artboards.remove(lastIndex);
+            if (doc.artboards.length > artboardCountBefore) {
+                doc.artboards.remove(doc.artboards.length - 1);
             }
         } catch (cleanupError) {}
         
