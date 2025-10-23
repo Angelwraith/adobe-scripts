@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.3",
+  "version": "3.4",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -63,7 +63,25 @@ function promptForPrimeFolderOnly() {
     return null;
 }
 
+function findProofDocuments() {
+    var proofDocs = [];
+    for (var i = 0; i < app.documents.length; i++) {
+        var doc = app.documents[i];
+        var docName = doc.name;
+        
+        // Check if document name contains "_Proof"
+        if (docName.match(/_Proof/i)) {
+            proofDocs.push({
+                document: doc,
+                name: docName
+            });
+        }
+    }
+    return proofDocs;
+}
+
 function showDocumentChoiceDialog() {
+    // Find PRIME documents
     var primeDocuments = [];
     for (var i = 0; i < app.documents.length; i++) {
         var docName = app.documents[i].name;
@@ -74,6 +92,9 @@ function showDocumentChoiceDialog() {
             });
         }
     }
+    
+    // Find Proof documents
+    var proofDocuments = findProofDocuments();
     
     var dialog = new Window("dialog", "PRIME Flex Template - Document Setup");
     dialog.orientation = "column";
@@ -86,6 +107,7 @@ function showDocumentChoiceDialog() {
     
     dialog.add("panel");
     
+    // OPTION 1: Add to existing PRIME document
     var docList = null;
     var addDocBtn = null;
     
@@ -107,11 +129,38 @@ function showDocumentChoiceDialog() {
         
         addDocBtn = docListGroup.add("button", undefined, "Add");
         addDocBtn.preferredSize.width = 80;
+        
+        dialog.add("panel");
     }
     
-    dialog.add("panel");
+    // OPTION 2: Create new from Proof document
+    var proofList = null;
+    var newFromProofBtn = null;
     
-    var folderLabel = dialog.add("statictext", undefined, "Create new PRIME file in PRIME folder:");
+    if (proofDocuments.length > 0) {
+        var proofLabel = dialog.add("statictext", undefined, "Create new PRIME from open Proof document:");
+        proofLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
+        
+        var proofListGroup = dialog.add("group");
+        proofListGroup.orientation = "row";
+        proofListGroup.spacing = 10;
+        
+        proofList = proofListGroup.add("dropdownlist", undefined, []);
+        proofList.preferredSize.width = 400;
+        
+        for (var i = 0; i < proofDocuments.length; i++) {
+            proofList.add("item", proofDocuments[i].name);
+        }
+        proofList.selection = 0;
+        
+        newFromProofBtn = proofListGroup.add("button", undefined, "New");
+        newFromProofBtn.preferredSize.width = 80;
+        
+        dialog.add("panel");
+    }
+    
+    // OPTION 3: Create new with manual folder path
+    var folderLabel = dialog.add("statictext", undefined, "Create new PRIME file (enter folder path manually):");
     folderLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
     
     var folderGroup = dialog.add("group");
@@ -125,10 +174,45 @@ function showDocumentChoiceDialog() {
     var newDocBtn = folderGroup.add("button", undefined, "New");
     newDocBtn.preferredSize.width = 80;
     
+    dialog.add("panel");
+    
     var cancelBtn = dialog.add("button", undefined, "Cancel");
     cancelBtn.alignment = "center";
     
     var result = null;
+    
+    // Button handlers
+    if (primeDocuments.length > 0) {
+        addDocBtn.onClick = function() {
+            var selectedIndex = docList.selection.index;
+            result = {
+                mode: "add",
+                document: primeDocuments[selectedIndex].doc,
+                primeFolder: primeFolderField.text
+            };
+            dialog.close();
+        };
+    }
+    
+    if (proofDocuments.length > 0) {
+        newFromProofBtn.onClick = function() {
+            var selectedIndex = proofList.selection.index;
+            var selectedDoc = proofDocuments[selectedIndex].document;
+            
+            // Get the document's folder path
+            try {
+                var docFile = selectedDoc.fullName;
+                var docFolder = docFile.parent;
+                result = {
+                    mode: "new",
+                    primeFolder: docFolder.fsName
+                };
+                dialog.close();
+            } catch (e) {
+                alert("Could not determine folder path for this document.\nThe document may not have been saved yet.\nPlease save it first or use the manual folder path option.");
+            }
+        };
+    }
     
     newDocBtn.onClick = function() {
         if (primeFolderField.text === "") {
@@ -141,18 +225,6 @@ function showDocumentChoiceDialog() {
         };
         dialog.close();
     };
-    
-    if (primeDocuments.length > 0) {
-        addDocBtn.onClick = function() {
-            var selectedIndex = docList.selection.index;
-            result = {
-                mode: "add",
-                document: primeDocuments[selectedIndex].doc,
-                primeFolder: primeFolderField.text
-            };
-            dialog.close();
-        };
-    }
     
     cancelBtn.onClick = function() {
         result = null;
@@ -545,7 +617,6 @@ function showSetupDialog(docChoice) {
         createArtboards(result);
     }
 }
-
 function calculateSpaceNeeded(specs, scale) {
     var spacing = (10 * 72) / scale;
     var maxSingleArtboardWidth = 0;
