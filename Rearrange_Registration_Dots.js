@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "Rearrange Registration Dots",
   "description": "Rearranges 5 selected registration dot groups to fit empty space on active artboard",
-  "version": "1.0",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["registration", "dots", "artboard"]
 }@END_METADATA*/
@@ -31,10 +31,7 @@ try {
             if (!allGroups) {
                 alert("All selected items must be groups.\n\nPlease select the 5 registration dot groups.");
             } else {
-                var success = rearrangeRegistrationDots(doc);
-                if (success) {
-                    alert("Registration dots rearranged successfully!");
-                }
+                rearrangeRegistrationDots(doc);
             }
         }
     }
@@ -56,10 +53,10 @@ function showPlacementDialog() {
     radioGroup.alignChildren = "left";
     radioGroup.spacing = 10;
     
-    var topBottomRadio = radioGroup.add("radiobutton", undefined, "Top/Bottom (for landscape artboards)");
     var leftRightRadio = radioGroup.add("radiobutton", undefined, "Left/Right (for portrait artboards)");
+    var topBottomRadio = radioGroup.add("radiobutton", undefined, "Top/Bottom (for landscape artboards)");
     
-    topBottomRadio.value = true;
+    leftRightRadio.value = true;
     
     var buttonGroup = dialog.add("group");
     buttonGroup.orientation = "row";
