@@ -3,7 +3,7 @@
 {
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.0",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["review", "check", "file""]
 }
@@ -63,10 +63,12 @@
             for (var i = 0; i < printFiles.length; i++) {
                 try {
                     var doc = app.open(printFiles[i]);
+                    var isCutOnly = printFiles[i].name.toUpperCase().indexOf("CUTONLY") != -1;
                     openDocs.push({
                         doc: doc,
                         file: printFiles[i],
-                        baseName: getBaseName(printFiles[i].name)
+                        baseName: getBaseName(printFiles[i].name),
+                        isCutOnly: isCutOnly
                     });
                 } catch (e) {
                     alert("Error opening file: " + printFiles[i].name + "\n" + e.message);
@@ -87,10 +89,10 @@
                 var cutFile = cutFiles[i];
                 var cutBaseName = getBaseName(cutFile.name);
                 
-                // Find matching PRINT file
+                // Find matching PRINT file (skip CutOnly files - they don't need a separate CUT file placed)
                 var matchedDoc = null;
                 for (var j = 0; j < openDocs.length; j++) {
-                    if (openDocs[j].baseName == cutBaseName) {
+                    if (openDocs[j].baseName == cutBaseName && !openDocs[j].isCutOnly) {
                         matchedDoc = openDocs[j].doc;
                         break;
                     }
