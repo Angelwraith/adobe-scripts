@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Image Quality Analysis",
   "description": "Analyze selected images and label them with resolution info",
-  "version": "2.0",
+  "version": "2.1",
   "target": "illustrator",
   "tags": ["image", "quality", "resolution", "PPI"]
 }@END_METADATA*/
@@ -88,20 +88,20 @@ function main() {
     var clippingMasks = [];
     collectClippingMasks(sel, clippingMasks);
     
-    // Process each clipping mask
+    // Process each item (clipping mask or standalone image)
     var labelsCreated = 0;
     for (var i = 0; i < clippingMasks.length; i++) {
-        var clippedGroup = clippingMasks[i];
+        var item = clippingMasks[i];
         
         // Get the VISIBLE bounds using the artboard method
-        var visibleBounds = getVisibleBounds(clippedGroup);
+        var visibleBounds = getVisibleBounds(item);
         
-        var result = processClippingMask(clippedGroup, visibleBounds, analysisLayer, scaleRatio, scaleFactor);
+        var result = processClippingMask(item, visibleBounds, analysisLayer, scaleRatio, scaleFactor);
         if (result) labelsCreated++;
     }
     
     if (labelsCreated === 0) {
-        alert("No clipping masks with images found in selection.");
+        alert("No images found in selection.");
     } else {
         alert("Analysis complete!\n" + labelsCreated + " label(s) created.");
     }
@@ -199,12 +199,16 @@ function collectClippingMasks(items, results) {
             continue;
         }
         
+        // Add clipping masks
         if (item.typename === "GroupItem" && item.clipped) {
-            // This is a clipping mask - add it
+            results.push(item);
+        }
+        // Add standalone images
+        else if (item.typename === "RasterItem" || item.typename === "PlacedItem") {
             results.push(item);
         }
         
-        // Also check inside groups for nested clipping masks
+        // Check inside groups for nested items
         if (item.typename === "GroupItem" && item.pageItems && item.pageItems.length > 0) {
             collectClippingMasks(item.pageItems, results);
         }
