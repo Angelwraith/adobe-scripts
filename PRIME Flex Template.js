@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.4",
+  "version": "3.5",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -319,7 +319,7 @@ function showSetupDialog(docChoice) {
     regGroup.orientation = "row";
     regGroup.add("statictext", undefined, "Reg Dots:");
     var regDropdown = regGroup.add("dropdownlist", undefined, ["Top/Bottom", "Left/Right", "None"]);
-    regDropdown.selection = 0;
+    regDropdown.selection = 1;
     regDropdown.preferredSize.width = 150;
     
     dialog.add("panel");
