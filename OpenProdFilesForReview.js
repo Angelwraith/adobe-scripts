@@ -1,26 +1,72 @@
-/*
-@METADATA
-{
+/*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.1",
+  "version": "1.3",
   "target": "illustrator",
   "tags": ["review", "check", "file""]
-}
-@END_METADATA
-*/
+}@END_METADATA*/
 
 (function() {
+    // Detect OS and set Downloads path
+    var downloadsPath;
+    if ($.os.indexOf("Windows") !== -1) {
+        // Windows path - use backslash
+        var userProfile = $.getenv("USERPROFILE");
+        downloadsPath = userProfile + "\\Downloads";
+    } else {
+        // Mac path
+        downloadsPath = "~/Downloads";
+    }
+    
+    var downloadsFolder = new Folder(downloadsPath);
+    
+    // Get list of folders in Downloads
+    var subfolders = [];
+    if (downloadsFolder.exists) {
+        var items = downloadsFolder.getFiles();
+        for (var i = 0; i < items.length; i++) {
+            if (items[i] instanceof Folder) {
+                subfolders.push(items[i]);
+            }
+        }
+    }
+    
     // Create dialog window
     var dialog = new Window("dialog", "Print/Cut File Processor");
     dialog.alignChildren = "fill";
+    dialog.spacing = 15;
+    dialog.margins = 20;
     
-    // Folder path input
+    // Dropdown selection (if folders exist in Downloads)
+    var folderDropdown = null;
+    if (subfolders.length > 0) {
+        var dropdownGroup = dialog.add("group");
+        dropdownGroup.orientation = "column";
+        dropdownGroup.alignChildren = "left";
+        
+        dropdownGroup.add("statictext", undefined, "Select folder from Downloads:");
+        
+        var dropdownRow = dropdownGroup.add("group");
+        dropdownRow.orientation = "row";
+        dropdownRow.spacing = 10;
+        
+        folderDropdown = dropdownRow.add("dropdownlist", undefined, []);
+        folderDropdown.preferredSize.width = 400;
+        
+        for (var i = 0; i < subfolders.length; i++) {
+            folderDropdown.add("item", subfolders[i].name);
+        }
+        folderDropdown.selection = 0;
+        
+        dialog.add("panel");
+    }
+    
+    // Manual folder path input
     var pathGroup = dialog.add("group");
     pathGroup.orientation = "column";
     pathGroup.alignChildren = "left";
     
-    pathGroup.add("statictext", undefined, "Folder Path:");
+    pathGroup.add("statictext", undefined, "Or enter folder path manually:");
     var folderPathInput = pathGroup.add("edittext", undefined, "");
     folderPathInput.preferredSize.width = 400;
     
@@ -32,10 +78,20 @@
     
     // Show dialog
     if (dialog.show() == 1) {
-        var folderPath = folderPathInput.text;
+        var folderPath = "";
+        
+        // Determine which path to use
+        if (folderPathInput.text != "") {
+            // Manual path takes priority
+            folderPath = folderPathInput.text;
+        } else if (folderDropdown != null && folderDropdown.selection != null) {
+            // Use selected dropdown folder
+            var selectedIndex = folderDropdown.selection.index;
+            folderPath = subfolders[selectedIndex].fsName;
+        }
         
         if (folderPath == "") {
-            alert("Please enter a folder path.");
+            alert("Please select a folder from the dropdown or enter a folder path.");
             return;
         }
         
@@ -112,10 +168,6 @@
                 app.activeDocument = openDocs[i].doc;
                 app.executeMenuCommand("fitall");
             }
-            
-            alert("Processing complete!\n" + 
-                  "Opened " + openDocs.length + " PRINT files.\n" +
-                  "Placed " + processedCount + " CUT files.");
                   
         } catch (e) {
             alert("Error: " + e.message);
