@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "3.4",
+  "version": "3.5",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -26,55 +26,139 @@ function addScaleTextToArtboards(selection, settings, layer) {
     var doc = app.activeDocument;
     var artboardIndices = [];
     
-    // Find which artboards contain the selected objects
-    for (var i = 0; i < selection.length; i++) {
-        var itemBounds = selection[i].geometricBounds;
-        var itemCenterX = (itemBounds[0] + itemBounds[2]) / 2;
-        var itemCenterY = (itemBounds[1] + itemBounds[3]) / 2;
+    // For "Below Centered" option, check if art is on artboards
+    if (settings.scaleTextPosition === "Below Centered") {
+        var hasArtOnArtboard = false;
         
-        // Check which artboard contains this object's center point
-        for (var j = 0; j < doc.artboards.length; j++) {
-            var artboardRect = doc.artboards[j].artboardRect;
-            if (itemCenterX >= artboardRect[0] && itemCenterX <= artboardRect[2] &&
-                itemCenterY <= artboardRect[1] && itemCenterY >= artboardRect[3]) {
-                // Check if we haven't already added this artboard
-                var alreadyAdded = false;
-                for (var k = 0; k < artboardIndices.length; k++) {
-                    if (artboardIndices[k] === j) {
-                        alreadyAdded = true;
-                        break;
+        // Find which artboards contain the selected objects
+        for (var i = 0; i < selection.length; i++) {
+            var itemBounds = selection[i].geometricBounds;
+            var itemCenterX = (itemBounds[0] + itemBounds[2]) / 2;
+            var itemCenterY = (itemBounds[1] + itemBounds[3]) / 2;
+            
+            // Check which artboard contains this object's center point
+            for (var j = 0; j < doc.artboards.length; j++) {
+                var artboardRect = doc.artboards[j].artboardRect;
+                if (itemCenterX >= artboardRect[0] && itemCenterX <= artboardRect[2] &&
+                    itemCenterY <= artboardRect[1] && itemCenterY >= artboardRect[3]) {
+                    hasArtOnArtboard = true;
+                    // Check if we haven't already added this artboard
+                    var alreadyAdded = false;
+                    for (var k = 0; k < artboardIndices.length; k++) {
+                        if (artboardIndices[k] === j) {
+                            alreadyAdded = true;
+                            break;
+                        }
                     }
+                    if (!alreadyAdded) {
+                        artboardIndices.push(j);
+                    }
+                    break;
                 }
-                if (!alreadyAdded) {
-                    artboardIndices.push(j);
+            }
+        }
+        
+        // If no art is on artboards, add scale text without artboard reference
+        if (!hasArtOnArtboard) {
+            addScaleTextToArtboard(-1, settings, layer, selection);
+            return;
+        }
+    } else {
+        // For "On Proof" and "Outside Proof", find artboards normally
+        for (var i = 0; i < selection.length; i++) {
+            var itemBounds = selection[i].geometricBounds;
+            var itemCenterX = (itemBounds[0] + itemBounds[2]) / 2;
+            var itemCenterY = (itemBounds[1] + itemBounds[3]) / 2;
+            
+            // Check which artboard contains this object's center point
+            for (var j = 0; j < doc.artboards.length; j++) {
+                var artboardRect = doc.artboards[j].artboardRect;
+                if (itemCenterX >= artboardRect[0] && itemCenterX <= artboardRect[2] &&
+                    itemCenterY <= artboardRect[1] && itemCenterY >= artboardRect[3]) {
+                    // Check if we haven't already added this artboard
+                    var alreadyAdded = false;
+                    for (var k = 0; k < artboardIndices.length; k++) {
+                        if (artboardIndices[k] === j) {
+                            alreadyAdded = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyAdded) {
+                        artboardIndices.push(j);
+                    }
+                    break;
                 }
-                break;
             }
         }
     }
     
     // Add scale text to each unique artboard
     for (var i = 0; i < artboardIndices.length; i++) {
-        addScaleTextToArtboard(artboardIndices[i], settings, layer);
+        addScaleTextToArtboard(artboardIndices[i], settings, layer, selection);
     }
 }
 
 // Add scale text to a specific artboard
-function addScaleTextToArtboard(artboardIndex, settings, layer) {
+function addScaleTextToArtboard(artboardIndex, settings, layer, selection) {
     var doc = app.activeDocument;
-    var artboard = doc.artboards[artboardIndex];
-    var artboardRect = artboard.artboardRect;
-    var artboardLeft = artboardRect[0];
-    var artboardTop = artboardRect[1];
+    var x, y;
     
-    // Calculate position relative to artboard
-    var x = artboardLeft + (15 * 72); // 15 inches from left edge
-    var y;
-    
-    if (settings.scaleTextPosition === "On Proof") {
-        y = artboardTop - (9.75 * 72);
-    } else { // "Outside Proof"
-        y = artboardTop - (11 * 72);
+    if (settings.scaleTextPosition === "Below Centered") {
+        // Calculate bounds for all selected objects
+        var minX = Number.MAX_VALUE;
+        var maxX = -Number.MAX_VALUE;
+        var minY = Number.MAX_VALUE;
+        
+        if (artboardIndex === -1) {
+            // No artboard - use all selected objects
+            for (var i = 0; i < selection.length; i++) {
+                var itemBounds = selection[i].geometricBounds;
+                if (itemBounds[0] < minX) minX = itemBounds[0];
+                if (itemBounds[2] > maxX) maxX = itemBounds[2];
+                if (itemBounds[3] < minY) minY = itemBounds[3];
+            }
+        } else {
+            // On artboard - use only objects on this artboard
+            var artboard = doc.artboards[artboardIndex];
+            var artboardRect = artboard.artboardRect;
+            var artboardLeft = artboardRect[0];
+            var artboardTop = artboardRect[1];
+            var artboardRight = artboardRect[2];
+            var artboardBottom = artboardRect[3];
+            
+            for (var i = 0; i < selection.length; i++) {
+                var itemBounds = selection[i].geometricBounds;
+                var itemCenterX = (itemBounds[0] + itemBounds[2]) / 2;
+                var itemCenterY = (itemBounds[1] + itemBounds[3]) / 2;
+                
+                // Check if this item is on this artboard
+                if (itemCenterX >= artboardLeft && itemCenterX <= artboardRight &&
+                    itemCenterY <= artboardTop && itemCenterY >= artboardBottom) {
+                    if (itemBounds[0] < minX) minX = itemBounds[0];
+                    if (itemBounds[2] > maxX) maxX = itemBounds[2];
+                    if (itemBounds[3] < minY) minY = itemBounds[3];
+                }
+            }
+        }
+        
+        // Position 1 inch below the lowest point, centered horizontally
+        x = (minX + maxX) / 2;
+        y = minY - (1 * 72);
+    } else {
+        // "On Proof" and "Outside Proof" require an artboard
+        var artboard = doc.artboards[artboardIndex];
+        var artboardRect = artboard.artboardRect;
+        var artboardLeft = artboardRect[0];
+        var artboardTop = artboardRect[1];
+        
+        // Calculate position relative to artboard for proof positions
+        x = artboardLeft + (15 * 72); // 15 inches from left edge
+        
+        if (settings.scaleTextPosition === "On Proof") {
+            y = artboardTop - (9.75 * 72);
+        } else { // "Outside Proof"
+            y = artboardTop - (11 * 72);
+        }
     }
     
     // Create the scale text
@@ -267,7 +351,7 @@ function main() {
     
     var scaleTextGroup = dimPanel.add("group");
     scaleTextGroup.add("statictext", undefined, "Include Scale:");
-    var scaleTextDropdown = scaleTextGroup.add("dropdownlist", undefined, ["None", "On Proof", "Outside Proof"]);
+    var scaleTextDropdown = scaleTextGroup.add("dropdownlist", undefined, ["None", "On Proof", "Outside Proof", "Below Centered"]);
     scaleTextDropdown.selection = 1; // Default to "On Proof"
     
     // Style settings (combined graphic style and text)
