@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.5",
+  "version": "1.6",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -945,8 +945,13 @@ function isolateArtboard(artboardIndex) {
             saveFile = new File(contextParentSavePath + "/" + fileName);
         }
         
-        // Check if file exists using preserved overwrite settings
+        // Check if file exists
         if (saveFile.exists) {
+            // Check skipAll first - if true, always skip
+            if (contextSkipAll) {
+                return; // Skip this file
+            }
+            
             var overwrite = false;
             
             if (contextOverwriteAll === null) {
@@ -964,13 +969,14 @@ function isolateArtboard(artboardIndex) {
                     if (confirm("Skip all existing files?")) {
                         // Update global variable
                         skipAll = true;
+                        return; // Skip this file immediately
                     }
                 }
             } else {
                 overwrite = contextOverwriteAll;
             }
             
-            if (!overwrite || contextSkipAll) {
+            if (!overwrite) {
                 return; // Skip this file
             }
         }
@@ -1060,32 +1066,38 @@ function isolateArtboard(artboardIndex) {
 		}
 		
 		// Check if file exists
-		if (saveFile.exists) {
-			var overwrite = false;
-			
-			if (overwriteAll === null) {
-				var dialog = confirm("File '" + fileName + "' already exists.\nDo you want to overwrite it?\n\n" +
-								   "Click 'Yes' to overwrite, 'No' to skip.");
-				
-				if (dialog) {
-					overwrite = true;
-					// Ask if should apply to all
-					if (confirm("Apply this decision to all existing files?")) {
-						overwriteAll = true;
-					}
-				} else {
-					if (confirm("Skip all existing files?")) {
-						skipAll = true;
-					}
-				}
-			} else {
-				overwrite = overwriteAll;
-			}
-			
-			if (!overwrite || skipAll) {
-				return; // Skip this file
-			}
-		}
+        if (saveFile.exists) {
+            // Check skipAll first - if true, always skip
+            if (skipAll) {
+                return; // Skip this file
+            }
+            
+            var overwrite = false;
+            
+            if (overwriteAll === null) {
+                var dialog = confirm("File '" + fileName + "' already exists.\nDo you want to overwrite it?\n\n" +
+                                   "Click 'Yes' to overwrite, 'No' to skip.");
+                
+                if (dialog) {
+                    overwrite = true;
+                    // Ask if should apply to all
+                    if (confirm("Apply this decision to all existing files?")) {
+                        overwriteAll = true;
+                    }
+                } else {
+                    if (confirm("Skip all existing files?")) {
+                        skipAll = true;
+                        return; // Skip this file immediately
+                    }
+                }
+            } else {
+                overwrite = overwriteAll;
+            }
+            
+            if (!overwrite) {
+                return; // Skip this file
+            }
+        }
 		
 		// Set up PDF save options with Large Canvas compatibility
 		var pdfOptions = new PDFSaveOptions();
