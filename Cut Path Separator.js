@@ -3,7 +3,7 @@
 {
   "name": "Cut Path Separator",
   "description": "Organize Cut/Print Data Into Respective Layers",
-  "version": "1.0",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["Cut", "Path", "Separator", "processors"]
 }
@@ -19,7 +19,7 @@
     }
     
     var doc = app.activeDocument;
-    var spotColorNames = ["CutThrough2-Outside", "CutThrough1-Inside", "CutThrough-Knifecut", "CutContour", "Spot1"];
+    var spotColorNames = ["CutThrough2-Outside", "CutThrough1-Inside", "PinMountHoles-Inside", "CutThrough-Knifecut", "CutContour", "Spot1"];
     var totalMovedPaths = 0;
     var targetStrokeWidth = 5 / doc.scaleFactor; // Adjust for Large Canvas documents
     
