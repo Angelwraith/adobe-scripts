@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.6",
+  "version": "1.7",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -196,7 +196,7 @@
     
     // Check if Cut Path Separator has been run by looking for CPS-created layers with content
     function checkForCPSProcessing() {
-        var cpsLayerNames = ["CutThrough2-Outside", "CutThrough1-Inside", "CutThrough-Knifecut", "CutContour", "Spot1"];
+        var cpsLayerNames = ["CutThrough2-Outside", "CutThrough1-Inside", "PinMountHoles-Inside", "CutThrough-Knifecut", "CutContour", "Spot1"];
         var foundLayers = [];
         var layersWithContent = [];
         
@@ -733,6 +733,17 @@ function isolateArtboard(artboardIndex) {
                     layer.remove();
                 } else {
                     hasAnyContent = true;
+                }
+                continue;
+            }
+            
+            // Keep PinMountHoles-Inside if it has content
+            if (layerName === "PinMountHoles-Inside") {
+                if (!layerHasContent(layer)) {
+                    layer.remove();
+                } else {
+                    hasAnyContent = true;
+                    otherCuts.push(layerName);
                 }
                 continue;
             }
