@@ -152,12 +152,12 @@ function addScaleTextToArtboard(artboardIndex, settings, layer, selection) {
         var artboardTop = artboardRect[1];
         
         // Calculate position relative to artboard for proof positions
-        x = artboardLeft + (15 * 72); // 15 inches from left edge
+        x = artboardLeft + (4 * 72); // 4 inches from left edge
         
         if (settings.scaleTextPosition === "On Proof") {
-            y = artboardTop - (9.75 * 72);
+            y = artboardTop - (6.9816 * 72);
         } else { // "Outside Proof"
-            y = artboardTop - (11 * 72);
+            y = artboardTop - (8.625 * 72);
         }
     }
     
@@ -171,8 +171,8 @@ function addScaleTextToArtboard(artboardIndex, settings, layer, selection) {
         scaleText.textRange.characterAttributes.characterStyle = characterStyle;
     }
     
-    // Set font size to 14pt
-    scaleText.textRange.characterAttributes.size = 14;
+    // Set font size to 7pt
+    scaleText.textRange.characterAttributes.size = 7;
     
     // Set center justification
     scaleText.textRange.paragraphAttributes.justification = Justification.CENTER;
