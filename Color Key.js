@@ -3,7 +3,7 @@
 {
   "name": "Color Key Creator",
   "description": "Create A Prepositioned Color Key On Proofs",
-  "version": "1.0",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["proof", "color", "key"]
 }
@@ -203,10 +203,13 @@ if (app.documents.length == 0) {
                 var artboardBounds = artboard.artboardRect;
                 var artboardLeft = artboardBounds[0]; // Left X coordinate
                 var artboardTop = artboardBounds[1]; // Top Y coordinate
-                var startX = artboardLeft + (10 * 72); // 10 inches from left edge of artboard
-                var startY = artboardTop - (8.75 * 72); // 8.75 inches down from top edge of artboard
+                var startX = artboardLeft + (6.75 * 72); // 6.75 inches from left edge of artboard
+                var startY = artboardTop - (7.125 * 72); // 7.125 inches down from top edge of artboard
                 var yPosition = startY;
-                var lineSpacing = 23; // Space between color entries
+                var lineSpacing = 12.6; // Space between color entries (0.875" / 5 colors = 0.175" per entry = 12.6 points)
+                var colorsPerColumn = 5; // Maximum colors per column
+                var columnSpacing = 1.4 * 72; // 1.4 inches between columns
+                var currentColumn = 0; // Track which column we're in
                 
                 // Store original selection to restore later
                 var originalSelection = doc.selection;
@@ -273,15 +276,16 @@ if (app.documents.length == 0) {
                     var isWarningColor = isCutContourProcess || isSpot1Process;
                     
                     // Add the color name text (offset to make room for color circle)
-                    var textFrame = addText(colorName, startX + 40, yPosition, 11, isWarningColor);
+                    var columnOffset = currentColumn * columnSpacing;
+                    var textFrame = addText(colorName, startX + 15 + columnOffset, yPosition, 7, isWarningColor);
                     if (textFrame) {
                         createdObjects.push(textFrame);
                     }
                     
                     // Create color swatch circle
                     try {
-                        var circleSize = 15;
-                        var circleLeft = startX + 20;
+                        var circleSize = 9; // 0.125 inches = 9 points
+                        var circleLeft = startX + 5 + columnOffset;
                         var circleTop = yPosition;
                         
                         // Create circle using ellipse
@@ -477,7 +481,15 @@ if (app.documents.length == 0) {
                         // If circle creation fails, continue without it
                     }
                     
-                    yPosition -= lineSpacing;
+                    // Move to next position (column wrapping logic)
+                    if ((i + 1) % colorsPerColumn === 0 && i < colorNames.length - 1) {
+                        // Move to next column
+                        currentColumn++;
+                        yPosition = startY;
+                    } else {
+                        // Move down in current column
+                        yPosition -= lineSpacing;
+                    }
                 }
                 
                 // Group all created objects
