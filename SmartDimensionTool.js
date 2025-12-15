@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "3.5",
+  "version": "3.6",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -16,6 +16,70 @@ function getCharacterStyle(styleName) {
             }
         }
     } catch (e) {}
+    return null;
+}
+
+// Detect existing scale text on artboards containing selected objects
+function detectExistingScale(selection) {
+    var doc = app.activeDocument;
+    var artboardIndices = [];
+    
+    // Find which artboards contain the selected objects
+    for (var i = 0; i < selection.length; i++) {
+        var itemBounds = selection[i].geometricBounds;
+        var itemCenterX = (itemBounds[0] + itemBounds[2]) / 2;
+        var itemCenterY = (itemBounds[1] + itemBounds[3]) / 2;
+        
+        for (var j = 0; j < doc.artboards.length; j++) {
+            var artboardRect = doc.artboards[j].artboardRect;
+            if (itemCenterX >= artboardRect[0] && itemCenterX <= artboardRect[2] &&
+                itemCenterY <= artboardRect[1] && itemCenterY >= artboardRect[3]) {
+                var alreadyAdded = false;
+                for (var k = 0; k < artboardIndices.length; k++) {
+                    if (artboardIndices[k] === j) {
+                        alreadyAdded = true;
+                        break;
+                    }
+                }
+                if (!alreadyAdded) {
+                    artboardIndices.push(j);
+                }
+                break;
+            }
+        }
+    }
+    
+    // Search for scale text on these artboards
+    for (var i = 0; i < artboardIndices.length; i++) {
+        var artboard = doc.artboards[artboardIndices[i]];
+        var artboardRect = artboard.artboardRect;
+        
+        // Check all text frames in the document
+        for (var j = 0; j < doc.textFrames.length; j++) {
+            var textFrame = doc.textFrames[j];
+            var textBounds = textFrame.geometricBounds;
+            var textCenterX = (textBounds[0] + textBounds[2]) / 2;
+            var textCenterY = (textBounds[1] + textBounds[3]) / 2;
+            
+            // Check if text is on this artboard
+            if (textCenterX >= artboardRect[0] && textCenterX <= artboardRect[2] &&
+                textCenterY <= artboardRect[1] && textCenterY >= artboardRect[3]) {
+                
+                // Check if text starts with "Scale " (case insensitive)
+                var content = textFrame.contents;
+                if (content.toLowerCase().indexOf("scale ") === 0) {
+                    // Extract the scale value (everything after "Scale ")
+                    var scaleValue = content.substring(6);
+                    // Manual trim - remove leading/trailing whitespace
+                    scaleValue = scaleValue.replace(/^\s+|\s+$/g, '');
+                    if (scaleValue.length > 0) {
+                        return scaleValue;
+                    }
+                }
+            }
+        }
+    }
+    
     return null;
 }
 
@@ -285,6 +349,9 @@ function main() {
         currentFontName = fonts[0].name;
     }
     
+    // Detect existing scale on artboards with selected objects
+    var existingScale = detectExistingScale(sel);
+    
     // Create configuration dialog
     var dialog = new Window("dialog", "Auto-Dimension Tool");
     dialog.alignChildren = "fill";
@@ -302,7 +369,24 @@ function main() {
     var scaleLabel = scaleRow.add("statictext", undefined, "Scale:");
     scaleLabel.preferredSize.width = 48;
     var scaleDropdown = scaleRow.add("dropdownlist", undefined, ["1:1", "1:2", "1:4", "1:5", "1:8", "1:10", "1:16", "1:20", "1:40", "1:50", "1:100", "2:1", "4:1", "8:1", "10:1", "100:2", "Custom"]);
-    scaleDropdown.selection = 5; // Default to 1:10
+    
+    // If existing scale detected, try to select it; otherwise default to 1:10
+    if (existingScale) {
+        var scaleFound = false;
+        for (var i = 0; i < scaleDropdown.items.length; i++) {
+            if (scaleDropdown.items[i].text === existingScale) {
+                scaleDropdown.selection = i;
+                scaleFound = true;
+                break;
+            }
+        }
+        if (!scaleFound) {
+            scaleDropdown.selection = 5; // Default to 1:10
+        }
+    } else {
+        scaleDropdown.selection = 5; // Default to 1:10
+    }
+    
     scaleDropdown.preferredSize.width = 80;
     
     var customScaleNumerator = scaleRow.add("edittext", undefined, "1");
@@ -352,7 +436,13 @@ function main() {
     var scaleTextGroup = dimPanel.add("group");
     scaleTextGroup.add("statictext", undefined, "Include Scale:");
     var scaleTextDropdown = scaleTextGroup.add("dropdownlist", undefined, ["None", "On Proof", "Outside Proof", "Below Centered"]);
-    scaleTextDropdown.selection = 1; // Default to "On Proof"
+    
+    // If existing scale detected, default to "None"; otherwise default to "On Proof"
+    if (existingScale) {
+        scaleTextDropdown.selection = 0; // "None"
+    } else {
+        scaleTextDropdown.selection = 1; // "On Proof"
+    }
     
     // Style settings (combined graphic style and text)
     var stylePanel = dialog.add("panel", undefined, "Style");
