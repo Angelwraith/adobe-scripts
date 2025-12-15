@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "3.6",
+  "version": "3.7",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -648,7 +648,10 @@ function main() {
         addScaleTextToArtboards(sel, settings, dimLayer);
     }
     
-    alert(message);
+    // Only show alert if there were problems (skipped dimensions)
+    if (skippedCount > 0) {
+        alert(message);
+    }
 }
 
 // NEW METHOD: Get bounds using temporary artboard and Fit to Selected Art
