@@ -3,10 +3,121 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.5",
+  "version": "3.6",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
+
+// Global variable to hold packing data
+var globalPackingData = null;
+
+// Read packing data from proof document XMP metadata
+function readPackingDataFromProof(doc) {
+    try {
+        $.writeln('🔍 Attempting to read packing data from proof...');
+        
+        if (ExternalObject.AdobeXMPScript == undefined) {
+            ExternalObject.AdobeXMPScript = new ExternalObject('lib:AdobeXMPScript');
+        }
+        
+        if (!doc.XMPString || doc.XMPString.length === 0) {
+            $.writeln('⚠️ Document has no XMP metadata');
+            return null;
+        }
+        
+        var xmp = new XMPMeta(doc.XMPString);
+        
+        // Register namespace for reading
+        try {
+            XMPMeta.registerNamespace('http://extremecolor.net/packing/', 'packing');
+        } catch (e) {
+            // Already registered, that's fine
+        }
+        
+        // Try to get packing data from custom namespace
+        if (xmp.doesPropertyExist('http://extremecolor.net/packing/', 'data')) {
+            var packingJSON = xmp.getProperty('http://extremecolor.net/packing/', 'data').value;
+            
+            $.writeln('📦 Found packing data in XMP (length: ' + packingJSON.length + ')');
+            
+            // Parse JSON
+            var packingData = eval('(' + packingJSON + ')');
+            
+            $.writeln('✅ Packing data parsed successfully!');
+            $.writeln('   Materials: ' + packingData.materials.length);
+            $.writeln('   Total sheets: ' + getTotalSheetCount(packingData));
+            
+            return packingData;
+        }
+        
+        $.writeln('⚠️ No packing data found in this proof document.');
+        return null;
+        
+    } catch (e) {
+        $.writeln('❌ Error reading packing data: ' + e.message);
+        $.writeln('   Line: ' + e.line);
+        return null;
+    }
+}
+
+function getTotalSheetCount(packingData) {
+    var count = 0;
+    if (packingData && packingData.materials) {
+        for (var i = 0; i < packingData.materials.length; i++) {
+            count += packingData.materials[i].sheets.length;
+        }
+    }
+    return count;
+}
+
+// Convert packing data to material specs format
+function convertPackingDataToSpecs(packingData) {
+    var specs = [];
+    
+    if (!packingData || !packingData.materials) {
+        return specs;
+    }
+    
+    for (var i = 0; i < packingData.materials.length; i++) {
+        var material = packingData.materials[i];
+        var sheets = material.sheets;
+        
+        // Group sheets by size
+        var sizeGroups = {};
+        for (var j = 0; j < sheets.length; j++) {
+            var sheet = sheets[j];
+            var sizeKey = sheet.width + 'x' + sheet.height;
+            
+            if (!sizeGroups[sizeKey]) {
+                sizeGroups[sizeKey] = {
+                    width: sheet.width,
+                    height: sheet.height,
+                    count: 0,
+                    sheets: []
+                };
+            }
+            sizeGroups[sizeKey].count++;
+            sizeGroups[sizeKey].sheets.push(sheet);
+        }
+        
+        // Create spec for each size group
+        for (var sizeKey in sizeGroups) {
+            if (sizeGroups.hasOwnProperty(sizeKey)) {
+                var group = sizeGroups[sizeKey];
+                specs.push({
+                    material: material.material_name,
+                    width: group.width,
+                    height: group.height,
+                    quantity: group.count,
+                    startingPartNumber: 1,
+                    packingSheets: group.sheets // Keep reference to original sheet data
+                });
+            }
+        }
+    }
+    
+    return specs;
+}
 
 // Main entry point
 try {
@@ -199,13 +310,17 @@ function showDocumentChoiceDialog() {
             var selectedIndex = proofList.selection.index;
             var selectedDoc = proofDocuments[selectedIndex].document;
             
+            // Try to read packing data from the proof
+            globalPackingData = readPackingDataFromProof(selectedDoc);
+            
             // Get the document's folder path
             try {
                 var docFile = selectedDoc.fullName;
                 var docFolder = docFile.parent;
                 result = {
                     mode: "new",
-                    primeFolder: docFolder.fsName
+                    primeFolder: docFolder.fsName,
+                    hasPackingData: (globalPackingData !== null)
                 };
                 dialog.close();
             } catch (e) {
@@ -318,9 +433,17 @@ function showSetupDialog(docChoice) {
     var regGroup = dialog.add("group");
     regGroup.orientation = "row";
     regGroup.add("statictext", undefined, "Reg Dots:");
-    var regDropdown = regGroup.add("dropdownlist", undefined, ["Top/Bottom", "Left/Right", "None"]);
-    regDropdown.selection = 1;
+    var regDropdown = regGroup.add("dropdownlist", undefined, ["Auto/Metadata", "Top/Bottom", "Left/Right", "None"]);
+    // Default to Auto/Metadata if we have packing data, otherwise Left/Right
+    regDropdown.selection = (docChoice.hasPackingData ? 0 : 2);
     regDropdown.preferredSize.width = 150;
+    
+    // Add placeholder artwork checkbox
+    var placeholderGroup = dialog.add("group");
+    placeholderGroup.orientation = "row";
+    var placeholderCheckbox = placeholderGroup.add("checkbox", undefined, "Create placeholder artwork from metadata");
+    placeholderCheckbox.value = docChoice.hasPackingData;
+    placeholderCheckbox.enabled = docChoice.hasPackingData;
     
     dialog.add("panel");
     
@@ -374,6 +497,15 @@ function showSetupDialog(docChoice) {
         var materialField = rowGroup.add("edittext", undefined, material ? material.name : "");
         materialField.preferredSize.width = 220;
         
+        // Store metadata on the field for later retrieval
+        if (material && material.fromPackingData) {
+            materialField.__metadata = {
+                width: material.width,
+                height: material.height,
+                packingSheets: material.packingSheets
+            };
+        }
+        
         var sizeContainer = rowGroup.add("group");
         sizeContainer.orientation = "column";
         sizeContainer.alignChildren = "fill";
@@ -381,36 +513,42 @@ function showSetupDialog(docChoice) {
         sizeContainer.spacing = 2;
         
         var sizeDropdown = sizeContainer.add("dropdownlist", undefined, 
-            ['48"w x 96"h', '60"w x 120"h', '50"w x 100"h', 'Custom']);
+            ['Auto/Metadata', '48"w x 96"h', '60"w x 120"h', '50"w x 100"h', 'Custom']);
         sizeDropdown.preferredSize.width = 200;
         
         if (material) {
-            if (material.width === 48 && material.height === 96) {
-                sizeDropdown.selection = 0;
-            } else if (material.width === 60 && material.height === 120) {
+            // Check if material has packing data (custom sizes from metadata)
+            if (material.fromPackingData) {
+                sizeDropdown.selection = 0; // Auto/Metadata
+            } else if (material.width === 48 && material.height === 96) {
                 sizeDropdown.selection = 1;
-            } else if (material.width === 50 && material.height === 100) {
+            } else if (material.width === 60 && material.height === 120) {
                 sizeDropdown.selection = 2;
-            } else {
+            } else if (material.width === 50 && material.height === 100) {
                 sizeDropdown.selection = 3;
+            } else {
+                sizeDropdown.selection = 4;
             }
+        } else if (docChoice.hasPackingData) {
+            // Default to Auto/Metadata when creating from proof with packing data
+            sizeDropdown.selection = 0;
         }
         
         var customGroup = sizeContainer.add("group");
         customGroup.orientation = "row";
         customGroup.spacing = 5;
-        customGroup.visible = material && sizeDropdown.selection && sizeDropdown.selection.index === 3;
+        customGroup.visible = material && sizeDropdown.selection && sizeDropdown.selection.index === 4;
         
         customGroup.add("statictext", undefined, "W:");
-        var customW = customGroup.add("edittext", undefined, material && sizeDropdown.selection && sizeDropdown.selection.index === 3 ? material.width.toString() : "");
+        var customW = customGroup.add("edittext", undefined, material && sizeDropdown.selection && sizeDropdown.selection.index === 4 ? material.width.toString() : "");
         customW.preferredSize.width = 60;
         
         customGroup.add("statictext", undefined, "H:");
-        var customH = customGroup.add("edittext", undefined, material && sizeDropdown.selection && sizeDropdown.selection.index === 3 ? material.height.toString() : "");
+        var customH = customGroup.add("edittext", undefined, material && sizeDropdown.selection && sizeDropdown.selection.index === 4 ? material.height.toString() : "");
         customH.preferredSize.width = 60;
         
         sizeDropdown.onChange = function() {
-            customGroup.visible = (sizeDropdown.selection && sizeDropdown.selection.index === 3);
+            customGroup.visible = (sizeDropdown.selection && sizeDropdown.selection.index === 4);
             dialog.layout.layout(true);
         };
         
@@ -450,7 +588,21 @@ function showSetupDialog(docChoice) {
         }
     }
     
-    if (existingMaterials.length > 0) {
+    // Pre-populate from packing data if available
+    if (docChoice.hasPackingData && globalPackingData) {
+        var packingSpecs = convertPackingDataToSpecs(globalPackingData);
+        for (var i = 0; i < packingSpecs.length; i++) {
+            var spec = packingSpecs[i];
+            createRow({
+                name: spec.material,
+                width: spec.width,
+                height: spec.height,
+                maxPart: spec.quantity,
+                fromPackingData: true,
+                packingSheets: spec.packingSheets
+            });
+        }
+    } else if (existingMaterials.length > 0) {
         for (var i = 0; i < existingMaterials.length; i++) {
             createRow(existingMaterials[i]);
         }
@@ -517,14 +669,25 @@ function showSetupDialog(docChoice) {
             
             var width, height;
             var sizeKey;
+            var packingSheets = null;
             
             if (sizeIndex === 0) {
+                // Auto/Metadata - get from stored material data
+                if (!row.material.__metadata || !row.material.__metadata.width) {
+                    alert("Auto/Metadata selected but no metadata available for: " + mat);
+                    return;
+                }
+                width = row.material.__metadata.width;
+                height = row.material.__metadata.height;
+                packingSheets = row.material.__metadata.packingSheets;
+                sizeKey = "metadata_" + width + "x" + height;
+            } else if (sizeIndex === 1) {
                 width = 48; height = 96;
                 sizeKey = "48x96";
-            } else if (sizeIndex === 1) {
+            } else if (sizeIndex === 2) {
                 width = 60; height = 120;
                 sizeKey = "60x120";
-            } else if (sizeIndex === 2) {
+            } else if (sizeIndex === 3) {
                 width = 50; height = 100;
                 sizeKey = "50x100";
             } else {
@@ -587,7 +750,8 @@ function showSetupDialog(docChoice) {
                 width: width,
                 height: height,
                 quantity: qtyToCreate,
-                startingPartNumber: startingPartNumber
+                startingPartNumber: startingPartNumber,
+                packingSheets: packingSheets
             });
         }
         
@@ -604,7 +768,9 @@ function showSetupDialog(docChoice) {
         result = {
             docChoice: docChoice,
             canvasType: canvasDropdown ? (canvasDropdown.selection.index === 0 ? "Large" : "Standard") : null,
-            regDots: regDropdown.selection.index === 0 ? "TopBottom" : (regDropdown.selection.index === 1 ? "LeftRight" : "None"),
+            regDots: regDropdown.selection.index === 0 ? "Auto" : (regDropdown.selection.index === 1 ? "TopBottom" : (regDropdown.selection.index === 2 ? "LeftRight" : "None")),
+            createPlaceholders: placeholderCheckbox.value,
+            packingData: globalPackingData,
             specs: specs
         };
         
@@ -1042,12 +1208,32 @@ function createArtboards(config) {
                 $.writeln("Artboard created successfully!");
                 $.writeln("Actual bounds: " + ab.artboardRect);
                 
-                if (config.regDots !== "None") {
+                // Determine reg dot placement
+                var regPlacement = config.regDots;
+                if (config.regDots === "Auto" && spec.packingSheets && spec.packingSheets[q]) {
+                    // Use metadata from packing data
+                    var sheet = spec.packingSheets[q];
+                    if (sheet.registration && sheet.registration.type) {
+                        regPlacement = (sheet.registration.type === "vertical") ? "LeftRight" : "TopBottom";
+                        $.writeln("Auto reg dots: Using " + regPlacement + " from metadata");
+                    } else {
+                        regPlacement = "LeftRight"; // Fallback
+                    }
+                }
+                
+                if (regPlacement !== "None") {
                     $.writeln("Creating reg dots...");
-                    createRegDots(doc, regLayer, ab, config.regDots, scale);
+                    createRegDots(doc, regLayer, ab, regPlacement, scale);
                     $.writeln("Reg dots created");
                 } else {
                     $.writeln("Skipping reg dots (None selected)");
+                }
+                
+                // Create placeholder artwork if requested
+                if (config.createPlaceholders && spec.packingSheets && spec.packingSheets[q]) {
+                    $.writeln("Creating placeholder artwork...");
+                    createPlaceholderArtwork(doc, ab, spec.packingSheets[q], scale, spec.material);
+                    $.writeln("Placeholder artwork created");
                 }
                 
                 currentX += artboardWidth + spacing;
@@ -1249,4 +1435,236 @@ function createSingleRegDot(doc, layer, centerX, centerY, scale) {
     innerCircle.moveToBeginning(clipGroup);
     outerCircle.moveToBeginning(clipGroup);
     clipGroup.clipped = true;
+}
+
+function applyStrokeToGroup(group, strokeColor, strokeWidth) {
+    // Apply stroke to all compound paths in this group
+    for (var i = 0; i < group.compoundPathItems.length; i++) {
+        var compound = group.compoundPathItems[i];
+        compound.stroked = true;
+        compound.strokeColor = strokeColor;
+        compound.strokeWidth = strokeWidth;
+    }
+    
+    // Apply stroke to all simple paths in this group
+    for (var i = 0; i < group.pathItems.length; i++) {
+        var path = group.pathItems[i];
+        path.stroked = true;
+        path.strokeColor = strokeColor;
+        path.strokeWidth = strokeWidth;
+    }
+    
+    // Recursively apply to nested groups
+    for (var i = 0; i < group.groupItems.length; i++) {
+        applyStrokeToGroup(group.groupItems[i], strokeColor, strokeWidth);
+    }
+}
+
+function createPlaceholderArtwork(doc, artboard, sheetData, scale, materialName) {
+    try {
+        // Get or create placeholder layer
+        var placeholderLayer = getOrCreateLayer(doc, "Placeholders");
+        
+        var bounds = artboard.artboardRect;
+        var artboardLeft = bounds[0];
+        var artboardTop = bounds[1];
+        
+        // Color palette for different line items (bright, distinct colors)
+        var lineColors = [
+            {c: 0, m: 100, y: 100, k: 0},    // Red
+            {c: 100, m: 0, y: 100, k: 0},    // Green
+            {c: 100, m: 100, y: 0, k: 0},    // Blue
+            {c: 0, m: 100, y: 0, k: 0},      // Magenta
+            {c: 100, m: 0, y: 0, k: 0},      // Cyan
+            {c: 0, m: 50, y: 100, k: 0},     // Orange
+            {c: 50, m: 0, y: 100, k: 0},     // Yellow-Green
+            {c: 100, m: 50, y: 0, k: 0},     // Purple
+            {c: 0, m: 100, y: 50, k: 0},     // Pink
+            {c: 50, m: 100, y: 0, k: 0}      // Violet
+        ];
+        
+        if (!sheetData.signs || sheetData.signs.length === 0) {
+            $.writeln("No signs in sheet data for placeholder artwork");
+            return;
+        }
+        
+        // Track which line numbers we've seen to assign colors
+        var lineNumberColors = {};
+        var colorIndex = 0;
+        
+        // Create each sign placeholder
+        for (var i = 0; i < sheetData.signs.length; i++) {
+            var sign = sheetData.signs[i];
+            
+            // Assign color based on line number
+            if (!lineNumberColors[sign.line_number]) {
+                lineNumberColors[sign.line_number] = lineColors[colorIndex % lineColors.length];
+                colorIndex++;
+            }
+            var fillColorData = lineNumberColors[sign.line_number];
+            
+            var fillColor = new CMYKColor();
+            fillColor.cyan = fillColorData.c;
+            fillColor.magenta = fillColorData.m;
+            fillColor.yellow = fillColorData.y;
+            fillColor.black = fillColorData.k;
+            
+            // Convert sign position from inches to points and scale
+            var signLeft = artboardLeft + ((sign.x * 72) / scale);
+            var signTop = artboardTop - ((sign.y * 72) / scale);
+            var signWidth = (sign.width * 72) / scale;
+            var signHeight = (sign.height * 72) / scale;
+            
+            // DON'T swap dimensions - the packing engine already swaps them
+            // When rotated=true, width/height are already in rotated state
+            // (e.g. a 60×24 sign rotated becomes 24×60 in the data)
+            
+            // Create rectangle with dimensions exactly as provided
+            var rect = placeholderLayer.pathItems.rectangle(
+                signTop,
+                signLeft,
+                signWidth,
+                signHeight
+            );
+            
+            rect.filled = true;
+            rect.fillColor = fillColor;
+            rect.stroked = true;
+            
+            var strokeColor = new CMYKColor();
+            strokeColor.cyan = 0;
+            strokeColor.magenta = 0;
+            strokeColor.yellow = 0;
+            strokeColor.black = 100;
+            rect.strokeColor = strokeColor;
+            rect.strokeWidth = 1;
+            
+            // Create text label with line number (120pt, Black weight, white stroke)
+            var textFrame = null;
+            if (sign.line_number) {
+                // Count how many signs with this line number we've created so far
+                var signCount = 1;
+                for (var j = 0; j < i; j++) {
+                    if (sheetData.signs[j].line_number === sign.line_number) {
+                        signCount++;
+                    }
+                }
+                
+                var labelText = "Line_" + sign.line_number + "_Sign_" + signCount;
+                
+                textFrame = placeholderLayer.textFrames.add();
+                textFrame.contents = labelText;
+                textFrame.textRange.characterAttributes.size = 60 / scale;
+                
+                // Set text to Black weight (heaviest)
+                try {
+                    textFrame.textRange.characterAttributes.textFont = app.textFonts.getByName("MyriadPro-Black");
+                } catch (e) {
+                    // Fallback if MyriadPro-Black not available, try Arial Black
+                    try {
+                        textFrame.textRange.characterAttributes.textFont = app.textFonts.getByName("Arial-Black");
+                    } catch (e2) {
+                        // If neither available, just use bold
+                        $.writeln("Black weight font not found, using default bold");
+                    }
+                }
+                
+                // Set fill color before converting to outlines
+                textFrame.textRange.characterAttributes.fillColor = strokeColor;
+                
+                // Center text in rectangle BEFORE converting to outlines
+                var textWidth = textFrame.width;
+                var textHeight = textFrame.height;
+                var textX = signLeft + (signWidth - textWidth) / 2;
+                var textY = signTop - (signHeight - textHeight) / 2;
+                textFrame.position = [textX, textY];
+                
+                // Set up colors
+                var whiteColor = new CMYKColor();
+                whiteColor.cyan = 0;
+                whiteColor.magenta = 0;
+                whiteColor.yellow = 0;
+                whiteColor.black = 0;
+                
+                // CENTER POSITION (calculate once, use for both text layers)
+                var textWidth = textFrame.width;
+                var textHeight = textFrame.height;
+                var textX = signLeft + (signWidth - textWidth) / 2;
+                var textY = signTop - (signHeight - textHeight) / 2;
+                
+                // === FILL LAYER (bottom - created first) ===
+                // Set ONLY fill on original text frame
+                textFrame.textRange.characterAttributes.fillColor = strokeColor;
+                textFrame.textRange.characterAttributes.filled = true;
+                textFrame.textRange.characterAttributes.stroked = false;
+                
+                // Position it
+                textFrame.position = [textX, textY];
+                
+                // Convert to outlines
+                var fillLayer = textFrame.createOutline();
+                
+                // === STROKE LAYER (top - created second, so it's on top) ===
+                // Create NEW text frame from scratch (on top)
+                var strokeTextFrame = placeholderLayer.textFrames.add();
+                strokeTextFrame.contents = labelText;
+                strokeTextFrame.textRange.characterAttributes.size = 60 / scale;
+                
+                // Set same font
+                try {
+                    strokeTextFrame.textRange.characterAttributes.textFont = app.textFonts.getByName("MyriadPro-Black");
+                } catch (e) {
+                    try {
+                        strokeTextFrame.textRange.characterAttributes.textFont = app.textFonts.getByName("Arial-Black");
+                    } catch (e2) {
+                        $.writeln("Black weight font not found, using default bold");
+                    }
+                }
+                
+                // Set ONLY stroke (no fill)
+                strokeTextFrame.textRange.characterAttributes.stroked = true;
+                strokeTextFrame.textRange.characterAttributes.strokeColor = whiteColor;
+                strokeTextFrame.textRange.characterAttributes.strokeWeight = 10 / scale;
+                strokeTextFrame.textRange.characterAttributes.filled = false;
+                
+                // Position it in same place
+                strokeTextFrame.position = [textX, textY];
+                
+                // Convert to outlines
+                var strokeLayer = strokeTextFrame.createOutline();
+                
+                // Store reference to fill layer
+                textFrame = fillLayer;
+            }
+            
+            // Group rectangle and text together with matching name
+            var group = placeholderLayer.groupItems.add();
+            if (sign.line_number) {
+                // Count signs again for group name
+                var signCount = 1;
+                for (var j = 0; j < i; j++) {
+                    if (sheetData.signs[j].line_number === sign.line_number) {
+                        signCount++;
+                    }
+                }
+                group.name = "Line_" + sign.line_number + "_Sign_" + signCount;
+            } else {
+                group.name = "Sign_" + (i + 1);
+            }
+            rect.moveToBeginning(group);
+            if (textFrame) {
+                // Move stroke layer FIRST (so it ends up behind)
+                if (typeof strokeLayer !== 'undefined' && strokeLayer) {
+                    strokeLayer.moveToBeginning(group);
+                }
+                // Move fill layer SECOND (so it ends up on top)
+                textFrame.moveToBeginning(group);
+            }
+        }
+        
+        $.writeln("Created " + sheetData.signs.length + " placeholder rectangles with color coding");
+        
+    } catch (e) {
+        $.writeln("Error creating placeholder artwork: " + e.message);
+    }
 }
