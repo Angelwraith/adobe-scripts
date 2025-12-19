@@ -3,7 +3,7 @@
 {
   "name": "Cut Path Separator",
   "description": "Organize Cut/Print Data Into Respective Layers",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["Cut", "Path", "Separator", "processors"]
 }
@@ -19,6 +19,20 @@
     }
     
     var doc = app.activeDocument;
+    
+    // Check for Aluminum material safety warning by checking artboard names
+    var hasAluminum = false;
+    for (var i = 0; i < doc.artboards.length; i++) {
+        if (doc.artboards[i].name.indexOf("Alum") !== -1) {
+            hasAluminum = true;
+            break;
+        }
+    }
+    
+    if (hasAluminum) {
+        alert("For router safety, Aluminum signs must be a minimum of 2\" from cut to cut.");
+    }
+    
     var spotColorNames = ["CutThrough2-Outside", "CutThrough1-Inside", "PinMountHoles-Inside", "CutThrough-Knifecut", "CutContour", "Spot1"];
     var totalMovedPaths = 0;
     var targetStrokeWidth = 5 / doc.scaleFactor; // Adjust for Large Canvas documents
