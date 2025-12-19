@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "3.7",
+  "version": "3.8",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -297,7 +297,7 @@ function showFontCustomizationDialog(currentFontName, currentFontSize) {
     if (fontDialog.show() == 1) {
         return {
             fontName: fontDropdown.selection.text,
-            fontSize: parseFloat(fontSizeInput.text) || 18
+            fontSize: parseFloat(fontSizeInput.text) || 12
         };
     }
     
@@ -320,7 +320,7 @@ function main() {
     
     // Default font settings
     var currentFontName = "MyriadPro-Semibold";
-    var currentFontSize = 18;
+    var currentFontSize = 12;
     
     // Try to find default font in available fonts
     var fonts = app.textFonts;
@@ -423,11 +423,6 @@ function main() {
     var heightPosDropdown = dimRow.add("dropdownlist", undefined, ["Left", "Right"]);
     heightPosDropdown.selection = 0; // Default to Left
     
-    var offsetGroup = dimPanel.add("group");
-    offsetGroup.add("statictext", undefined, "Offset from object (inches):");
-    var offsetInput = offsetGroup.add("edittext", undefined, "0.125");
-    offsetInput.characters = 6;
-    
     var roundingGroup = dimPanel.add("group");
     roundingGroup.add("statictext", undefined, "Rounding:");
     var roundingDropdown = roundingGroup.add("dropdownlist", undefined, ["None", "1/16\" (0.0625)", "1/8\" (0.125)", "1/4\" (0.25)", "1/2\" (0.5)", "Integer"]);
@@ -467,11 +462,6 @@ function main() {
             fontInfoText.text = "Font: " + currentFontName + " (" + currentFontSize + "pt)";
         }
     };
-    
-    var textOffsetGroup = stylePanel.add("group");
-    textOffsetGroup.add("statictext", undefined, "Text Offset from Line (inches):");
-    var textOffsetInput = textOffsetGroup.add("edittext", undefined, "0.125");
-    textOffsetInput.characters = 6;
     
     // Collision detection
     var collisionPanel = dialog.add("panel", undefined, "Smart Placement");
@@ -533,7 +523,7 @@ function main() {
         addHeight: checkHeight.value,
         widthPos: widthPosDropdown.selection.text,
         heightPos: heightPosDropdown.selection.text,
-        offset: parseFloat(offsetInput.text) * 72 || 9,
+        offset: 0.1 * 72,
         scale: scaleText,
         scaleRatio: scaleRatio,
         precision: precisionDropdown.selection.index,
@@ -541,11 +531,11 @@ function main() {
         scaleTextPosition: scaleTextDropdown.selection.text,
         lineColor: colorDropdown.selection.text,
         lineWeight: 1,
-        extensionLength: 0.125 * 72,
-        extensionOffset: 0.069 * 72,
+        extensionLength: 0.083 * 72,
+        extensionOffset: 0.046 * 72,
         fontName: currentFontName,
         fontSize: currentFontSize,
-        textOffset: parseFloat(textOffsetInput.text) * 72 || 9,
+        textOffset: 0.05 * 72,
         checkCollision: checkCollision.value,
         useNewLayer: checkNewLayer.value,
         layerName: layerNameInput.text || "Dimensions",
