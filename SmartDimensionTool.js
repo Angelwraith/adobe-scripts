@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "3.8",
+  "version": "3.9",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -389,15 +389,38 @@ function main() {
     
     scaleDropdown.preferredSize.width = 80;
     
-    var customScaleNumerator = scaleRow.add("edittext", undefined, "1");
+    // Parse existing scale for custom values
+    var initialNumerator = "1";
+    var initialDenominator = "1";
+    if (existingScale && existingScale.indexOf(":") > -1) {
+        var scaleParts = existingScale.split(":");
+        if (scaleParts.length === 2) {
+            initialNumerator = scaleParts[0];
+            initialDenominator = scaleParts[1];
+            
+            // If it's a custom scale (not in dropdown), select Custom and populate fields
+            var scaleFound = false;
+            for (var i = 0; i < scaleDropdown.items.length - 1; i++) { // -1 to exclude "Custom"
+                if (scaleDropdown.items[i].text === existingScale) {
+                    scaleFound = true;
+                    break;
+                }
+            }
+            if (!scaleFound) {
+                scaleDropdown.selection = scaleDropdown.items.length - 1; // Select "Custom"
+            }
+        }
+    }
+    
+    var customScaleNumerator = scaleRow.add("edittext", undefined, initialNumerator);
     customScaleNumerator.characters = 3;
-    customScaleNumerator.enabled = false;
+    customScaleNumerator.enabled = (scaleDropdown.selection && scaleDropdown.selection.text === "Custom");
     
     scaleRow.add("statictext", undefined, ":");
     
-    var customScaleDenominator = scaleRow.add("edittext", undefined, "1");
+    var customScaleDenominator = scaleRow.add("edittext", undefined, initialDenominator);
     customScaleDenominator.characters = 3;
-    customScaleDenominator.enabled = false;
+    customScaleDenominator.enabled = (scaleDropdown.selection && scaleDropdown.selection.text === "Custom");
     
     // Enable/disable custom scale inputs based on dropdown selection
     scaleDropdown.onChange = function() {
