@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "Scale and Repeat",
   "description": "Scale artwork by ratio and repeat with spacing",
-  "version": "1.0",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["scale", "repeat", "production"]
 }@END_METADATA*/
@@ -60,7 +60,7 @@ if (app.documents.length === 0) {
         
         var currentDropdown = mainRow.add("dropdownlist", undefined, scaleOptions);
         currentDropdown.preferredSize.width = 120;
-        currentDropdown.selection = 5; // Default to 1:10
+        currentDropdown.selection = 0; // Default to 1:1
         
         var separator1 = mainRow.add("statictext", undefined, "|");
         separator1.preferredSize.width = 20;
