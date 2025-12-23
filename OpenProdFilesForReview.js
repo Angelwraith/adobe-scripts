@@ -1,9 +1,9 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.3",
+  "version": "1.4",
   "target": "illustrator",
-  "tags": ["review", "check", "file""]
+  "tags": ["review", "check", "file"]
 }@END_METADATA*/
 
 (function() {
@@ -203,10 +203,10 @@
     function getBaseName(fileName) {
         // Remove keywords and file extension to get base name for matching
         var baseName = fileName.toUpperCase();
-        baseName = baseName.replace(/PRINT/gi, "");
-        baseName = baseName.replace(/PNC/gi, "");
-        baseName = baseName.replace(/CUTONLY/gi, "");
-        baseName = baseName.replace(/CUT/gi, "");
+        baseName = baseName.replace(/_PRINT_/gi, "_");
+        baseName = baseName.replace(/_PNC_/gi, "_");
+        baseName = baseName.replace(/_CUTONLY_/gi, "_");
+        baseName = baseName.replace(/_CUT_/gi, "_");
         baseName = baseName.replace(/\.AI$/gi, "");
         baseName = baseName.replace(/\.EPS$/gi, "");
         baseName = baseName.replace(/\.PDF$/gi, "");
