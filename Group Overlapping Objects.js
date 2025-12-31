@@ -3,7 +3,7 @@
 {
   "name": "Auto-Group Overlapping",
   "description": "Create Groups From Isolated Overlapping Objects",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["group", "auto", "utility"]
 }
