@@ -3,7 +3,7 @@
 {
   "name": "Auto-Group Overlapping",
   "description": "Create Groups From Isolated Overlapping Objects",
-  "version": "1.0",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["group", "auto", "utility"]
 }
@@ -23,6 +23,9 @@
         alert('No active document found.');
         return;
     }
+    
+    // Set inset amount to ignore edge touches (1 point works reliably)
+    var INSET_AMOUNT = 1;
     
     if (app.selection.length < 2) {
         alert('Please select at least 2 objects to group.');
@@ -74,19 +77,26 @@
     }
     
     /**
-     * Cache bounding boxes for performance
+     * Cache bounding boxes for performance with optional inset
      */
     function cacheBoundingBoxes(objects) {
         var boxes = [];
         for (var i = 0; i < objects.length; i++) {
             var bounds = objects[i].geometricBounds;
+            
+            // Apply inset to shrink bounding box inward
+            var left = bounds[0] + INSET_AMOUNT;
+            var top = bounds[1] - INSET_AMOUNT;
+            var right = bounds[2] - INSET_AMOUNT;
+            var bottom = bounds[3] + INSET_AMOUNT;
+            
             boxes[i] = {
-                left: bounds[0],
-                top: bounds[1],
-                right: bounds[2],
-                bottom: bounds[3],
-                width: bounds[2] - bounds[0],
-                height: bounds[1] - bounds[3],
+                left: left,
+                top: top,
+                right: right,
+                bottom: bottom,
+                width: right - left,
+                height: top - bottom,
                 index: i
             };
         }
@@ -110,11 +120,12 @@
     
     /**
      * Optimized bounding box overlap detection
+     * Boxes have already been inset, so we just check for any overlap
      */
     function boxesOverlap(box1, box2) {
         // Early termination - check if boxes are completely separate
-        if (box1.right < box2.left || box2.right < box1.left) return false;
-        if (box1.bottom > box2.top || box2.bottom > box1.top) return false;
+        if (box1.right <= box2.left || box2.right <= box1.left) return false;
+        if (box1.bottom >= box2.top || box2.bottom >= box1.top) return false;
         
         return true;
     }
