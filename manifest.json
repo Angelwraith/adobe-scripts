@@ -1,0 +1,649 @@
+{
+  "last_updated": "2026-01-05T15:54:04.781995",
+  "deployer_version": "3.0",
+  "total_scripts": 30,
+  "launcher_version": "4.0",
+  "repository": "Angelwraith/adobe-scripts",
+  "scripts": {
+    "Address Formatter.js": {
+      "filename": "Address Formatter.js",
+      "metadata": {
+        "name": "BROKEN!!!Address Format Corrector",
+        "version": "1.0",
+        "description": "Corrects address formatting to proper postal standards",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "address",
+          "formatting",
+          "postal",
+          "text"
+        ]
+      },
+      "hash": "a3850febc6dc15c8b4f465d3a47f417f",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Address Formatter.js",
+      "file_size": 17137,
+      "last_modified": "2025-10-03T10:13:06.369967",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Address Formatter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Address Formatter.js"
+    },
+    "Color Key.js": {
+      "filename": "Color Key.js",
+      "metadata": {
+        "name": "Color Key Creator",
+        "version": "1.1",
+        "description": "Create A Prepositioned Color Key On Proofs",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "proof",
+          "color",
+          "key"
+        ]
+      },
+      "hash": "7dfea7b01f1b456825991c3ccf074b13",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Color Key.js",
+      "file_size": 28029,
+      "last_modified": "2025-12-08T13:35:32.620084",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color Key.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color Key.js"
+    },
+    "Cut Path Counter.js": {
+      "filename": "Cut Path Counter.js",
+      "metadata": {
+        "name": "Cut Path Counter",
+        "version": "1.0",
+        "description": "Count CutContour and CutThrough2-Outside paths in current selection",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "selection",
+          "cutcontour",
+          "cutthrough",
+          "count"
+        ]
+      },
+      "hash": "25f28d7dc1e8247cc4caa824eb62afa0",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Cut Path Counter.js",
+      "file_size": 8940,
+      "last_modified": "2025-09-10T13:13:21.608380",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut Path Counter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut Path Counter.js"
+    },
+    "Cut Path Separator.js": {
+      "filename": "Cut Path Separator.js",
+      "metadata": {
+        "name": "Cut Path Separator",
+        "version": "1.2",
+        "description": "Organize Cut/Print Data Into Respective Layers",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Cut",
+          "Path",
+          "Separator",
+          "processors"
+        ]
+      },
+      "hash": "0a66828917357124ca8b9586b44e79d6",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Cut Path Separator.js",
+      "file_size": 30153,
+      "last_modified": "2025-12-19T13:34:04.372750",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut Path Separator.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut Path Separator.js"
+    },
+    "Detect Inside and Outside Paths for Copy.js": {
+      "filename": "Detect Inside and Outside Paths for Copy.js",
+      "metadata": {
+        "name": "Inside / Outside cut labeler",
+        "version": "1.0",
+        "description": "Detects and sets spot colors for inside and outside cuts on ungrouped outlined copy",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "sort",
+          "processor",
+          "Spot",
+          "Colors"
+        ]
+      },
+      "hash": "32458d0cc94c2b0f460a7f77e615803b",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Detect Inside and Outside Paths for Copy.js",
+      "file_size": 5088,
+      "last_modified": "2025-10-09T07:47:36.957864",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect Inside and Outside Paths for Copy.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect Inside and Outside Paths for Copy.js"
+    },
+    "export_artboards_jpg.js": {
+      "filename": "export_artboards_jpg.js",
+      "metadata": {
+        "name": "Export Artboards - Proof or Print",
+        "version": "5.1",
+        "description": "Exports artboards as proofs (72 PPI) or prints (720 PPI) to respective folders",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "export",
+          "artboards",
+          "jpg",
+          "proof",
+          "print"
+        ]
+      },
+      "hash": "d25e09c38c43d3696548a6ae9baf1209",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\export_artboards_jpg.js",
+      "file_size": 20852,
+      "last_modified": "2025-10-09T16:30:47.355195",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/export_artboards_jpg.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/export_artboards_jpg.js"
+    },
+    "File Check.js": {
+      "filename": "File Check.js",
+      "metadata": {
+        "name": "File Check",
+        "version": "2.9",
+        "description": "Production file readiness analysis",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "file",
+          "check",
+          "report"
+        ]
+      },
+      "hash": "5e4d385fbe00b6d93c942e661f5027a2",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\File Check.js",
+      "file_size": 45619,
+      "last_modified": "2026-01-05T15:53:19.379559",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File Check.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File Check.js"
+    },
+    "File Name Sorter.js": {
+      "filename": "File Name Sorter.js",
+      "metadata": {
+        "name": "File Name Sorter",
+        "version": "1.0",
+        "description": "Organize Selected Objects by Sequential File Names",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Sorter",
+          "processors",
+          "name"
+        ]
+      },
+      "hash": "4c3c96c100ea9c2cf8698e096f177b91",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\File Name Sorter.js",
+      "file_size": 10094,
+      "last_modified": "2025-10-09T07:42:19.798750",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File Name Sorter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File Name Sorter.js"
+    },
+    "Group Overlapping Objects.js": {
+      "filename": "Group Overlapping Objects.js",
+      "metadata": {
+        "name": "Auto-Group Overlapping",
+        "version": "1.2",
+        "description": "Create Groups From Isolated Overlapping Objects",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "group",
+          "auto",
+          "utility"
+        ]
+      },
+      "hash": "600ac983bdebcac5026548cbfe506a12",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Group Overlapping Objects.js",
+      "file_size": 8411,
+      "last_modified": "2025-12-31T08:24:43.347159",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Group Overlapping Objects.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Group Overlapping Objects.js"
+    },
+    "image_quality_analyzer.js": {
+      "filename": "image_quality_analyzer.js",
+      "metadata": {
+        "name": "Image Quality Analysis",
+        "version": "2.1",
+        "description": "Analyze selected images and label them with resolution info",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "image",
+          "quality",
+          "resolution",
+          "PPI"
+        ]
+      },
+      "hash": "5202eb82102dee2a6d95706e757111e4",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\image_quality_analyzer.js",
+      "file_size": 12177,
+      "last_modified": "2025-11-12T10:41:55.209850",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js"
+    },
+    "Label Images in Group.js": {
+      "filename": "Label Images in Group.js",
+      "metadata": {
+        "name": "Wrap Image Namer",
+        "version": "1.0",
+        "description": "Adds Filenames Above Images for Wrap ProdProofs",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "ProdProof",
+          "namer",
+          "wrap"
+        ]
+      },
+      "hash": "786b4215e56e542ca29b211d60b32ab2",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Label Images in Group.js",
+      "file_size": 4818,
+      "last_modified": "2025-08-30T12:57:03.636279",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label Images in Group.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label Images in Group.js"
+    },
+    "Link Namer.js": {
+      "filename": "Link Namer.js",
+      "metadata": {
+        "name": "Link Namer",
+        "version": "1.1",
+        "description": "Name Linked Files for ProdProof Layout",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "ProdProof",
+          "linked",
+          "namer"
+        ]
+      },
+      "hash": "cd5828335ad30fda60fe85f7de6d37a5",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Link Namer.js",
+      "file_size": 7958,
+      "last_modified": "2025-09-26T20:29:40.613390",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link Namer.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link Namer.js"
+    },
+    "Make Size Consistent.js": {
+      "filename": "Make Size Consistent.js",
+      "metadata": {
+        "name": "Make Size Consistent",
+        "version": "1.0",
+        "description": "Resize All Selected Objects to Same Size",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "resize",
+          "processors"
+        ]
+      },
+      "hash": "a01993c3c925df7cf76045afb2c10843",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Make Size Consistent.js",
+      "file_size": 2710,
+      "last_modified": "2025-10-09T07:41:36.319036",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make Size Consistent.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make Size Consistent.js"
+    },
+    "Measurement Converter.js": {
+      "filename": "Measurement Converter.js",
+      "metadata": {
+        "name": "Measurement Converter",
+        "version": "1.0",
+        "description": "U.S. Customary to Decimal Converter",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "measurement",
+          "conversion",
+          "decimal",
+          "imperial"
+        ]
+      },
+      "hash": "9149cb3da4b6f0fb586c3b3fef2f5955",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Measurement Converter.js",
+      "file_size": 9952,
+      "last_modified": "2025-08-29T21:17:10.747014",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement Converter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement Converter.js"
+    },
+    "Move CUTS to PRINTS.js": {
+      "filename": "Move CUTS to PRINTS.js",
+      "metadata": {
+        "name": "CUT Mover",
+        "version": "1.1",
+        "description": "For after naming files, this script aligns CUT files to PRINT File position and layer orders",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "CUT",
+          "mover",
+          "utility"
+        ]
+      },
+      "hash": "19b5ddd9cbbc8266c7f8e0bb4918e065",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Move CUTS to PRINTS.js",
+      "file_size": 5609,
+      "last_modified": "2025-10-09T07:33:02.948229",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move CUTS to PRINTS.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move CUTS to PRINTS.js"
+    },
+    "New Proof from Template.js": {
+      "filename": "New Proof from Template.js",
+      "metadata": {
+        "name": "New Proof From Template",
+        "version": "1.2",
+        "description": "Create a blank proof from a Sheet file",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Optimal",
+          "Prime",
+          "processors",
+          "scaleFactor"
+        ]
+      },
+      "hash": "f856429354b45ee311dfe199539c56b0",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\New Proof from Template.js",
+      "file_size": 21498,
+      "last_modified": "2025-10-16T14:57:19.854189",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/New Proof from Template.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/New Proof from Template.js"
+    },
+    "OpenProdFilesForReview.js": {
+      "filename": "OpenProdFilesForReview.js",
+      "metadata": {
+        "name": "Open Production Files and organize for review",
+        "version": "1.4",
+        "description": "Open print and cut files, organize them together and tile the view to show them all",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "review",
+          "check",
+          "file"
+        ]
+      },
+      "hash": "58880f128f8c01cd41c44710b6857f0d",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\OpenProdFilesForReview.js",
+      "file_size": 9826,
+      "last_modified": "2025-12-23T15:15:40.755793",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
+    },
+    "Optimal PRIME transformer.js": {
+      "filename": "Optimal PRIME transformer.js",
+      "metadata": {
+        "name": "Optimal PRIME Transformer",
+        "version": "1.7",
+        "description": "Generate Production Files From a PRIME",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Optimal",
+          "Prime",
+          "processors",
+          "scaleFactor"
+        ]
+      },
+      "hash": "d05576811fdf8131396911f86270700b",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Optimal PRIME transformer.js",
+      "file_size": 46858,
+      "last_modified": "2025-12-05T09:29:07.563364",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal PRIME transformer.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal PRIME transformer.js"
+    },
+    "pnc_bleeder.js": {
+      "filename": "pnc_bleeder.js",
+      "metadata": {
+        "name": "PnC Bleeder",
+        "version": "1.0",
+        "description": "Automatically generates intelligent color-matched bleed/trap paths for vinyl cutting on complex multi-color artwork",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "vinyl cutting",
+          "trapping",
+          "bleed generation"
+        ]
+      },
+      "hash": "ba95be42aef8cc22c7ce2b3a0f92f097",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\pnc_bleeder.js",
+      "file_size": 10390,
+      "last_modified": "2025-10-10T10:37:48.537159",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/pnc_bleeder.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/pnc_bleeder.js"
+    },
+    "PRIME Flex Template.js": {
+      "filename": "PRIME Flex Template.js",
+      "metadata": {
+        "name": "PRIME Flex Template",
+        "version": "3.6",
+        "description": "Create artboards with reg dots for flexible materials",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "artboard",
+          "template",
+          "setup"
+        ]
+      },
+      "hash": "206664c425b1f3c6eb61b4f72853c071",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\PRIME Flex Template.js",
+      "file_size": 64971,
+      "last_modified": "2025-12-13T09:53:30.213457",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME Flex Template.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME Flex Template.js"
+    },
+    "Qty Sum.js": {
+      "filename": "Qty Sum.js",
+      "metadata": {
+        "name": "Qty: Sum",
+        "version": "1.0",
+        "description": "Sum Quantities from Selected Text Objects",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Qty",
+          "sum",
+          "utility"
+        ]
+      },
+      "hash": "6e12620ca29394fb3c312caa8a219f23",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Qty Sum.js",
+      "file_size": 2921,
+      "last_modified": "2025-08-30T13:03:27.975168",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty Sum.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty Sum.js"
+    },
+    "Rearrange_Registration_Dots.js": {
+      "filename": "Rearrange_Registration_Dots.js",
+      "metadata": {
+        "name": "Rearrange Registration Dots",
+        "version": "1.1",
+        "description": "Rearranges 5 selected registration dot groups to fit empty space on active artboard",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "registration",
+          "dots",
+          "artboard"
+        ]
+      },
+      "hash": "8434955df91676e739032c5ea47b7393",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Rearrange_Registration_Dots.js",
+      "file_size": 6118,
+      "last_modified": "2025-10-29T09:48:16.326015",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rearrange_Registration_Dots.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rearrange_Registration_Dots.js"
+    },
+    "scale_repeat_script.js": {
+      "filename": "scale_repeat_script.js",
+      "metadata": {
+        "name": "Scale and Repeat",
+        "version": "1.1",
+        "description": "Scale artwork by ratio and repeat with spacing",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "scale",
+          "repeat",
+          "production"
+        ]
+      },
+      "hash": "aee024f5eb14b326c2230d735fd505d7",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\scale_repeat_script.js",
+      "file_size": 11506,
+      "last_modified": "2025-12-23T15:15:59.829884",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_repeat_script.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_repeat_script.js"
+    },
+    "scale_to_target_size.js": {
+      "filename": "scale_to_target_size.js",
+      "metadata": {
+        "name": "Scale Selection to Target Size",
+        "version": "1.0",
+        "description": "Select a key object, enter target dimensions, and scale everything proportionally",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "scale",
+          "size",
+          "processors"
+        ]
+      },
+      "hash": "a585df63acb005f383a4e7f8701d311b",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\scale_to_target_size.js",
+      "file_size": 7645,
+      "last_modified": "2025-10-09T07:24:33.675066",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js"
+    },
+    "SmartDimensionTool.js": {
+      "filename": "SmartDimensionTool.js",
+      "metadata": {
+        "name": "Smart Dimension Tool",
+        "version": "3.9",
+        "description": "Add dimensions to an array of signs without the fuss",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Measure",
+          "Smart",
+          "Utility"
+        ]
+      },
+      "hash": "894aa6e321976cf6fac6fc20a1b73d6d",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\SmartDimensionTool.js",
+      "file_size": 41952,
+      "last_modified": "2025-12-23T15:15:41.822186",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js"
+    },
+    "Unrotate Groups.js": {
+      "filename": "Unrotate Groups.js",
+      "metadata": {
+        "name": "Group Un-Rotator",
+        "version": "1.0",
+        "description": "Un-Rotate a Group by a Baseline Reference",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Un-Rotate",
+          "group",
+          "transform"
+        ]
+      },
+      "hash": "e56a229bddc50d85210505f448eb253d",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Unrotate Groups.js",
+      "file_size": 3499,
+      "last_modified": "2025-08-30T12:47:17.132678",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate Groups.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate Groups.js"
+    },
+    "Wrap Template Converter.js": {
+      "filename": "Wrap Template Converter.js",
+      "metadata": {
+        "name": "Wrap Template Converter",
+        "version": "1.1",
+        "description": "Prepare Wrap Design Files From Templates",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "wrap",
+          "template",
+          "processors"
+        ]
+      },
+      "hash": "0a533e6bd80aa6060a0ae11778933ff4",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Wrap Template Converter.js",
+      "file_size": 6356,
+      "last_modified": "2025-09-02T11:42:26.394340",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap Template Converter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap Template Converter.js"
+    },
+    "wrap_converter_multidoc.js": {
+      "filename": "wrap_converter_multidoc.js",
+      "metadata": {
+        "name": "Wrap Template Converter (Multi-Doc)",
+        "version": "2.0",
+        "description": "Prepare Wrap Design Files From Templates - Multiple Documents",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "wrap",
+          "template",
+          "processors",
+          "multi-document"
+        ]
+      },
+      "hash": "d16d52102b9df307f413363ce6e0a662",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\wrap_converter_multidoc.js",
+      "file_size": 16653,
+      "last_modified": "2025-09-30T22:36:28.479696",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/wrap_converter_multidoc.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/wrap_converter_multidoc.js"
+    },
+    "Just Arrange it DAMNIT.jsx": {
+      "filename": "Just Arrange it DAMNIT.jsx",
+      "metadata": {
+        "name": "Just Arrange it DAMNIT",
+        "version": "2.0",
+        "description": "Poorly arranges objects on artboards.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Arrange",
+          "pack",
+          "processors"
+        ]
+      },
+      "hash": "69a459fd4e6fd2085e349c906d23b7a8",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Just Arrange it DAMNIT.jsx",
+      "file_size": 15819,
+      "last_modified": "2025-10-09T07:22:34.979796",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Just Arrange it DAMNIT.jsx",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Just Arrange it DAMNIT.jsx"
+    },
+    "Sort_Text_Numerically.jsx": {
+      "filename": "Sort_Text_Numerically.jsx",
+      "metadata": {
+        "name": "Sort Text Numerically",
+        "version": "1.0",
+        "description": "Sorts selected text frames numerically from left to right based on numbers found in the text content",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "text",
+          "sort",
+          "organize"
+        ]
+      },
+      "hash": "1f6104dfc73337b88bedf9c6733fcdf4",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Sort_Text_Numerically.jsx",
+      "file_size": 2768,
+      "last_modified": "2025-10-28T13:47:31.396798",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort_Text_Numerically.jsx",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort_Text_Numerically.jsx"
+    }
+  }
+}
