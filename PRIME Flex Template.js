@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.6",
+  "version": "3.7",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
