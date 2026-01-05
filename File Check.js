@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "File Check",
   "description": "Production file readiness analysis",
-  "version": "2.8",
+  "version": "2.9",
   "target": "illustrator",
   "tags": ["file", "check", "report"]
 }@END_METADATA*/
