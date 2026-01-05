@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-01-05T15:54:04.781995",
+  "last_updated": "2026-01-05T17:00:40.339066",
   "deployer_version": "3.0",
-  "total_scripts": 30,
+  "total_scripts": 29,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -24,8 +24,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Address Formatter.js",
       "file_size": 17137,
       "last_modified": "2025-10-03T10:13:06.369967",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Address Formatter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Address Formatter.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Address%20Formatter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Address%20Formatter.js"
     },
     "Color Key.js": {
       "filename": "Color Key.js",
@@ -45,8 +45,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Color Key.js",
       "file_size": 28029,
       "last_modified": "2025-12-08T13:35:32.620084",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color Key.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color Key.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js"
     },
     "Cut Path Counter.js": {
       "filename": "Cut Path Counter.js",
@@ -67,8 +67,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Cut Path Counter.js",
       "file_size": 8940,
       "last_modified": "2025-09-10T13:13:21.608380",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut Path Counter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut Path Counter.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Counter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Counter.js"
     },
     "Cut Path Separator.js": {
       "filename": "Cut Path Separator.js",
@@ -89,8 +89,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Cut Path Separator.js",
       "file_size": 30153,
       "last_modified": "2025-12-19T13:34:04.372750",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut Path Separator.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut Path Separator.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js"
     },
     "Detect Inside and Outside Paths for Copy.js": {
       "filename": "Detect Inside and Outside Paths for Copy.js",
@@ -111,8 +111,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Detect Inside and Outside Paths for Copy.js",
       "file_size": 5088,
       "last_modified": "2025-10-09T07:47:36.957864",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect Inside and Outside Paths for Copy.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect Inside and Outside Paths for Copy.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect%20Inside%20and%20Outside%20Paths%20for%20Copy.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect%20Inside%20and%20Outside%20Paths%20for%20Copy.js"
     },
     "export_artboards_jpg.js": {
       "filename": "export_artboards_jpg.js",
@@ -155,8 +155,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\File Check.js",
       "file_size": 45619,
       "last_modified": "2026-01-05T15:53:19.379559",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File Check.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File Check.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js"
     },
     "File Name Sorter.js": {
       "filename": "File Name Sorter.js",
@@ -176,8 +176,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\File Name Sorter.js",
       "file_size": 10094,
       "last_modified": "2025-10-09T07:42:19.798750",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File Name Sorter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File Name Sorter.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Name%20Sorter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Name%20Sorter.js"
     },
     "Group Overlapping Objects.js": {
       "filename": "Group Overlapping Objects.js",
@@ -197,8 +197,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Group Overlapping Objects.js",
       "file_size": 8411,
       "last_modified": "2025-12-31T08:24:43.347159",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Group Overlapping Objects.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Group Overlapping Objects.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Group%20Overlapping%20Objects.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Group%20Overlapping%20Objects.js"
     },
     "image_quality_analyzer.js": {
       "filename": "image_quality_analyzer.js",
@@ -240,8 +240,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Label Images in Group.js",
       "file_size": 4818,
       "last_modified": "2025-08-30T12:57:03.636279",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label Images in Group.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label Images in Group.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Images%20in%20Group.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Images%20in%20Group.js"
     },
     "Link Namer.js": {
       "filename": "Link Namer.js",
@@ -261,8 +261,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Link Namer.js",
       "file_size": 7958,
       "last_modified": "2025-09-26T20:29:40.613390",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link Namer.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link Namer.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link%20Namer.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link%20Namer.js"
     },
     "Make Size Consistent.js": {
       "filename": "Make Size Consistent.js",
@@ -281,8 +281,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Make Size Consistent.js",
       "file_size": 2710,
       "last_modified": "2025-10-09T07:41:36.319036",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make Size Consistent.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make Size Consistent.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make%20Size%20Consistent.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make%20Size%20Consistent.js"
     },
     "Measurement Converter.js": {
       "filename": "Measurement Converter.js",
@@ -303,8 +303,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Measurement Converter.js",
       "file_size": 9952,
       "last_modified": "2025-08-29T21:17:10.747014",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement Converter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement Converter.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement%20Converter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement%20Converter.js"
     },
     "Move CUTS to PRINTS.js": {
       "filename": "Move CUTS to PRINTS.js",
@@ -324,8 +324,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Move CUTS to PRINTS.js",
       "file_size": 5609,
       "last_modified": "2025-10-09T07:33:02.948229",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move CUTS to PRINTS.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move CUTS to PRINTS.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move%20CUTS%20to%20PRINTS.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move%20CUTS%20to%20PRINTS.js"
     },
     "New Proof from Template.js": {
       "filename": "New Proof from Template.js",
@@ -346,8 +346,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\New Proof from Template.js",
       "file_size": 21498,
       "last_modified": "2025-10-16T14:57:19.854189",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/New Proof from Template.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/New Proof from Template.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/New%20Proof%20from%20Template.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/New%20Proof%20from%20Template.js"
     },
     "OpenProdFilesForReview.js": {
       "filename": "OpenProdFilesForReview.js",
@@ -389,8 +389,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Optimal PRIME transformer.js",
       "file_size": 46858,
       "last_modified": "2025-12-05T09:29:07.563364",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal PRIME transformer.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal PRIME transformer.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
     "pnc_bleeder.js": {
       "filename": "pnc_bleeder.js",
@@ -417,7 +417,7 @@
       "filename": "PRIME Flex Template.js",
       "metadata": {
         "name": "PRIME Flex Template",
-        "version": "3.6",
+        "version": "3.7",
         "description": "Create artboards with reg dots for flexible materials",
         "author": "Unknown",
         "target": "illustrator",
@@ -427,12 +427,12 @@
           "setup"
         ]
       },
-      "hash": "206664c425b1f3c6eb61b4f72853c071",
+      "hash": "f9a5ed85904f0cf3f12c482c034a10a2",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\PRIME Flex Template.js",
       "file_size": 64971,
-      "last_modified": "2025-12-13T09:53:30.213457",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME Flex Template.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME Flex Template.js"
+      "last_modified": "2026-01-05T16:59:55.567316",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js"
     },
     "Qty Sum.js": {
       "filename": "Qty Sum.js",
@@ -452,8 +452,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Qty Sum.js",
       "file_size": 2921,
       "last_modified": "2025-08-30T13:03:27.975168",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty Sum.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty Sum.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty%20Sum.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty%20Sum.js"
     },
     "Rearrange_Registration_Dots.js": {
       "filename": "Rearrange_Registration_Dots.js",
@@ -557,8 +557,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Unrotate Groups.js",
       "file_size": 3499,
       "last_modified": "2025-08-30T12:47:17.132678",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate Groups.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate Groups.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate%20Groups.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate%20Groups.js"
     },
     "Wrap Template Converter.js": {
       "filename": "Wrap Template Converter.js",
@@ -578,8 +578,8 @@
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Wrap Template Converter.js",
       "file_size": 6356,
       "last_modified": "2025-09-02T11:42:26.394340",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap Template Converter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap Template Converter.js"
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap%20Template%20Converter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap%20Template%20Converter.js"
     },
     "wrap_converter_multidoc.js": {
       "filename": "wrap_converter_multidoc.js",
@@ -602,27 +602,6 @@
       "last_modified": "2025-09-30T22:36:28.479696",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/wrap_converter_multidoc.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/wrap_converter_multidoc.js"
-    },
-    "Just Arrange it DAMNIT.jsx": {
-      "filename": "Just Arrange it DAMNIT.jsx",
-      "metadata": {
-        "name": "Just Arrange it DAMNIT",
-        "version": "2.0",
-        "description": "Poorly arranges objects on artboards.",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "Arrange",
-          "pack",
-          "processors"
-        ]
-      },
-      "hash": "69a459fd4e6fd2085e349c906d23b7a8",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Just Arrange it DAMNIT.jsx",
-      "file_size": 15819,
-      "last_modified": "2025-10-09T07:22:34.979796",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Just Arrange it DAMNIT.jsx",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Just Arrange it DAMNIT.jsx"
     },
     "Sort_Text_Numerically.jsx": {
       "filename": "Sort_Text_Numerically.jsx",
