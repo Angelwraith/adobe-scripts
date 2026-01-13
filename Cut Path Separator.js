@@ -3,7 +3,7 @@
 {
   "name": "Cut Path Separator",
   "description": "Organize Cut/Print Data Into Respective Layers",
-  "version": "1.2",
+  "version": "1.3",
   "target": "illustrator",
   "tags": ["Cut", "Path", "Separator", "processors"]
 }
@@ -669,11 +669,65 @@
             var targetLayer = getOrCreateLayer(currentSpotColorName);
             processedLayers.push(targetLayer); // Track this layer
             
-            // Move all found paths to the target layer
-            var movedCount = 0;
+            // Build a map of group relationships before moving
+            var groupMap = {}; // Maps original group UUID to new group in target layer
+            var itemGroupInfo = []; // Stores each item with its group ancestry
+            
+            // Analyze group structure for each item
             for (var i = 0; i < pathsToMove.length; i++) {
+                var item = pathsToMove[i];
+                var groupChain = [];
+                var parent = item.parent;
+                
+                // Walk up the parent chain to find all ancestor groups
+                while (parent && parent.typename === "GroupItem") {
+                    groupChain.unshift(parent); // Add to beginning to maintain hierarchy
+                    parent = parent.parent;
+                }
+                
+                itemGroupInfo.push({
+                    item: item,
+                    groupChain: groupChain
+                });
+            }
+            
+            // Move all found paths to the target layer, preserving group structures
+            var movedCount = 0;
+            
+            for (var i = 0; i < itemGroupInfo.length; i++) {
                 try {
-                    pathsToMove[i].move(targetLayer, ElementPlacement.PLACEATEND);
+                    var info = itemGroupInfo[i];
+                    var item = info.item;
+                    var groupChain = info.groupChain;
+                    
+                    if (groupChain.length === 0) {
+                        // Item is not in any group, move directly to layer
+                        item.move(targetLayer, ElementPlacement.PLACEATEND);
+                    } else {
+                        // Item is in one or more groups - recreate the group hierarchy
+                        var currentContainer = targetLayer;
+                        
+                        // Process each group in the chain from outermost to innermost
+                        for (var j = 0; j < groupChain.length; j++) {
+                            var originalGroup = groupChain[j];
+                            
+                            // Create a unique identifier for this group
+                            var groupUUID = originalGroup.uuid;
+                            
+                            // Check if we've already created a matching group
+                            if (!groupMap[groupUUID]) {
+                                // Create new group in the current container
+                                groupMap[groupUUID] = currentContainer.groupItems.add();
+                            }
+                            
+                            // Move down to this group for the next iteration
+                            currentContainer = groupMap[groupUUID];
+                        }
+                        
+                        // Move the item to its final destination (innermost group)
+                        item.move(currentContainer, ElementPlacement.PLACEATEND);
+                    }
+                    
                     movedCount++;
                 } catch (e) {
                     // Continue with other items if one fails to move
