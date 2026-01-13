@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-01-05T17:00:40.339066",
+  "last_updated": "2026-01-13T10:20:08.105662",
   "deployer_version": "3.0",
-  "total_scripts": 29,
+  "total_scripts": 30,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -74,7 +74,7 @@
       "filename": "Cut Path Separator.js",
       "metadata": {
         "name": "Cut Path Separator",
-        "version": "1.2",
+        "version": "1.3",
         "description": "Organize Cut/Print Data Into Respective Layers",
         "author": "Unknown",
         "target": "illustrator",
@@ -85,10 +85,10 @@
           "processors"
         ]
       },
-      "hash": "0a66828917357124ca8b9586b44e79d6",
+      "hash": "30a4da94671e5e861783944c6e4d45d6",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Cut Path Separator.js",
-      "file_size": 30153,
-      "last_modified": "2025-12-19T13:34:04.372750",
+      "file_size": 32831,
+      "last_modified": "2026-01-13T10:18:56.154643",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js"
     },
@@ -118,7 +118,7 @@
       "filename": "export_artboards_jpg.js",
       "metadata": {
         "name": "Export Artboards - Proof or Print",
-        "version": "5.1",
+        "version": "5.2",
         "description": "Exports artboards as proofs (72 PPI) or prints (720 PPI) to respective folders",
         "author": "Unknown",
         "target": "illustrator",
@@ -130,10 +130,10 @@
           "print"
         ]
       },
-      "hash": "d25e09c38c43d3696548a6ae9baf1209",
+      "hash": "611f213ed8f9e285b79b5b417bb14534",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\export_artboards_jpg.js",
-      "file_size": 20852,
-      "last_modified": "2025-10-09T16:30:47.355195",
+      "file_size": 29157,
+      "last_modified": "2026-01-08T14:18:24.980696",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/export_artboards_jpg.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/export_artboards_jpg.js"
     },
@@ -353,7 +353,7 @@
       "filename": "OpenProdFilesForReview.js",
       "metadata": {
         "name": "Open Production Files and organize for review",
-        "version": "1.4",
+        "version": "1.5",
         "description": "Open print and cut files, organize them together and tile the view to show them all",
         "author": "Unknown",
         "target": "illustrator",
@@ -363,10 +363,10 @@
           "file"
         ]
       },
-      "hash": "58880f128f8c01cd41c44710b6857f0d",
+      "hash": "6c9ed5da2e88f733dd585ff3ec581b9d",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\OpenProdFilesForReview.js",
-      "file_size": 9826,
-      "last_modified": "2025-12-23T15:15:40.755793",
+      "file_size": 10370,
+      "last_modified": "2026-01-07T15:06:17.227793",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
     },
@@ -388,7 +388,7 @@
       "hash": "d05576811fdf8131396911f86270700b",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Optimal PRIME transformer.js",
       "file_size": 46858,
-      "last_modified": "2025-12-05T09:29:07.563364",
+      "last_modified": "2026-01-06T14:14:05.452515",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
@@ -430,7 +430,7 @@
       "hash": "f9a5ed85904f0cf3f12c482c034a10a2",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\PRIME Flex Template.js",
       "file_size": 64971,
-      "last_modified": "2026-01-05T16:59:55.567316",
+      "last_modified": "2026-01-05T20:08:33.851969",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js"
     },
@@ -580,6 +580,31 @@
       "last_modified": "2025-09-02T11:42:26.394340",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap%20Template%20Converter.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap%20Template%20Converter.js"
+    },
+    "WrapProcessor.js": {
+      "filename": "WrapProcessor.js",
+      "metadata": {
+        "name": "Wrap Processor",
+        "version": "1.0",
+        "description": "Export proofs/prints or convert wrap templates with proof-based path prefilling",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "export",
+          "artboards",
+          "jpg",
+          "proof",
+          "print",
+          "wrap",
+          "template"
+        ]
+      },
+      "hash": "81481d68bbdc9d4db4d53acd13ebb067",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\WrapProcessor.js",
+      "file_size": 38855,
+      "last_modified": "2026-01-09T11:27:55.191044",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js"
     },
     "wrap_converter_multidoc.js": {
       "filename": "wrap_converter_multidoc.js",
