@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.4",
+  "version": "1.5",
   "target": "illustrator",
   "tags": ["review", "check", "file"]
 }@END_METADATA*/
@@ -20,13 +20,26 @@
     
     var downloadsFolder = new Folder(downloadsPath);
     
-    // Get list of folders in Downloads
+    // Get the Filecheck Staging folder
+    var stagingPath;
+    if ($.os.indexOf("Windows") !== -1) {
+        stagingPath = downloadsPath + "\\Filecheck Staging";
+    } else {
+        stagingPath = downloadsPath + "/Filecheck Staging";
+    }
+    
+    var stagingFolder = new Folder(stagingPath);
+    
+    // Get list of folders in Filecheck Staging
     var subfolders = [];
-    if (downloadsFolder.exists) {
-        var items = downloadsFolder.getFiles();
+    if (stagingFolder.exists) {
+        var items = stagingFolder.getFiles();
         for (var i = 0; i < items.length; i++) {
             if (items[i] instanceof Folder) {
-                subfolders.push(items[i]);
+                // Ignore .stfolder folders
+                if (items[i].name !== ".stfolder") {
+                    subfolders.push(items[i]);
+                }
             }
         }
     }
@@ -54,7 +67,9 @@
         folderDropdown.preferredSize.width = 400;
         
         for (var i = 0; i < subfolders.length; i++) {
-            folderDropdown.add("item", subfolders[i].name);
+            // Replace %20 with spaces in display name
+            var displayName = subfolders[i].name.replace(/%20/g, " ");
+            folderDropdown.add("item", displayName);
         }
         folderDropdown.selection = 0;
         
