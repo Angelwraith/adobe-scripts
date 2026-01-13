@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "Export Artboards - Proof or Print",
   "description": "Exports artboards as proofs (72 PPI) or prints (720 PPI) to respective folders",
-  "version": "5.1",
+  "version": "5.2",
   "target": "illustrator",
   "tags": ["export", "artboards", "jpg", "proof", "print"]
 }@END_METADATA*/
@@ -22,9 +22,50 @@ try {
 }
 
 // ============================================================================
+// FIND PROOF DOCUMENTS
+// ============================================================================
+function findProofDocuments() {
+    var proofDocs = [];
+    for (var i = 0; i < app.documents.length; i++) {
+        var doc = app.documents[i];
+        var docName = doc.name;
+        
+        // Check if document name contains "_Proof"
+        if (docName.match(/_Proof/i)) {
+            proofDocs.push({
+                document: doc,
+                name: docName
+            });
+        }
+    }
+    return proofDocs;
+}
+
+function findProofFile(folderPath) {
+    var folder = Folder(folderPath);
+    var files = folder.getFiles("*.pdf");
+    
+    for (var i = 0; i < files.length; i++) {
+        if (files[i] instanceof File) {
+            var fileName = files[i].name;
+            var decodedFileName = decodeURI(fileName);
+            
+            if (decodedFileName.match(/\s*_Proof\.pdf$/i)) {
+                return files[i];
+            }
+        }
+    }
+    
+    return null;
+}
+
+// ============================================================================
 // MODE SELECTION DIALOG (PROOF OR PRINT)
 // ============================================================================
 function showModeSelectionDialog() {
+    // Find proof documents first
+    var proofDocuments = findProofDocuments();
+    
     var dialog = new Window("dialog", "Export Mode");
     dialog.orientation = "column";
     dialog.alignChildren = "center";
@@ -33,6 +74,26 @@ function showModeSelectionDialog() {
     
     var titleText = dialog.add("statictext", undefined, "Select export mode:");
     titleText.graphics.font = ScriptUI.newFont("dialog", "Bold", 14);
+    
+    // Proof document selection (if any proof documents are open)
+    var proofList = null;
+    if (proofDocuments.length > 0) {
+        dialog.add("panel");
+        
+        var proofLabel = dialog.add("statictext", undefined, "Base export paths on open Proof document:");
+        proofLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
+        
+        proofList = dialog.add("dropdownlist", undefined, []);
+        proofList.preferredSize.width = 350;
+        
+        proofList.add("item", "None - enter paths manually");
+        for (var i = 0; i < proofDocuments.length; i++) {
+            proofList.add("item", proofDocuments[i].name);
+        }
+        proofList.selection = 1; // Default to first proof document if available
+    }
+    
+    dialog.add("panel");
     
     var buttonGroup = dialog.add("group");
     buttonGroup.orientation = "column";
@@ -53,12 +114,28 @@ function showModeSelectionDialog() {
     var result = null;
     
     proofButton.onClick = function() {
-        result = "proof";
+        var selectedProofDoc = null;
+        if (proofList && proofList.selection && proofList.selection.index > 0) {
+            // User selected a proof document (index 0 is "None")
+            selectedProofDoc = proofDocuments[proofList.selection.index - 1];
+        }
+        result = {
+            mode: "proof",
+            proofDoc: selectedProofDoc
+        };
         dialog.close();
     };
     
     printButton.onClick = function() {
-        result = "print";
+        var selectedProofDoc = null;
+        if (proofList && proofList.selection && proofList.selection.index > 0) {
+            // User selected a proof document (index 0 is "None")
+            selectedProofDoc = proofDocuments[proofList.selection.index - 1];
+        }
+        result = {
+            mode: "print",
+            proofDoc: selectedProofDoc
+        };
         dialog.close();
     };
     
@@ -69,19 +146,75 @@ function showModeSelectionDialog() {
     
     dialog.show();
     
-    if (result === "proof") {
-        showDocumentSelectionDialog("proof", 72);
-    } else if (result === "print") {
-        showDocumentSelectionDialog("print", 720);
+    if (result && result.mode === "proof") {
+        showDocumentSelectionDialog("proof", 72, result.proofDoc);
+    } else if (result && result.mode === "print") {
+        showDocumentSelectionDialog("print", 720, result.proofDoc);
     }
 }
 
 // ============================================================================
 // DOCUMENT SELECTION DIALOG
 // ============================================================================
-function showDocumentSelectionDialog(mode, resolution) {
+function showDocumentSelectionDialog(mode, resolution, selectedProofDoc) {
     var folderName = (mode === "proof") ? "Proof" : "PRINT";
     var dialogTitle = (mode === "proof") ? "Export Proof - Select Documents" : "Export Prints - Select Documents";
+    
+    // Extract path and prefix from selected proof document
+    var prefillData = null;
+    
+    if (selectedProofDoc) {
+        $.writeln("=== EXTRACTING PATH AND PREFIX ===");
+        $.writeln("Selected proof doc name: " + selectedProofDoc.name);
+        
+        var proofDoc = selectedProofDoc.document;
+        try {
+            $.writeln("Checking if document has fullName...");
+            $.writeln("proofDoc.saved: " + proofDoc.saved);
+            $.writeln("proofDoc.fullName: " + proofDoc.fullName);
+            
+            if (proofDoc.fullName) {
+                var proofPath = proofDoc.fullName;
+                var proofFolder = proofPath.parent;
+                
+                $.writeln("Proof folder path: " + proofFolder.fsName);
+                
+                // Find the proof file in the folder (same method as PRIME script)
+                $.writeln("Calling findProofFile...");
+                var proofFile = findProofFile(proofFolder.fsName);
+                var prefix = "";
+                
+                if (proofFile) {
+                    $.writeln("Proof file found: " + proofFile.name);
+                    // Extract prefix from proof filename
+                    var originalName = decodeURI(proofFile.name);
+                    $.writeln("Decoded filename: " + originalName);
+                    var nameWithoutExtension = originalName.replace(/\.[^\.]+$/, '');
+                    $.writeln("Without extension: " + nameWithoutExtension);
+                    prefix = nameWithoutExtension.replace(/\s*_Proof$/i, "");
+                    $.writeln("Extracted prefix: " + prefix);
+                } else {
+                    $.writeln("ERROR: No proof file found in folder!");
+                }
+                
+                prefillData = {
+                    folder: proofFolder.fsName,
+                    prefix: prefix
+                };
+                $.writeln("prefillData created successfully");
+                $.writeln("  folder: " + prefillData.folder);
+                $.writeln("  prefix: " + prefillData.prefix);
+            } else {
+                $.writeln("ERROR: Document not saved or no fullName");
+            }
+        } catch (e) {
+            // Couldn't get path from proof, leave prefillData null
+            $.writeln("ERROR in extraction: " + e.toString());
+            $.writeln("Error line: " + e.line);
+        }
+    } else {
+        $.writeln("No proof document selected");
+    }
     
     var dialog = new Window("dialog", dialogTitle);
     dialog.orientation = "column";
@@ -114,7 +247,14 @@ function showDocumentSelectionDialog(mode, resolution) {
         checkboxGroup.alignChildren = "left";
         
         var checkbox = checkboxGroup.add("checkbox", undefined, doc.name);
-        checkbox.value = true;
+        
+        // Uncheck if this is the selected proof document
+        if (selectedProofDoc && doc.name === selectedProofDoc.name) {
+            checkbox.value = false;
+        } else {
+            checkbox.value = true;
+        }
+        
         checkbox.preferredSize.width = 400;
         
         checkboxes.push({
@@ -155,6 +295,28 @@ function showDocumentSelectionDialog(mode, resolution) {
             checkboxes[i].checkbox.value = false;
         }
     };
+    
+    dialog.add("panel");
+    
+    // Export path and prefix options
+    var pathGroup = dialog.add("group");
+    pathGroup.orientation = "column";
+    pathGroup.alignChildren = "fill";
+    pathGroup.spacing = 10;
+    
+    var pathLabel = pathGroup.add("statictext", undefined, "Export folder path:");
+    pathLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
+    
+    var exportPathField = pathGroup.add("edittext", undefined, prefillData ? prefillData.folder : "");
+    exportPathField.preferredSize.width = 450;
+    exportPathField.helpTip = "Path to the folder where exports will be saved";
+    
+    var prefixLabel = pathGroup.add("statictext", undefined, "Filename prefix:");
+    prefixLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
+    
+    var prefixField = pathGroup.add("edittext", undefined, prefillData ? prefillData.prefix : "");
+    prefixField.preferredSize.width = 450;
+    prefixField.helpTip = "Prefix for exported filenames (e.g., 'JobName' creates 'JobName_ArtboardName.jpg')";
     
     dialog.add("panel");
     
@@ -204,6 +366,15 @@ function showDocumentSelectionDialog(mode, resolution) {
         
         if (selectedDocuments.length === 0) {
             alert("Please select at least one document to process.");
+            return;
+        }
+        
+        // Get export path and prefix
+        var exportPath = exportPathField.text.replace(/^\s+|\s+$/g, ''); // Trim whitespace
+        var filePrefix = prefixField.text.replace(/^\s+|\s+$/g, ''); // Trim whitespace
+        
+        if (exportPath === "") {
+            alert("Please enter an export folder path.");
             return;
         }
         
@@ -271,7 +442,9 @@ function showDocumentSelectionDialog(mode, resolution) {
             mode: mode,
             folderName: folderName,
             resolution: resolution,
-            closeAfterExport: closeRadio.value
+            closeAfterExport: closeRadio.value,
+            exportPath: exportPath,
+            filePrefix: filePrefix
         };
         dialog.close();
     };
@@ -279,14 +452,14 @@ function showDocumentSelectionDialog(mode, resolution) {
     dialog.show();
     
     if (result && result.documents && result.documents.length > 0) {
-        processDocuments(result.documents, result.mode, result.folderName, result.resolution, result.closeAfterExport);
+        processDocuments(result.documents, result.mode, result.folderName, result.resolution, result.closeAfterExport, result.exportPath, result.filePrefix);
     }
 }
 
 // ============================================================================
 // DOCUMENT PROCESSING LOOP
 // ============================================================================
-function processDocuments(documents, mode, folderName, resolution, closeAfterExport) {
+function processDocuments(documents, mode, folderName, resolution, closeAfterExport, customExportPath, filePrefix) {
     try {
         var overallStartTime = new Date().getTime();
         var totalExported = 0;
@@ -295,7 +468,8 @@ function processDocuments(documents, mode, folderName, resolution, closeAfterExp
         // Store document file paths instead of references (since references can become stale)
         var docPaths = [];
         for (var i = 0; i < documents.length; i++) {
-            if (documents[i].saved && documents[i].fullName.toString() !== "") {
+            // Only check if fullName exists (not saved status, as PDFs may show as unsaved)
+            if (documents[i].fullName && documents[i].fullName.toString() !== "") {
                 docPaths.push({
                     path: documents[i].fullName.fsName,
                     name: documents[i].name
@@ -329,7 +503,7 @@ function processDocuments(documents, mode, folderName, resolution, closeAfterExp
             $.sleep(100);
             
             // Process this document
-            var exportResult = processDocument(targetDoc, mode, folderName, resolution);
+            var exportResult = processDocument(targetDoc, mode, folderName, resolution, customExportPath, filePrefix);
             if (exportResult && exportResult.count > 0) {
                 totalExported += exportResult.count;
                 exportSummary.push(docInfo.name + ": " + exportResult.count + " artboards exported");
@@ -374,11 +548,11 @@ function processDocuments(documents, mode, folderName, resolution, closeAfterExp
 // ============================================================================
 // DOCUMENT PROCESSING FUNCTION
 // ============================================================================
-function processDocument(doc, mode, folderName, resolution) {
+function processDocument(doc, mode, folderName, resolution, customExportPath, filePrefix) {
     try {
-        // Double-check document is saved (should be, but verify)
-        if (!doc.saved || doc.fullName.toString() === "") {
-            alert("Document '" + doc.name + "' is not saved. Skipping.");
+        // Double-check document has a file path
+        if (!doc.fullName || doc.fullName.toString() === "") {
+            alert("Document '" + doc.name + "' has no file path. Please save it first. Skipping.");
             return { count: 0 };
         }
         
@@ -390,14 +564,20 @@ function processDocument(doc, mode, folderName, resolution) {
         
         // Navigate to export folder
         var exportFolder;
-        if (mode === "proof") {
-            // Proof folder is inside PRIME folder (1 level up from document location)
-            exportFolder = docFolder.parent;
-            exportFolder = new Folder(exportFolder.fsName + "/" + folderName);
+        if (customExportPath && customExportPath !== "") {
+            // Use custom export path
+            exportFolder = new Folder(customExportPath + "/" + folderName);
         } else {
-            // PRINT folder is at same level as PRIME (2 levels up from document location)
-            exportFolder = docFolder.parent.parent;
-            exportFolder = new Folder(exportFolder.fsName + "/" + folderName);
+            // Use default path logic
+            if (mode === "proof") {
+                // Proof folder is inside PRIME folder (1 level up from document location)
+                exportFolder = docFolder.parent;
+                exportFolder = new Folder(exportFolder.fsName + "/" + folderName);
+            } else {
+                // PRINT folder is at same level as PRIME (2 levels up from document location)
+                exportFolder = docFolder.parent.parent;
+                exportFolder = new Folder(exportFolder.fsName + "/" + folderName);
+            }
         }
         
         // Create export folder if it doesn't exist
@@ -463,7 +643,25 @@ function processDocument(doc, mode, folderName, resolution) {
             }
             
             // Export this artboard
-            exportArtboard(currentDoc, artboardInfo.index, artboardInfo.name, docName, exportFolder, resolution);
+            var exportPrefix = docName; // Default to full document name
+            
+            if (filePrefix && filePrefix !== "") {
+                // User provided a prefix - append document's unique suffix
+                // Extract the suffix by removing the prefix from the document name
+                var docNameNoExt = docName; // docName already has extension removed (line 468)
+                
+                // Check if document name starts with the prefix
+                if (docNameNoExt.indexOf(filePrefix) === 0) {
+                    // Get the suffix (everything after the prefix)
+                    var suffix = docNameNoExt.substring(filePrefix.length);
+                    exportPrefix = filePrefix + suffix;
+                } else {
+                    // Document name doesn't match prefix pattern, use full document name
+                    exportPrefix = docName;
+                }
+            }
+            
+            exportArtboard(currentDoc, artboardInfo.index, artboardInfo.name, exportPrefix, exportFolder, resolution);
             exportCount++;
             
             // Small delay between artboards to let Illustrator catch up
