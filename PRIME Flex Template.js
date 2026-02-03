@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.7",
+  "version": "3.8",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -439,10 +439,10 @@ function showSetupDialog(docChoice) {
     regDropdown.preferredSize.width = 150;
     
     // Add placeholder artwork checkbox
-    var placeholderGroup = dialog.add("group");
+     var placeholderGroup = dialog.add("group");
     placeholderGroup.orientation = "row";
     var placeholderCheckbox = placeholderGroup.add("checkbox", undefined, "Create placeholder artwork from metadata");
-    placeholderCheckbox.value = docChoice.hasPackingData;
+    placeholderCheckbox.value = false;
     placeholderCheckbox.enabled = docChoice.hasPackingData;
     
     dialog.add("panel");
