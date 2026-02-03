@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.5",
+  "version": "1.6",
   "target": "illustrator",
   "tags": ["review", "check", "file"]
 }@END_METADATA*/
@@ -88,8 +88,51 @@
     // Buttons
     var buttonGroup = dialog.add("group");
     buttonGroup.alignment = "center";
+    var openFolderButton = buttonGroup.add("button", undefined, "Open Folder");
     var okButton = buttonGroup.add("button", undefined, "Process Files", {name: "ok"});
     var cancelButton = buttonGroup.add("button", undefined, "Cancel", {name: "cancel"});
+    
+    // Open folder button handler
+    openFolderButton.onClick = function() {
+        var folderToOpen = "";
+        
+        // Determine which path to use
+        if (folderPathInput.text != "") {
+            folderToOpen = folderPathInput.text;
+        } else if (folderDropdown != null && folderDropdown.selection != null) {
+            var selectedIndex = folderDropdown.selection.index;
+            folderToOpen = subfolders[selectedIndex].fsName;
+        }
+        
+        if (folderToOpen == "") {
+            alert("Please select a folder from the dropdown or enter a folder path first.");
+            return;
+        }
+        
+        var folder = new Folder(folderToOpen);
+        if (!folder.exists) {
+            alert("The specified folder does not exist.");
+            return;
+        }
+        
+        // Open folder in Windows Explorer or Mac Finder
+        try {
+            if ($.os.indexOf("Windows") !== -1) {
+                // Windows - open in Explorer
+                var batFile = new File(Folder.temp + "/openFolder.bat");
+                batFile.open("w");
+                batFile.writeln("@echo off");
+                batFile.writeln("explorer \"" + folder.fsName + "\"");
+                batFile.close();
+                batFile.execute();
+            } else {
+                // Mac - open in Finder
+                folder.execute();
+            }
+        } catch (e) {
+            alert("Error opening folder: " + e.message);
+        }
+    };
     
     // Show dialog
     if (dialog.show() == 1) {
