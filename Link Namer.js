@@ -3,7 +3,7 @@
 {
   "name": "Link Namer",
   "description": "Name Linked Files for ProdProof Layout",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["ProdProof", "linked", "namer"]
 }
@@ -44,9 +44,11 @@
     
     if (processedCount === 0) {
         alert("No linked files found in selection.");
-    } else {
-        alert("Successfully processed " + processedCount + " linked file(s).");
+        return;
     }
+    
+    // Run CUT Mover silently after processing
+    runCutMover();
     
     function processLinkedFile(placedItem, hostFileName) {
         try {
@@ -136,7 +138,7 @@
                     textRange.characterAttributes.textFont = app.textFonts[0]; 
                 }
             }
-            textRange.characterAttributes.size = 23;
+            textRange.characterAttributes.size = 13;
             textRange.characterAttributes.fillColor = createBlackColor();
             textRange.paragraphAttributes.justification = Justification.CENTER;
             
@@ -218,5 +220,131 @@
         color.green = 0;
         color.blue = 0;
         return color;
+    }
+    
+    function runCutMover() {
+        var doc = app.activeDocument;
+        var placedItems = [];
+        var printItems = [];
+        var cutItems = [];
+        var matchedPairs = [];
+
+        function getFileNameWithoutExtension(filePath) {
+            var fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+            fileName = fileName.substring(fileName.lastIndexOf('\\') + 1);
+            return fileName.substring(0, fileName.lastIndexOf('.'));
+        }
+
+        function getFileNameParts(fileName) {
+            var printMatch = fileName.match(/^(.*)_PRINT_(.*)$/i);
+            if (printMatch) {
+                return {
+                    before: printMatch[1],
+                    after: printMatch[2],
+                    type: 'PRINT'
+                };
+            }
+            
+            var cutMatch = fileName.match(/^(.*)_CUT_(.*)$/i);
+            if (cutMatch) {
+                return {
+                    before: cutMatch[1],
+                    after: cutMatch[2],
+                    type: 'CUT'
+                };
+            }
+            
+            return null;
+        }
+
+        function getNormalizedName(fileName) {
+            var parts = getFileNameParts(fileName);
+            if (parts) {
+                return parts.before + "_" + parts.after;
+            }
+            return fileName;
+        }
+
+        function containsPrint(fileName) {
+            return /_PRINT_/i.test(fileName);
+        }
+
+        function containsCut(fileName) {
+            return /_CUT_/i.test(fileName);
+        }
+
+        function collectPlacedItems(container) {
+            for (var i = 0; i < container.placedItems.length; i++) {
+                placedItems.push(container.placedItems[i]);
+            }
+            
+            for (var j = 0; j < container.groupItems.length; j++) {
+                collectPlacedItems(container.groupItems[j]);
+            }
+        }
+
+        collectPlacedItems(doc);
+
+        if (placedItems.length === 0) {
+            return;
+        }
+
+        for (var i = 0; i < placedItems.length; i++) {
+            var item = placedItems[i];
+            try {
+                var fileName = getFileNameWithoutExtension(item.file.fsName);
+                
+                if (containsPrint(fileName)) {
+                    printItems.push({
+                        item: item,
+                        fileName: fileName,
+                        normalizedName: getNormalizedName(fileName)
+                    });
+                } else if (containsCut(fileName)) {
+                    cutItems.push({
+                        item: item,
+                        fileName: fileName,
+                        normalizedName: getNormalizedName(fileName)
+                    });
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+
+        for (var i = 0; i < printItems.length; i++) {
+            var printItem = printItems[i];
+            
+            for (var j = 0; j < cutItems.length; j++) {
+                var cutItem = cutItems[j];
+                
+                if (printItem.normalizedName === cutItem.normalizedName) {
+                    matchedPairs.push({
+                        print: printItem,
+                        cut: cutItem
+                    });
+                    break;
+                }
+            }
+        }
+
+        if (matchedPairs.length === 0) {
+            return;
+        }
+
+        for (var i = 0; i < matchedPairs.length; i++) {
+            var pair = matchedPairs[i];
+            var printItem = pair.print.item;
+            var cutItem = pair.cut.item;
+
+            try {
+                var targetPosition = [printItem.position[0], printItem.position[1]];
+                var targetLayer = printItem.layer;
+                cutItem.move(targetLayer, ElementPlacement.PLACEATBEGINNING);
+                cutItem.position = targetPosition;
+            } catch (e) {
+                continue;
+            }
+        }
     }
 })();
