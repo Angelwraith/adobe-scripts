@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-02-03T15:26:49.687072",
+  "last_updated": "2026-02-09T12:25:16.192131",
   "deployer_version": "3.0",
   "total_scripts": 30,
   "launcher_version": "4.0",
@@ -532,10 +532,10 @@
           "Utility"
         ]
       },
-      "hash": "894aa6e321976cf6fac6fc20a1b73d6d",
+      "hash": "4ece7d246a121505cb722651a14e9c18",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\SmartDimensionTool.js",
-      "file_size": 41952,
-      "last_modified": "2025-12-23T15:15:41.822186",
+      "file_size": 42857,
+      "last_modified": "2026-02-09T12:23:37.338940",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js"
     },
