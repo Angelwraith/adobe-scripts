@@ -429,22 +429,54 @@ function main() {
         customScaleDenominator.enabled = isCustom;
     };
     
-    // Dimensions to add with position dropdowns inline
-    var dimPanel = dialog.add("panel", undefined, "Dimensions to Add");
-    dimPanel.alignChildren = "left";
+    // Dimensions to add with position checkboxes
+    var dimPanel = dialog.add("panel", undefined, "Dimension Placement");
+    dimPanel.alignChildren = "center";
     
-    var dimRow = dimPanel.add("group");
-    var checkWidth = dimRow.add("checkbox", undefined, "Add Width");
-    checkWidth.value = true;
-    var widthPosDropdown = dimRow.add("dropdownlist", undefined, ["Above", "Below"]);
-    widthPosDropdown.selection = 0;
+    // Visual diagram with checkboxes
+    var topRow = dimPanel.add("group");
+    topRow.alignment = "center";
+    var checkTop = topRow.add("checkbox", undefined, "Top");
+    checkTop.value = true; // Default on
     
-    dimRow.add("statictext", undefined, "     ");
+    var middleRow = dimPanel.add("group");
+    var checkLeft = middleRow.add("checkbox", undefined, "Left");
+    checkLeft.value = true; // Default on
+    var spacer = middleRow.add("statictext", undefined, "          ");
+    spacer.preferredSize.width = 80;
+    var checkRight = middleRow.add("checkbox", undefined, "Right");
+    checkRight.value = false; // Default off
     
-    var checkHeight = dimRow.add("checkbox", undefined, "Add Height");
-    checkHeight.value = true;
-    var heightPosDropdown = dimRow.add("dropdownlist", undefined, ["Left", "Right"]);
-    heightPosDropdown.selection = 0; // Default to Left
+    var bottomRow = dimPanel.add("group");
+    bottomRow.alignment = "center";
+    var checkBottom = bottomRow.add("checkbox", undefined, "Bottom");
+    checkBottom.value = false; // Default off
+    
+    // Add mutual exclusivity for left/right
+    checkLeft.onClick = function() {
+        if (checkLeft.value) {
+            checkRight.value = false;
+        }
+    };
+    
+    checkRight.onClick = function() {
+        if (checkRight.value) {
+            checkLeft.value = false;
+        }
+    };
+    
+    // Add mutual exclusivity for top/bottom
+    checkTop.onClick = function() {
+        if (checkTop.value) {
+            checkBottom.value = false;
+        }
+    };
+    
+    checkBottom.onClick = function() {
+        if (checkBottom.value) {
+            checkTop.value = false;
+        }
+    };
     
     var roundingGroup = dimPanel.add("group");
     roundingGroup.add("statictext", undefined, "Rounding:");
@@ -542,10 +574,10 @@ function main() {
     }
     
     var settings = {
-        addWidth: checkWidth.value,
-        addHeight: checkHeight.value,
-        widthPos: widthPosDropdown.selection.text,
-        heightPos: heightPosDropdown.selection.text,
+        addWidth: checkTop.value || checkBottom.value,
+        addHeight: checkLeft.value || checkRight.value,
+        widthPos: checkTop.value ? "Above" : "Below",
+        heightPos: checkLeft.value ? "Left" : "Right",
         offset: 0.1 * 72,
         scale: scaleText,
         scaleRatio: scaleRatio,
@@ -599,8 +631,8 @@ function main() {
     };
     settings.graphicStyleName = colorToStyleMap[settings.lineColor];
     
-    if (!settings.addWidth && !settings.addHeight) {
-        alert("Please select at least one dimension type to add.");
+    if (!checkTop.value && !checkBottom.value && !checkLeft.value && !checkRight.value) {
+        alert("Please select at least one dimension location.");
         return;
     }
     
