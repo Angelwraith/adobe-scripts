@@ -518,28 +518,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js"
     },
-    "wrap_converter_multidoc.js": {
-      "filename": "wrap_converter_multidoc.js",
-      "metadata": {
-        "name": "Wrap Template Converter (Multi-Doc)",
-        "version": "2.0",
-        "description": "Prepare Wrap Design Files From Templates - Multiple Documents",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "wrap",
-          "template",
-          "processors",
-          "multi-document"
-        ]
-      },
-      "hash": "d16d52102b9df307f413363ce6e0a662",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\wrap_converter_multidoc.js",
-      "file_size": 16653,
-      "last_modified": "2025-09-30T22:36:28.479696",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/wrap_converter_multidoc.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/wrap_converter_multidoc.js"
-    },
     "Sort_Text_Numerically.jsx": {
       "filename": "Sort_Text_Numerically.jsx",
       "metadata": {
