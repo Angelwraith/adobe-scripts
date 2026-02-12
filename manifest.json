@@ -516,27 +516,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate%20Groups.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate%20Groups.js"
     },
-    "Wrap Template Converter.js": {
-      "filename": "Wrap Template Converter.js",
-      "metadata": {
-        "name": "Wrap Template Converter",
-        "version": "1.1",
-        "description": "Prepare Wrap Design Files From Templates",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "wrap",
-          "template",
-          "processors"
-        ]
-      },
-      "hash": "0a533e6bd80aa6060a0ae11778933ff4",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Wrap Template Converter.js",
-      "file_size": 6356,
-      "last_modified": "2025-09-02T11:42:26.394340",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap%20Template%20Converter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Wrap%20Template%20Converter.js"
-    },
     "WrapProcessor.js": {
       "filename": "WrapProcessor.js",
       "metadata": {
