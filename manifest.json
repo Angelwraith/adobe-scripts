@@ -305,28 +305,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move%20CUTS%20to%20PRINTS.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move%20CUTS%20to%20PRINTS.js"
     },
-    "New Proof from Template.js": {
-      "filename": "New Proof from Template.js",
-      "metadata": {
-        "name": "New Proof From Template",
-        "version": "1.2",
-        "description": "Create a blank proof from a Sheet file",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "Optimal",
-          "Prime",
-          "processors",
-          "scaleFactor"
-        ]
-      },
-      "hash": "f856429354b45ee311dfe199539c56b0",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\New Proof from Template.js",
-      "file_size": 21498,
-      "last_modified": "2025-10-16T14:57:19.854189",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/New%20Proof%20from%20Template.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/New%20Proof%20from%20Template.js"
-    },
     "OpenProdFilesForReview.js": {
       "filename": "OpenProdFilesForReview.js",
       "metadata": {
