@@ -92,29 +92,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect%20Inside%20and%20Outside%20Paths%20for%20Copy.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect%20Inside%20and%20Outside%20Paths%20for%20Copy.js"
     },
-    "export_artboards_jpg.js": {
-      "filename": "export_artboards_jpg.js",
-      "metadata": {
-        "name": "Export Artboards - Proof or Print",
-        "version": "5.2",
-        "description": "Exports artboards as proofs (72 PPI) or prints (720 PPI) to respective folders",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "export",
-          "artboards",
-          "jpg",
-          "proof",
-          "print"
-        ]
-      },
-      "hash": "611f213ed8f9e285b79b5b417bb14534",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\export_artboards_jpg.js",
-      "file_size": 29157,
-      "last_modified": "2026-01-08T14:18:24.980696",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/export_artboards_jpg.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/export_artboards_jpg.js"
-    },
     "File Check.js": {
       "filename": "File Check.js",
       "metadata": {
