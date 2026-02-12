@@ -5,28 +5,6 @@
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
-    "Address Formatter.js": {
-      "filename": "Address Formatter.js",
-      "metadata": {
-        "name": "BROKEN!!!Address Format Corrector",
-        "version": "1.0",
-        "description": "Corrects address formatting to proper postal standards",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "address",
-          "formatting",
-          "postal",
-          "text"
-        ]
-      },
-      "hash": "a3850febc6dc15c8b4f465d3a47f417f",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Address Formatter.js",
-      "file_size": 17137,
-      "last_modified": "2025-10-03T10:13:06.369967",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Address%20Formatter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Address%20Formatter.js"
-    },
     "Color Key.js": {
       "filename": "Color Key.js",
       "metadata": {
