@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.6",
+  "version": "1.7",
   "target": "illustrator",
   "tags": ["review", "check", "file"]
 }@END_METADATA*/
@@ -192,8 +192,27 @@
             // Step 2: Find all CUT files
             var cutFiles = findFiles(folder, ["CUT"]);
             
-            if (cutFiles.length == 0) {
+            // Check if all opened docs are CutOnly - if so, skip CUT placement entirely
+            var hasNonCutOnly = false;
+            for (var i = 0; i < openDocs.length; i++) {
+                if (!openDocs[i].isCutOnly) {
+                    hasNonCutOnly = true;
+                    break;
+                }
+            }
+            
+            if (cutFiles.length == 0 && hasNonCutOnly) {
                 alert("No CUT files found. Only PRINT files have been opened.");
+                return;
+            }
+            
+            if (!hasNonCutOnly) {
+                // All files are CutOnly - skip CUT placement, go straight to tiling
+                app.executeMenuCommand("tile");
+                for (var i = 0; i < openDocs.length; i++) {
+                    app.activeDocument = openDocs[i].doc;
+                    app.executeMenuCommand("fitall");
+                }
                 return;
             }
             
