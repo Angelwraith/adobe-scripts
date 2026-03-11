@@ -3,7 +3,7 @@
 {
   "name": "Cut Path Separator",
   "description": "Organize Cut/Print Data Into Respective Layers",
-  "version": "1.3",
+  "version": "1.4",
   "target": "illustrator",
   "tags": ["Cut", "Path", "Separator", "processors"]
 }
@@ -294,12 +294,39 @@
                 foundPaths = foundPaths.concat(groupPaths);
             }
             else if (item.typename === "CompoundPathItem") {
-                // Check each path in the compound path
-                for (var j = 0; j < item.pathItems.length; j++) {
-                    if (usesSpotColor(item.pathItems[j], spotColor)) {
-                        foundPaths.push(item);
-                        break; // Only add the compound path once
+                var compoundFound = false;
+                
+                // Check the compound path item's own stroke/fill directly
+                try {
+                    if (item.strokeColor && item.strokeColor.typename === "SpotColor") {
+                        if (item.strokeColor.spot.name === spotColor.name) {
+                            compoundFound = true;
+                        }
                     }
+                } catch(e) {}
+                
+                try {
+                    if (!compoundFound && item.fillColor && item.fillColor.typename === "SpotColor") {
+                        if (item.fillColor.spot.name === spotColor.name) {
+                            compoundFound = true;
+                        }
+                    }
+                } catch(e) {}
+                
+                // Also check child paths as fallback
+                if (!compoundFound) {
+                    try {
+                        for (var j = 0; j < item.pathItems.length; j++) {
+                            if (usesSpotColor(item.pathItems[j], spotColor)) {
+                                compoundFound = true;
+                                break;
+                            }
+                        }
+                    } catch(e) {}
+                }
+                
+                if (compoundFound) {
+                    foundPaths.push(item);
                 }
             }
         }
@@ -646,8 +673,21 @@
             // Search for paths using the spot color in all layers
             for (var layerIndex = 0; layerIndex < doc.layers.length; layerIndex++) {
                 var currentLayer = doc.layers[layerIndex];
-                if (currentLayer.locked || !currentLayer.visible) {
-                    continue; // Skip locked or invisible layers
+                if (currentLayer.locked) {
+                    // Temporarily unlock to search, then re-lock after
+                    currentLayer.locked = false;
+                    var foundItems;
+                    if (currentSpotColorName === "Spot1") {
+                        foundItems = searchForPathsAndText(currentLayer, targetSpotColor, true);
+                    } else {
+                        foundItems = searchForPaths(currentLayer, targetSpotColor);
+                    }
+                    currentLayer.locked = true;
+                    pathsToMove = pathsToMove.concat(foundItems);
+                    continue;
+                }
+                if (!currentLayer.visible) {
+                    continue; // Skip invisible layers only
                 }
                 
                 var foundItems;
