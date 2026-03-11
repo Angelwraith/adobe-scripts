@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.7",
+  "version": "1.8",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -111,8 +111,14 @@
             }
         }
 		
-        // Process each artboard
-        processAllArtboards();
+        // Show artboard selection dialog so user can re-export specific artboards
+        var selectedArtboards = showArtboardSelectionDialog();
+        if (selectedArtboards === null) {
+            return; // User cancelled
+        }
+
+        // Process only the selected artboards
+        processAllArtboards(selectedArtboards);
         
         alert("Processing complete!" + (scaleFactor !== 1 ? "\nLarge Canvas scaling factor (" + scaleFactor + ") has been applied." : ""));
         
@@ -194,6 +200,93 @@
         return result;
     }
     
+    // Show a dialog letting the user pick which artboards to export.
+    // Returns an array of selected artboard indices, or null if cancelled.
+    function showArtboardSelectionDialog() {
+        var artboardCount = doc.artboards.length;
+
+        // Single artboard — no need to ask, just export it
+        if (artboardCount === 1) {
+            return [0];
+        }
+
+        var dialog = new Window("dialog", "Select Artboards to Export");
+        dialog.orientation = "column";
+        dialog.alignChildren = "fill";
+        dialog.spacing = 12;
+        dialog.margins = 20;
+        dialog.preferredSize.width = 400;
+
+        // Header
+        var headerText = dialog.add("statictext", undefined, "Choose which artboards to export:");
+        headerText.graphics.font = ScriptUI.newFont("dialog", "bold", 12);
+
+        // Scrollable checkbox list inside a panel
+        var listPanel = dialog.add("panel");
+        listPanel.orientation = "column";
+        listPanel.alignChildren = "left";
+        listPanel.spacing = 4;
+        listPanel.margins = 10;
+        listPanel.preferredSize.height = Math.min(artboardCount * 26 + 20, 320);
+
+        var checkboxes = [];
+        for (var i = 0; i < artboardCount; i++) {
+            var cb = listPanel.add("checkbox", undefined, (i + 1) + ":  " + doc.artboards[i].name);
+            cb.value = true; // default: all selected
+            checkboxes.push(cb);
+        }
+
+        // Select All / Deselect All row
+        var toggleGroup = dialog.add("group");
+        toggleGroup.alignment = "center";
+        toggleGroup.spacing = 10;
+
+        var selectAllBtn = toggleGroup.add("button", undefined, "Select All");
+        selectAllBtn.preferredSize.width = 100;
+        var deselectAllBtn = toggleGroup.add("button", undefined, "Deselect All");
+        deselectAllBtn.preferredSize.width = 100;
+
+        selectAllBtn.onClick = function() {
+            for (var i = 0; i < checkboxes.length; i++) checkboxes[i].value = true;
+        };
+        deselectAllBtn.onClick = function() {
+            for (var i = 0; i < checkboxes.length; i++) checkboxes[i].value = false;
+        };
+
+        // OK / Cancel row
+        var buttonGroup = dialog.add("group");
+        buttonGroup.alignment = "center";
+        buttonGroup.spacing = 10;
+
+        var okBtn = buttonGroup.add("button", undefined, "Export Selected");
+        okBtn.preferredSize.width = 130;
+        var cancelBtn = buttonGroup.add("button", undefined, "Cancel");
+        cancelBtn.preferredSize.width = 80;
+
+        var result = null;
+
+        okBtn.onClick = function() {
+            var selected = [];
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (checkboxes[i].value) selected.push(i);
+            }
+            if (selected.length === 0) {
+                alert("Please select at least one artboard to export.");
+                return;
+            }
+            result = selected;
+            dialog.close();
+        };
+
+        cancelBtn.onClick = function() {
+            result = null;
+            dialog.close();
+        };
+
+        dialog.show();
+        return result;
+    }
+
     // Check if Cut Path Separator has been run by looking for CPS-created layers with content
     function checkForCPSProcessing() {
         var cpsLayerNames = ["CutThrough2-Outside", "CutThrough1-Inside", "PinMountHoles-Inside", "CutThrough-Knifecut", "CutContour", "Spot1"];
@@ -486,11 +579,17 @@
         return true;
     }
     
-    // Process all artboards
-    function processAllArtboards() {
-        var totalArtboards = doc.artboards.length;
-        
-        for (var i = 0; i < totalArtboards; i++) {
+    // Process artboards — selectedIndices is an array of artboard index numbers to export
+    function processAllArtboards(selectedIndices) {
+        var indicesToProcess = (selectedIndices && selectedIndices.length > 0) ? selectedIndices : [];
+
+        // Fallback: if nothing passed in, process everything
+        if (indicesToProcess.length === 0) {
+            for (var x = 0; x < doc.artboards.length; x++) indicesToProcess.push(x);
+        }
+
+        for (var ii = 0; ii < indicesToProcess.length; ii++) {
+            var i = indicesToProcess[ii];
             try {
                 // Set active artboard
                 doc.artboards.setActiveArtboardIndex(i);
