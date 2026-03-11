@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-02-18T13:44:31.979280",
+  "last_updated": "2026-03-11T14:24:34.865358",
   "deployer_version": "3.0",
   "total_scripts": 25,
   "launcher_version": "4.0",
@@ -52,7 +52,7 @@
       "filename": "Cut Path Separator.js",
       "metadata": {
         "name": "Cut Path Separator",
-        "version": "1.3",
+        "version": "1.4",
         "description": "Organize Cut/Print Data Into Respective Layers",
         "author": "Unknown",
         "target": "illustrator",
@@ -63,10 +63,10 @@
           "processors"
         ]
       },
-      "hash": "30a4da94671e5e861783944c6e4d45d6",
+      "hash": "e9e3d063005ffa1c100d9831fbba85f6",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Cut Path Separator.js",
-      "file_size": 32831,
-      "last_modified": "2026-01-13T10:18:56.154643",
+      "file_size": 34511,
+      "last_modified": "2026-03-11T14:17:47.243898",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js"
     },
@@ -286,7 +286,7 @@
       "filename": "OpenProdFilesForReview.js",
       "metadata": {
         "name": "Open Production Files and organize for review",
-        "version": "1.6",
+        "version": "1.7",
         "description": "Open print and cut files, organize them together and tile the view to show them all",
         "author": "Unknown",
         "target": "illustrator",
@@ -296,10 +296,10 @@
           "file"
         ]
       },
-      "hash": "78be9090464fd6c32c938d5ffd02d883",
+      "hash": "16a8a3419bd100c783fd4e7a727e113f",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\OpenProdFilesForReview.js",
-      "file_size": 11934,
-      "last_modified": "2026-01-20T12:22:45.172007",
+      "file_size": 12703,
+      "last_modified": "2026-03-11T14:16:55.776135",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
     },
@@ -307,7 +307,7 @@
       "filename": "Optimal PRIME transformer.js",
       "metadata": {
         "name": "Optimal PRIME Transformer",
-        "version": "1.7",
+        "version": "1.8",
         "description": "Generate Production Files From a PRIME",
         "author": "Unknown",
         "target": "illustrator",
@@ -318,10 +318,10 @@
           "scaleFactor"
         ]
       },
-      "hash": "d05576811fdf8131396911f86270700b",
+      "hash": "9d835871daea840b9641bf70ce05108e",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Optimal PRIME transformer.js",
-      "file_size": 46858,
-      "last_modified": "2026-01-06T14:14:05.452515",
+      "file_size": 50632,
+      "last_modified": "2026-03-11T14:16:40.051121",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
