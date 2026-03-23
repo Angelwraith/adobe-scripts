@@ -3,7 +3,7 @@
 {
   "name": "Color Key Creator",
   "description": "Create A Prepositioned Color Key On Proofs",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["proof", "color", "key"]
 }
@@ -218,6 +218,21 @@ if (app.documents.length == 0) {
                 // Create all objects and collect them in an array
                 var createdObjects = [];
                 
+                // Reset Illustrator's session-level character attributes before creating any text.
+                // app.currentCharacterAttributes persists across scripts and user actions within
+                // a session — if a large font was active (type tool, selected headline, etc.),
+                // new textFrames inherit that stale size and characterAttributes.size fights it.
+                // Resetting here ensures a clean baseline. "Restart fixes it" = this exact bug.
+                try {
+                    app.currentCharacterAttributes.size = 7;
+                    app.currentCharacterAttributes.horizontalScale = 100;
+                    app.currentCharacterAttributes.verticalScale = 100;
+                    app.currentCharacterAttributes.tracking = 0;
+                    app.currentCharacterAttributes.baselineShift = 0;
+                } catch (e) {
+                    // Non-fatal — proceed if this fails (e.g., older AI versions)
+                }
+
                 // Pre-cache font for better performance
                 var boldFont = null;
                 try {
@@ -230,10 +245,13 @@ if (app.documents.length == 0) {
                 function addText(text, x, y, fontSize, isWarning) {
                     try {
                         var textFrame = doc.textFrames.add();
-                        textFrame.contents = text;
                         textFrame.left = x;
                         textFrame.top = y;
+                        // Set font size BEFORE setting contents — Illustrator's text engine
+                        // applies characterAttributes at insertion time. Setting size after
+                        // contents can lose to inherited session state in some builds.
                         textFrame.textRange.characterAttributes.size = fontSize;
+                        textFrame.contents = text;
                         
                         // Set color based on warning status
                         if (isWarning) {
