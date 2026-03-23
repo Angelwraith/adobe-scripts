@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.7",
+  "version": "1.8",
   "target": "illustrator",
   "tags": ["review", "check", "file"]
 }@END_METADATA*/
@@ -166,12 +166,7 @@
         try {
             // Step 1: Find and open all PRINT, PnC, and CutOnly files
             var printFiles = findFiles(folder, ["PRINT", "PnC", "CutOnly"]);
-            
-            if (printFiles.length == 0) {
-                alert("No PRINT, PnC, or CutOnly files found.");
-                return;
-            }
-            
+
             // Open all print files
             var openDocs = [];
             for (var i = 0; i < printFiles.length; i++) {
@@ -188,11 +183,17 @@
                     alert("Error opening file: " + printFiles[i].name + "\n" + e.message);
                 }
             }
-            
+
             // Step 2: Find all CUT files
             var cutFiles = findFiles(folder, ["CUT"]);
-            
-            // Check if all opened docs are CutOnly - if so, skip CUT placement entirely
+
+            // If nothing was found at all, alert and bail
+            if (printFiles.length == 0 && cutFiles.length == 0) {
+                alert("No PRINT, PnC, CutOnly, or CUT files found.");
+                return;
+            }
+
+            // Check if any opened docs are non-CutOnly (i.e. PRINT/PnC that need CUT placed)
             var hasNonCutOnly = false;
             for (var i = 0; i < openDocs.length; i++) {
                 if (!openDocs[i].isCutOnly) {
@@ -200,46 +201,45 @@
                     break;
                 }
             }
-            
-            if (cutFiles.length == 0 && hasNonCutOnly) {
-                alert("No CUT files found. Only PRINT files have been opened.");
-                return;
-            }
-            
-            if (!hasNonCutOnly) {
-                // All files are CutOnly - skip CUT placement, go straight to tiling
-                app.executeMenuCommand("tile");
-                for (var i = 0; i < openDocs.length; i++) {
-                    app.activeDocument = openDocs[i].doc;
-                    app.executeMenuCommand("fitall");
-                }
-                return;
-            }
-            
-            // Step 3: Match and place CUT files into PRINT files
-            var processedCount = 0;
+
+            // Step 3: Match CUT files to PRINT docs, place matched ones, open unmatched ones standalone
             for (var i = 0; i < cutFiles.length; i++) {
                 var cutFile = cutFiles[i];
                 var cutBaseName = getBaseName(cutFile.name);
-                
-                // Find matching PRINT file (skip CutOnly files - they don't need a separate CUT file placed)
+
+                // Find matching PRINT/PnC file (skip CutOnly files - they don't need a separate CUT file placed)
                 var matchedDoc = null;
-                for (var j = 0; j < openDocs.length; j++) {
-                    if (openDocs[j].baseName == cutBaseName && !openDocs[j].isCutOnly) {
-                        matchedDoc = openDocs[j].doc;
-                        break;
+                if (hasNonCutOnly) {
+                    for (var j = 0; j < openDocs.length; j++) {
+                        if (openDocs[j].baseName == cutBaseName && !openDocs[j].isCutOnly) {
+                            matchedDoc = openDocs[j].doc;
+                            break;
+                        }
                     }
                 }
-                
+
                 if (matchedDoc != null) {
+                    // Place CUT into matching PRINT doc
                     placeCutFile(matchedDoc, cutFile);
-                    processedCount++;
+                } else {
+                    // No matching PRINT file - open the CUT file as a standalone document
+                    try {
+                        var cutDoc = app.open(cutFile);
+                        openDocs.push({
+                            doc: cutDoc,
+                            file: cutFile,
+                            baseName: cutBaseName,
+                            isCutOnly: false
+                        });
+                    } catch (e) {
+                        alert("Error opening CUT file: " + cutFile.name + "\n" + e.message);
+                    }
                 }
             }
-            
+
             // Arrange documents in a tiled grid
             app.executeMenuCommand("tile");
-            
+
             // Fit all documents in their windows
             for (var i = 0; i < openDocs.length; i++) {
                 app.activeDocument = openDocs[i].doc;
