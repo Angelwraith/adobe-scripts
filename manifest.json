@@ -1,10 +1,31 @@
 {
-  "last_updated": "2026-03-23T15:05:04.301014",
+  "last_updated": "2026-03-26T14:19:40.298180",
   "deployer_version": "3.0",
-  "total_scripts": 25,
+  "total_scripts": 26,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
+    "BACKUP File Check.js": {
+      "filename": "BACKUP File Check.js",
+      "metadata": {
+        "name": "File Check",
+        "version": "2.9",
+        "description": "Production file readiness analysis",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "file",
+          "check",
+          "report"
+        ]
+      },
+      "hash": "5e4d385fbe00b6d93c942e661f5027a2",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\BACKUP File Check.js",
+      "file_size": 45619,
+      "last_modified": "2026-01-05T15:53:19.379559",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/BACKUP%20File%20Check.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/BACKUP%20File%20Check.js"
+    },
     "Color Key.js": {
       "filename": "Color Key.js",
       "metadata": {
@@ -96,20 +117,21 @@
       "filename": "File Check.js",
       "metadata": {
         "name": "File Check",
-        "version": "2.9",
-        "description": "Production file readiness analysis",
+        "version": "3.0",
+        "description": "Production file readiness analysis with manifest comparison",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
           "file",
           "check",
-          "report"
+          "report",
+          "manifest"
         ]
       },
-      "hash": "5e4d385fbe00b6d93c942e661f5027a2",
+      "hash": "9823f099ee2def29365c900d4b556f8c",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\File Check.js",
-      "file_size": 45619,
-      "last_modified": "2026-01-05T15:53:19.379559",
+      "file_size": 57317,
+      "last_modified": "2026-03-26T14:10:54.348098",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js"
     },
