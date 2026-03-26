@@ -5,27 +5,6 @@
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
-    "BACKUP File Check.js": {
-      "filename": "BACKUP File Check.js",
-      "metadata": {
-        "name": "File Check",
-        "version": "2.9",
-        "description": "Production file readiness analysis",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "file",
-          "check",
-          "report"
-        ]
-      },
-      "hash": "5e4d385fbe00b6d93c942e661f5027a2",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\BACKUP File Check.js",
-      "file_size": 45619,
-      "last_modified": "2026-01-05T15:53:19.379559",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/BACKUP%20File%20Check.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/BACKUP%20File%20Check.js"
-    },
     "Color Key.js": {
       "filename": "Color Key.js",
       "metadata": {
