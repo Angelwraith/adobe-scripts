@@ -2,11 +2,44 @@
 
 /*@METADATA{
   "name": "File Check",
-  "description": "Production file readiness analysis",
-  "version": "2.9",
+  "description": "Production file readiness analysis with manifest comparison",
+  "version": "3.0",
   "target": "illustrator",
-  "tags": ["file", "check", "report"]
+  "tags": ["file", "check", "report", "manifest"]
 }@END_METADATA*/
+
+// JSON Polyfill for ExtendScript (doesn't have native JSON)
+if (typeof JSON === 'undefined') {
+    var JSON = {
+        stringify: function(obj) {
+            if (obj === null) return 'null';
+            if (obj === undefined) return undefined;
+            if (typeof obj === 'string') return '"' + obj.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"';
+            if (typeof obj === 'number') return isFinite(obj) ? String(obj) : 'null';
+            if (typeof obj === 'boolean') return String(obj);
+            if (obj instanceof Array) {
+                var items = [];
+                for (var i = 0; i < obj.length; i++) {
+                    items.push(this.stringify(obj[i]));
+                }
+                return '[' + items.join(',') + ']';
+            }
+            if (typeof obj === 'object') {
+                var items = [];
+                for (var key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        items.push('"' + key + '":' + this.stringify(obj[key]));
+                    }
+                }
+                return '{' + items.join(',') + '}';
+            }
+            return '""';
+        },
+        parse: function(str) {
+            return eval('(' + str + ')');
+        }
+    };
+}
 
 // Main entry point with proper error checking
 try {
@@ -27,90 +60,90 @@ function showDocumentSelectionDialog() {
     dialog.margins = 20;
     dialog.preferredSize.width = 500;
     dialog.preferredSize.height = 175;
-    
+
     var titleText = dialog.add("statictext", undefined, "Select documents to analyze:");
     titleText.graphics.font = ScriptUI.newFont("dialog", "Bold", 14);
-    
+
     dialog.add("panel");
-    
+
     // Document selection - NO Analysis Options panel
     var documentsGroup = dialog.add("group");
     documentsGroup.orientation = "column";
     documentsGroup.alignChildren = "fill";
-    
+
     var listPanel = documentsGroup.add("panel");
     listPanel.orientation = "column";
     listPanel.alignChildren = "fill";
     listPanel.margins = 10;
     listPanel.preferredSize.height = 180;
-    
+
     var checkboxes = [];
     for (var i = 0; i < app.documents.length; i++) {
         var doc = app.documents[i];
         var checkboxGroup = listPanel.add("group");
         checkboxGroup.orientation = "row";
         checkboxGroup.alignChildren = "left";
-        
+
         var checkbox = checkboxGroup.add("checkbox", undefined, doc.name);
         checkbox.value = true;
         checkbox.preferredSize.width = 400;
-        
+
         checkboxes.push({
             checkbox: checkbox,
             document: doc
         });
     }
-    
+
     dialog.add("panel");
-    
+
     var selectionGroup = dialog.add("group");
     selectionGroup.alignment = "center";
     selectionGroup.spacing = 10;
-    
+
     var selectAllButton = selectionGroup.add("button", undefined, "Select All");
     selectAllButton.preferredSize.width = 80;
     var selectCurrentButton = selectionGroup.add("button", undefined, "Select Current");
     selectCurrentButton.preferredSize.width = 90;
     var selectNoneButton = selectionGroup.add("button", undefined, "Select None");
     selectNoneButton.preferredSize.width = 80;
-    
+
     selectAllButton.onClick = function() {
         for (var i = 0; i < checkboxes.length; i++) {
             checkboxes[i].checkbox.value = true;
         }
     };
-    
+
     selectCurrentButton.onClick = function() {
         var activeDocName = app.activeDocument.name;
         for (var i = 0; i < checkboxes.length; i++) {
             checkboxes[i].checkbox.value = (checkboxes[i].document.name === activeDocName);
         }
     };
-    
+
     selectNoneButton.onClick = function() {
         for (var i = 0; i < checkboxes.length; i++) {
             checkboxes[i].checkbox.value = false;
         }
     };
-    
+
     dialog.add("panel");
-    
+
     // THREE BUTTONS - No radio buttons anywhere
     var buttonGroup = dialog.add("group");
     buttonGroup.alignment = "center";
     buttonGroup.spacing = 10;
-    
+
     var cancelButton = buttonGroup.add("button", undefined, "Cancel");
     var quickButton = buttonGroup.add("button", undefined, "Quick Analysis");
     var ppiButton = buttonGroup.add("button", undefined, "Full Analysis (with PPI)");
-    
+
     var result = null;
-    
+
     cancelButton.onClick = function() {
         result = null;
         dialog.close();
     };
-    
+
     quickButton.onClick = function() {
         var selectedDocuments = [];
         for (var i = 0; i < checkboxes.length; i++) {
@@ -118,19 +151,19 @@ function showDocumentSelectionDialog() {
                 selectedDocuments.push(checkboxes[i].document);
             }
         }
-        
+
         if (selectedDocuments.length === 0) {
             alert("Please select at least one document to analyze.");
             return;
         }
-        
+
         result = {
             documents: selectedDocuments,
             includePPI: false
         };
         dialog.close();
     };
-    
+
     ppiButton.onClick = function() {
         var selectedDocuments = [];
         for (var i = 0; i < checkboxes.length; i++) {
@@ -138,24 +171,340 @@ function showDocumentSelectionDialog() {
                 selectedDocuments.push(checkboxes[i].document);
             }
         }
-        
+
         if (selectedDocuments.length === 0) {
             alert("Please select at least one document to analyze.");
             return;
         }
-        
+
         result = {
             documents: selectedDocuments,
             includePPI: true
         };
         dialog.close();
     };
-    
+
     dialog.show();
-    
+
     if (result && result.documents && result.documents.length > 0) {
         runAnalysis(result.documents, result.includePPI);
     }
+}
+
+function extractMaterialFromFilename(filename) {
+    // Production file naming convention (from Optimal PRIME transformer):
+    //   {baseName}_{type}_{artboardName}.pdf
+    // type = PRINT, CUT, PnC, or CutOnly
+    // artboardName = material name, optionally suffixed with _Pt# for multi-part
+    var upperName = filename.toUpperCase();
+    // Check longest keywords first to avoid partial matches (e.g. _CUT_ inside _CUTONLY_)
+    var keywords = ['_CUTONLY_', '_PRINT_', '_PNC_', '_CUT_'];
+
+    for (var k = 0; k < keywords.length; k++) {
+        var idx = upperName.indexOf(keywords[k]);
+        if (idx !== -1) {
+            var afterKeyword = filename.substring(idx + keywords[k].length);
+            // Remove file extension
+            var extensionMatch = afterKeyword.match(/\.(ai|eps|pdf)$/i);
+            if (extensionMatch) {
+                afterKeyword = afterKeyword.substring(0, afterKeyword.length - extensionMatch[0].length);
+            }
+            // Strip _Pt# suffix (multi-part artboards) to group all parts under same material
+            afterKeyword = afterKeyword.replace(/_Pt\d+$/i, '');
+            return afterKeyword;
+        }
+    }
+    return '';
+}
+
+function extractFileType(filename) {
+    // Returns the production file type: PRINT, CUT, CutOnly, PnC, or empty
+    var upperName = filename.toUpperCase();
+    if (upperName.indexOf('_CUTONLY_') !== -1) { return 'CutOnly'; }
+    if (upperName.indexOf('_PNC_') !== -1) { return 'PnC'; }
+    if (upperName.indexOf('_PRINT_') !== -1) { return 'PRINT'; }
+    if (upperName.indexOf('_CUT_') !== -1) { return 'CUT'; }
+    return '';
+}
+
+function normalizeDimension(width, height) {
+    // Round to nearest 1/8"
+    width = Math.round(width * 8) / 8;
+    height = Math.round(height * 8) / 8;
+
+    // Ensure smaller dimension first
+    if (width <= height) {
+        return width + '"x' + height + '"';
+    } else {
+        return height + '"x' + width + '"';
+    }
+}
+
+function findAndReadProofManifest(documents) {
+    // Returns { data: <object>|null, status: <string> }
+    // status is always set so we can show diagnostics when manifest is not found
+    try {
+        if (!documents || documents.length === 0) {
+            return { data: null, status: 'No documents provided' };
+        }
+
+        var firstDocPath = documents[0].fullName;
+        if (!firstDocPath) {
+            return { data: null, status: 'First document has no file path (unsaved?)' };
+        }
+
+        var docFile = new File(firstDocPath);
+        var currentFolder = docFile.parent;
+        var searchedFolders = [];
+
+        // Walk up the folder hierarchy looking for a PRIME subfolder
+        // Production files live in the order folder (or material subfolders within it)
+        // PRIME folder is a child of the order folder:
+        //   Order Folder/PRIME/proof.pdf
+        //   Order Folder/production_file.pdf
+        //   Order Folder/Material Subfolder/production_file.pdf
+        var maxLevels = 5;
+        var primeFolder = null;
+
+        for (var level = 0; level < maxLevels; level++) {
+            if (!currentFolder || currentFolder.parent === currentFolder) {
+                break;
+            }
+
+            searchedFolders.push(decodeURI(currentFolder.name));
+
+            // Check if PRIME folder exists as a child of current folder
+            var primeFolderPath = currentFolder.absoluteURI + '/' + 'PRIME';
+            var potentialPrimeFolder = new Folder(primeFolderPath);
+
+            if (potentialPrimeFolder.exists) {
+                primeFolder = potentialPrimeFolder;
+                break;
+            }
+
+            currentFolder = currentFolder.parent;
+        }
+
+        if (!primeFolder) {
+            return { data: null, status: 'No PRIME folder found. Searched: ' + searchedFolders.join(' > ') };
+        }
+
+        // Look for a file with "Proof" in the name (case-insensitive), preferring PDF
+        var proofFile = null;
+        var filesInPrime = [];
+        var files = primeFolder.getFiles();
+
+        for (var f = 0; f < files.length; f++) {
+            var file = files[f];
+            if (file instanceof File) {
+                filesInPrime.push(file.name);
+                var fileName = file.name.toUpperCase();
+                if (fileName.indexOf('PROOF') !== -1) {
+                    // Prefer PDF files
+                    if (fileName.indexOf('.PDF') !== -1) {
+                        proofFile = file;
+                        break;
+                    } else if (!proofFile) {
+                        proofFile = file;
+                    }
+                }
+            }
+        }
+
+        if (!proofFile) {
+            return { data: null, status: 'PRIME folder found but no proof file. Files in PRIME: ' + filesInPrime.join(', ') };
+        }
+
+        // Read XMP metadata from proof file
+        if (ExternalObject.AdobeXMPScript === undefined) {
+            ExternalObject.AdobeXMPScript = new ExternalObject('lib:AdobeXMPScript');
+        }
+
+        // Determine file type for XMPFile constructor
+        var proofNameUpper = proofFile.name.toUpperCase();
+        var xmpFileType = XMPConst.FILE_UNKNOWN;
+        if (proofNameUpper.indexOf('.PDF') !== -1) {
+            xmpFileType = XMPConst.FILE_PDF;
+        } else if (proofNameUpper.indexOf('.AI') !== -1) {
+            xmpFileType = XMPConst.FILE_ILLUSTRATOR;
+        } else if (proofNameUpper.indexOf('.EPS') !== -1) {
+            xmpFileType = XMPConst.FILE_EPS;
+        }
+
+        var xmpFile = new XMPFile(proofFile.fsName, xmpFileType, XMPConst.OPEN_FOR_READ);
+        if (!xmpFile) {
+            return { data: null, status: 'Could not open XMP for: ' + proofFile.name };
+        }
+
+        var xmp = xmpFile.getXMP();
+        var packingProp = xmp.getProperty('http://extremecolor.net/packing/', 'data');
+
+        xmpFile.closeFile(XMPConst.CLOSE_UPDATE_IF_SAFE);
+
+        if (packingProp && packingProp.value) {
+            try {
+                var parsed = JSON.parse(packingProp.value);
+                return { data: parsed, status: 'Loaded from: ' + proofFile.name };
+            } catch (parseError) {
+                return { data: null, status: 'Found XMP in ' + proofFile.name + ' but JSON parse failed: ' + parseError.toString() };
+            }
+        }
+
+        return { data: null, status: 'Proof found (' + proofFile.name + ') but no packing data in XMP' };
+
+    } catch (e) {
+        return { data: null, status: 'Error: ' + e.toString() };
+    }
+}
+
+function buildManifestComparison(packingData, individualResults) {
+    // Returns structured data for building the UI, not a text string
+    var result = {
+        hasData: false,
+        expectedText: '',
+        foundText: '',
+        mismatches: []
+    };
+
+    if (!packingData) {
+        return result;
+    }
+    result.hasData = true;
+
+    // Build expected sizes by material from packing data
+    var expectedSizes = {};
+    if (packingData.materials) {
+        for (var m = 0; m < packingData.materials.length; m++) {
+            var material = packingData.materials[m];
+            var materialName = material.material_name || 'Unknown';
+            if (!expectedSizes[materialName]) { expectedSizes[materialName] = {}; }
+            if (material.sheets) {
+                for (var s = 0; s < material.sheets.length; s++) {
+                    var sheet = material.sheets[s];
+                    if (sheet.signs) {
+                        for (var sg = 0; sg < sheet.signs.length; sg++) {
+                            var sign = sheet.signs[sg];
+                            var signW = sign.width || 0;
+                            var signH = sign.height || 0;
+                            var size = normalizeDimension(signW, signH);
+                            if (signW > 0 && signH > 0) {
+                                expectedSizes[materialName][size] = (expectedSizes[materialName][size] || 0) + 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Build found sizes by material from file check results
+    // Also track which materials use CutOnly/PnC (uncountable via spot color)
+    var foundSizes = {};
+    var uncountableMaterials = {};
+    if (individualResults) {
+        for (var d = 0; d < individualResults.length; d++) {
+            var ir = individualResults[d];
+            var matName = ir.materialName || 'Unknown';
+            if (!foundSizes[matName]) { foundSizes[matName] = {}; }
+
+            // CutOnly and PnC files use CutContour layers, not CutThrough2-Outside
+            // Their cut paths can't be reliably counted (vinyl = multi-piece)
+            if (ir.fileType === 'CutOnly' || ir.fileType === 'PnC') {
+                uncountableMaterials[matName] = true;
+            }
+
+            if (ir.cutThroughSizes) {
+                for (var size in ir.cutThroughSizes) {
+                    foundSizes[matName][size] = (foundSizes[matName][size] || 0) + ir.cutThroughSizes[size];
+                }
+            }
+        }
+    }
+
+    // Collect all materials
+    var allMaterials = {};
+    var mat;
+    for (mat in expectedSizes) { allMaterials[mat] = true; }
+    for (mat in foundSizes) { allMaterials[mat] = true; }
+    var materialList = [];
+    for (mat in allMaterials) { materialList.push(mat); }
+    materialList.sort();
+
+    var expectedLines = [];
+    var foundLines = [];
+
+    for (var m = 0; m < materialList.length; m++) {
+        var matName = materialList[m];
+        var expectedByMat = expectedSizes[matName] || {};
+        var foundByMat = foundSizes[matName] || {};
+
+        // Material header
+        expectedLines.push(matName);
+        foundLines.push(matName);
+
+        // If this material uses CutOnly/PnC, skip counting — show note instead
+        if (uncountableMaterials[matName]) {
+            var expCount = 0;
+            for (var sz in expectedByMat) { expCount += expectedByMat[sz]; }
+            if (expCount > 0) {
+                expectedLines.push('  ' + expCount + ' sign(s) expected');
+            }
+            foundLines.push('  (CutContour - not counted)');
+            expectedLines.push('');
+            foundLines.push('');
+            continue;
+        }
+
+        // Collect all sizes for this material
+        var allSizes = {};
+        var sz;
+        for (sz in expectedByMat) { allSizes[sz] = true; }
+        for (sz in foundByMat) { allSizes[sz] = true; }
+        var sizeList = [];
+        for (sz in allSizes) { sizeList.push(sz); }
+        sizeList.sort();
+
+        // Matched items first
+        for (var s = 0; s < sizeList.length; s++) {
+            var size = sizeList[s];
+            var expCount = expectedByMat[size] || 0;
+            var fndCount = foundByMat[size] || 0;
+            if (expCount > 0 && fndCount > 0 && expCount === fndCount) {
+                expectedLines.push('  ' + expCount + 'x  ' + size);
+                foundLines.push('  ' + fndCount + 'x  ' + size);
+            }
+        }
+
+        // Mismatched items second
+        for (var s = 0; s < sizeList.length; s++) {
+            var size = sizeList[s];
+            var expCount = expectedByMat[size] || 0;
+            var fndCount = foundByMat[size] || 0;
+            if (expCount === fndCount && expCount > 0) { continue; }
+
+            if (expCount > 0 && fndCount > 0 && expCount !== fndCount) {
+                expectedLines.push('  ' + expCount + 'x  ' + size + '  <<<');
+                foundLines.push('  ' + fndCount + 'x  ' + size + '  <<<');
+                result.mismatches.push(matName + ' ' + size + ': expected ' + expCount + ', found ' + fndCount);
+            } else if (expCount > 0 && fndCount === 0) {
+                expectedLines.push('  ' + expCount + 'x  ' + size + '  <<<');
+                foundLines.push('  --missing--');
+                result.mismatches.push('MISSING: ' + expCount + 'x ' + size + ' ' + matName);
+            } else if (expCount === 0 && fndCount > 0) {
+                expectedLines.push('  --not expected--');
+                foundLines.push('  ' + fndCount + 'x  ' + size + '  <<<');
+                result.mismatches.push('UNEXPECTED: ' + fndCount + 'x ' + size + ' ' + matName);
+            }
+        }
+
+        // Blank line between materials
+        expectedLines.push('');
+        foundLines.push('');
+    }
+
+    result.expectedText = expectedLines.join('\n');
+    result.foundText = foundLines.join('\n');
+    return result;
 }
 
 function runAnalysis(documents, includePPI) {
@@ -171,7 +520,7 @@ function runAnalysis(documents, includePPI) {
         var allCompoundPathWarnings = [];
         var documentNames = [];
         var individualDocumentResults = [];
-        
+
         // Get the scale factor for Large Canvas handling
         var scaleFactor = 1;
         try {
@@ -179,21 +528,26 @@ function runAnalysis(documents, includePPI) {
         } catch (e) {
             scaleFactor = 1;
         }
-        
+
         // Store original active document
         var originalActiveDoc = app.activeDocument;
-        
+
+        // Try to read proof manifest
+        var manifestResult = findAndReadProofManifest(documents);
+        var proofManifest = manifestResult.data;
+        var manifestStatus = manifestResult.status;
+
         // Process each document
         for (var docIndex = 0; docIndex < documents.length; docIndex++) {
             var doc = documents[docIndex];
             documentNames.push(doc.name);
-            
+
             var docStartTime = new Date().getTime();
-            
+
             // Activate document for analysis
             var documentActivated = false;
             var targetDoc = null;
-            
+
             for (var activateIndex = 0; activateIndex < app.documents.length; activateIndex++) {
                 if (app.documents[activateIndex].name === doc.name) {
                     targetDoc = app.documents[activateIndex];
@@ -202,22 +556,24 @@ function runAnalysis(documents, includePPI) {
                     break;
                 }
             }
-            
+
             if (!documentActivated) {
                 alert("ERROR: Could not activate document: " + doc.name);
                 continue;
             }
-            
+
             // Force redraw to ensure document is active
             app.redraw();
             $.sleep(100);
-            
+
             var docResult = analyzeDocument(targetDoc, includePPI, scaleFactor);
             var analysisTime = new Date().getTime() - docStartTime;
-            
+
             // Store individual document results
             var individualResult = {
                 name: doc.name,
+                materialName: extractMaterialFromFilename(doc.name),
+                fileType: extractFileType(doc.name),
                 analysisTime: analysisTime,
                 rasterCount: docResult.rasterCount,
                 lowResImages: docResult.lowResImages || [],
@@ -229,12 +585,12 @@ function runAnalysis(documents, includePPI) {
                 scaleFactor: scaleFactor
             };
             individualDocumentResults.push(individualResult);
-            
+
             // Aggregate results
             totalImageCount += docResult.rasterCount;
             totalCutThroughPaths += docResult.totalCutThroughPaths;
             totalCompoundPaths += docResult.totalCompoundPaths;
-            
+
             // Merge cut through sizes
             for (var size in docResult.cutThroughSizes) {
                 if (allCutThroughSizes[size]) {
@@ -243,7 +599,7 @@ function runAnalysis(documents, includePPI) {
                     allCutThroughSizes[size] = docResult.cutThroughSizes[size];
                 }
             }
-            
+
             // Merge compound path warnings
             if (docResult.compoundPathWarnings) {
                 for (var i = 0; i < docResult.compoundPathWarnings.length; i++) {
@@ -253,7 +609,7 @@ function runAnalysis(documents, includePPI) {
                     });
                 }
             }
-            
+
             // Merge low res images
             if (docResult.lowResImages) {
                 for (var i = 0; i < docResult.lowResImages.length; i++) {
@@ -263,7 +619,7 @@ function runAnalysis(documents, includePPI) {
                     });
                 }
             }
-            
+
             // Merge all image details
             if (docResult.allImageDetails) {
                 for (var i = 0; i < docResult.allImageDetails.length; i++) {
@@ -273,9 +629,9 @@ function runAnalysis(documents, includePPI) {
                     });
                 }
             }
-            
+
             timingReport.push("Document '" + doc.name + "': " + analysisTime + "ms");
-            
+
             // Cleanup between documents
             if (docIndex < documents.length - 1) {
                 try {
@@ -290,23 +646,27 @@ function runAnalysis(documents, includePPI) {
                 } catch (cleanupError) {}
             }
         }
-        
+
         // Restore original active document
         try {
             app.activeDocument = originalActiveDoc;
         } catch (e) {}
-        
+
         var totalTime = new Date().getTime() - overallStartTime;
-        
+
         // Build report text
-        var reportText = buildReport(documents.length, documentNames, totalTime, timingReport, 
-                                   totalImageCount, allLowResImages, allImageDetails, allCutThroughSizes, 
+        var reportText = buildReport(documents.length, documentNames, totalTime, timingReport,
+                                   totalImageCount, allLowResImages, allImageDetails, allCutThroughSizes,
                                    totalCutThroughPaths, totalCompoundPaths, allCompoundPathWarnings,
                                    includePPI, individualDocumentResults);
-        
+
+        // Build manifest comparison if available
+        var manifestComparison = buildManifestComparison(proofManifest, individualDocumentResults);
+
         // Store analysis data
         var analysisData = {
             reportText: reportText,
+            manifestComparison: manifestComparison,
             individualResults: individualDocumentResults,
             totalDocuments: documents.length,
             totalPaths: totalCutThroughPaths,
@@ -314,14 +674,15 @@ function runAnalysis(documents, includePPI) {
             totalTime: Math.round(totalTime / 1000),
             hasLowRes: includePPI && allLowResImages.length > 0,
             hasCompoundPaths: totalCompoundPaths > 0,
+            manifestStatus: manifestStatus,
             allCutThroughSizes: allCutThroughSizes,
             allImageDetails: allImageDetails,
             allCompoundPathWarnings: allCompoundPathWarnings
         };
-        
+
         // Show results
         showResultsDialog(analysisData);
-        
+
     } catch (error) {
         alert("Error in analysis: " + error.toString());
     }
@@ -344,11 +705,11 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
         var bounds = pathItem.geometricBounds;
         var width = pointsToInches(bounds[2] - bounds[0]);
         var height = pointsToInches(bounds[1] - bounds[3]);
-        
+
         // Round to nearest 1/8" (0.125)
         width = Math.round(width * 8) / 8;
         height = Math.round(height * 8) / 8;
-        
+
         if (width <= height) {
             return width + '"x' + height + '"';
         } else {
@@ -358,12 +719,12 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
 
     function findPathsWithCutThroughColor(doc) {
         var originalSelection = doc.selection;
-        
+
         var cutThroughSizes = {};
         var totalPaths = 0;
         var compoundPathWarnings = [];
         var totalCompoundPaths = 0;
-        
+
         try {
             var targetSpot = null;
             for (var i = 0; i < doc.spots.length; i++) {
@@ -372,7 +733,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                     break;
                 }
             }
-            
+
             if (!targetSpot) {
                 return {
                     cutThroughSizes: cutThroughSizes,
@@ -381,37 +742,36 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                     totalCompoundPaths: 0
                 };
             }
-            
+
             var spotColor = new SpotColor();
             spotColor.spot = targetSpot;
-            
+
             doc.selection = null;
             doc.defaultFillColor = spotColor;
             app.executeMenuCommand("Find Fill Color menu item");
-            
+
             var fillSelection = [];
             for (var i = 0; i < doc.selection.length; i++) {
                 fillSelection.push(doc.selection[i]);
             }
-            
+
             doc.selection = null;
             doc.defaultStrokeColor = spotColor;
             app.executeMenuCommand("Find Stroke Color menu item");
-            
+
             var strokeSelection = [];
             for (var i = 0; i < doc.selection.length; i++) {
                 strokeSelection.push(doc.selection[i]);
             }
-            
+
             var allPaths = [];
             var processedItems = [];
-            
+
             for (var i = 0; i < fillSelection.length; i++) {
                 if (fillSelection[i].typename == "PathItem") {
                     allPaths.push(fillSelection[i]);
                     processedItems.push(fillSelection[i]);
                 } else if (fillSelection[i].typename == "CompoundPathItem") {
-                    // COMPOUND PATH DETECTED - This is a production error!
                     totalCompoundPaths++;
                     var size = getPathDimensions(fillSelection[i]);
                     compoundPathWarnings.push({
@@ -419,7 +779,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                     });
                 }
             }
-            
+
             for (var i = 0; i < strokeSelection.length; i++) {
                 if (strokeSelection[i].typename == "PathItem") {
                     var alreadyAdded = false;
@@ -433,7 +793,6 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                         allPaths.push(strokeSelection[i]);
                     }
                 } else if (strokeSelection[i].typename == "CompoundPathItem") {
-                    // Check if already counted
                     var alreadyCounted = false;
                     for (var j = 0; j < fillSelection.length; j++) {
                         if (fillSelection[j] === strokeSelection[i]) {
@@ -450,7 +809,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                     }
                 }
             }
-            
+
             for (var i = 0; i < allPaths.length; i++) {
                 var size = getPathDimensions(allPaths[i]);
                 if (cutThroughSizes[size]) {
@@ -460,14 +819,14 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                 }
                 totalPaths++;
             }
-            
+
         } catch (e) {
         } finally {
             try {
                 doc.selection = originalSelection;
             } catch (e) {}
         }
-        
+
         return {
             cutThroughSizes: cutThroughSizes,
             totalCutThroughPaths: totalPaths,
@@ -480,7 +839,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
     var rasterCount = 0;
     var lowResImages = [];
     var allImageDetails = [];
-    
+
     // FAST PRE-CHECK: Skip image analysis if document has no images
     var hasImages = false;
     try {
@@ -490,7 +849,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
     } catch (e) {
         hasImages = true;
     }
-    
+
     if (includePPI && hasImages) {
         try {
             var processedItems = [];
@@ -504,29 +863,29 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                             break;
                         }
                     }
-                    
+
                     if (!alreadyProcessed) {
                         processedItems.push(item);
                         rasterCount++;
-                        
+
                         try {
                             // Get basic image info with Large Canvas correction
                             var bounds = item.geometricBounds;
                             var actualScaleFactor = (scaleFactor && scaleFactor > 0) ? scaleFactor : 1;
                             var docWidthInches = Math.round(((bounds[2] - bounds[0]) / 72 * scaleFactor) * 100) / 100;
                             var docHeightInches = Math.round(((bounds[1] - bounds[3]) / 72 * scaleFactor) * 100) / 100;
-                            
+
                             var imageInfo = {
                                 type: item.typename,
                                 bounds: bounds,
                                 docWidth: docWidthInches,
                                 docHeight: docHeightInches
                             };
-                            
+
                             // Try multiple methods to get PPI/resolution info
                             var estimatedPPI = "Unknown";
                             var resolutionMethod = "No method available";
-                            
+
                             // Method 1: Try to get actual resolution for RasterItems
                             if (item.typename == "RasterItem") {
                                 try {
@@ -538,9 +897,9 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                                     } catch (fileError) {
                                         fileStatus = "Embedded";
                                     }
-                                    
+
                                     resolutionMethod = fileStatus;
-                                    
+
                                     // Calculate from transformation matrix
                                     try {
                                         var matrix = item.matrix;
@@ -570,7 +929,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                                     resolutionMethod = "RasterItem analysis error: " + rasterError.toString();
                                 }
                             }
-                            
+
                             // Method 2: Try for PlacedItems
                             else if (item.typename == "PlacedItem") {
                                 try {
@@ -584,9 +943,9 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                                     } catch (fileError) {
                                         fileStatus = "No file reference";
                                     }
-                                    
+
                                     resolutionMethod = fileStatus;
-                                    
+
                                     // Calculate from transformation matrix
                                     try {
                                         var matrix = item.matrix;
@@ -610,21 +969,21 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                                     resolutionMethod = "PlacedItem analysis error: " + placedError.toString();
                                 }
                             }
-                            
+
                             // Build comprehensive image text
                             var imageText = 'Img#' + rasterCount + ' (' + item.typename + '): SIZE: ' + docWidthInches + '"x' + docHeightInches + '"';
-                            
+
                             if (estimatedPPI !== "Unknown") {
                                 imageText += ', PPI: ~' + estimatedPPI;
                             } else {
                                 imageText += ', PPI: Unknown';
                             }
-                            
+
                             imageText += ' [' + resolutionMethod + ']';
-                            
+
                             // Add to ALL images list
                             allImageDetails.push({text: imageText});
-                            
+
                             // Check if low resolution
                             var isLowRes = false;
                             if (estimatedPPI !== "Unknown" && typeof estimatedPPI === "number") {
@@ -634,14 +993,14 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                                     lowResImages.push({text: imageText});
                                 }
                             }
-                            
+
                         } catch (imageError) {
                             var errorText = 'Image ' + rasterCount + ' (' + item.typename + '): Analysis error - ' + imageError.toString();
                             allImageDetails.push({text: errorText});
                         }
                     }
                 }
-                
+
                 if (item.typename == "GroupItem" && item.pageItems.length > 0) {
                     for (var j = 0; j < item.pageItems.length; j++) {
                         processImageItem(item.pageItems[j]);
@@ -689,182 +1048,151 @@ function showResultsDialog(analysisData) {
     var dialog = new Window("dialog", "Analysis Results");
     dialog.orientation = "column";
     dialog.alignChildren = "fill";
-    dialog.spacing = 10;
-    dialog.margins = 15;
-    dialog.preferredSize.width = 700;
-    dialog.layout.layout(true);
-    dialog.layout.resize();
-    dialog.preferredSize.height = 1200;
-    dialog.maximumSize.height = 1200;
-    dialog.minimumSize.height = 1200;
-    
-    // Summary header
-    var headerPanel = dialog.add("panel", undefined, "Analysis Summary");
-    headerPanel.orientation = "column";
-    headerPanel.alignChildren = "fill";
-    headerPanel.margins = 10;
-    
-    var summaryGroup = headerPanel.add("group");
-    summaryGroup.orientation = "row";
-    summaryGroup.alignment = "fill";
-    
-    var docsLabel = summaryGroup.add("statictext", undefined, "Documents: " + analysisData.totalDocuments);
-    var pathsLabel = summaryGroup.add("statictext", undefined, "Cut Paths: " + analysisData.totalPaths);
-    var timeLabel = summaryGroup.add("statictext", undefined, "Time: " + analysisData.totalTime + "s");
-    
-    // Add critical warnings if detected
+    dialog.spacing = 8;
+    dialog.margins = 12;
+    dialog.preferredSize.width = 1100;
+
+    // -- ROW 1: Summary header --
+    var headerGroup = dialog.add("group");
+    headerGroup.orientation = "row";
+    headerGroup.alignment = "fill";
+    headerGroup.spacing = 20;
+    headerGroup.add("statictext", undefined, "Documents: " + analysisData.totalDocuments);
+    headerGroup.add("statictext", undefined, "Cut Paths: " + analysisData.totalPaths);
+    headerGroup.add("statictext", undefined, "Time: " + analysisData.totalTime + "s");
+
+    // Critical warnings inline
     if (analysisData.hasCompoundPaths) {
-        var warningGroup = headerPanel.add("group");
-        warningGroup.orientation = "row";
-        warningGroup.alignment = "fill";
-        var compoundWarning = warningGroup.add("statictext", undefined, "COMPOUND PATHS: " + analysisData.totalCompoundPaths + " - PRODUCTION ERROR!");
-        compoundWarning.graphics.foregroundColor = compoundWarning.graphics.newPen(compoundWarning.graphics.PenType.SOLID_COLOR, [1, 0, 0], 1);
-        compoundWarning.graphics.font = ScriptUI.newFont("dialog", "Bold", 12);
+        var cpWarn = headerGroup.add("statictext", undefined, "COMPOUND PATHS: " + analysisData.totalCompoundPaths + " - FIX!");
+        cpWarn.graphics.foregroundColor = cpWarn.graphics.newPen(cpWarn.graphics.PenType.SOLID_COLOR, [1, 0, 0], 1);
+        cpWarn.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
     }
-    
     if (analysisData.hasLowRes) {
-        var lowResCount = 0;
-        if (analysisData.individualResults) {
-            for (var lr = 0; lr < analysisData.individualResults.length; lr++) {
-                if (analysisData.individualResults[lr].lowResImages) {
-                    lowResCount += analysisData.individualResults[lr].lowResImages.length;
-                }
+        var lrCount = 0;
+        for (var lr = 0; lr < analysisData.individualResults.length; lr++) {
+            if (analysisData.individualResults[lr].lowResImages) {
+                lrCount += analysisData.individualResults[lr].lowResImages.length;
             }
         }
-        var lowResGroup = headerPanel.add("group");
-        lowResGroup.orientation = "row";
-        lowResGroup.alignment = "fill";
-        var lowResWarning = lowResGroup.add("statictext", undefined, "LOW RESOLUTION: " + lowResCount + " images below 72 PPI!");
-        lowResWarning.graphics.foregroundColor = lowResWarning.graphics.newPen(lowResWarning.graphics.PenType.SOLID_COLOR, [1, 0, 0], 1);
-        lowResWarning.graphics.font = ScriptUI.newFont("dialog", "Bold", 12);
+        var lrWarn = headerGroup.add("statictext", undefined, "LOW RES: " + lrCount);
+        lrWarn.graphics.foregroundColor = lrWarn.graphics.newPen(lrWarn.graphics.PenType.SOLID_COLOR, [1, 0, 0], 1);
+        lrWarn.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
     }
-    
-    // Results tabs
-    var tabGroup = dialog.add("tabbedpanel");
-    tabGroup.alignChildren = "fill";
-    tabGroup.preferredSize.height = 1075;
-    tabGroup.maximumSize.height = 1075;
-    
-    // Summary tab
-    var summaryTab = tabGroup.add("tab", undefined, "Summary");
-    summaryTab.orientation = "column";
-    summaryTab.alignChildren = "fill";
-    
-    var summaryText = summaryTab.add("edittext", undefined, "", {multiline: true, scrolling: true, readonly: true});
-    summaryText.alignment = ["fill", "fill"];
-    
-    // Build summary content with warnings
-    var summaryContent = [];
-    
-    // Add compound path warning at top if needed
-    if (analysisData.hasCompoundPaths) {
-        summaryContent.push("*** CRITICAL PRODUCTION ERROR ***");
-        summaryContent.push("COMPOUND PATHS WITH CUTTHROUGH COLOR DETECTED!");
-        summaryContent.push("Found " + analysisData.totalCompoundPaths + " compound path(s) with CutThrough color");
-        summaryContent.push("This WILL cause cutting machine failures!");
-        summaryContent.push("MUST BE FIXED before production!");
-        summaryContent.push("");
-    }
-    
-    // Add low-res warning at top if needed  
-    if (analysisData.hasLowRes) {
-        var summaryLowResCount = 0;
-        if (analysisData.individualResults) {
-            for (var lr = 0; lr < analysisData.individualResults.length; lr++) {
-                if (analysisData.individualResults[lr].lowResImages) {
-                    summaryLowResCount += analysisData.individualResults[lr].lowResImages.length;
-                }
+
+    // -- ROW 2: Manifest comparison (always visible) --
+    var comparison = analysisData.manifestComparison;
+
+    if (comparison && comparison.hasData) {
+        // Mismatch alerts
+        if (comparison.mismatches.length > 0) {
+            var alertPanel = dialog.add("panel", undefined, "MISMATCHES");
+            alertPanel.orientation = "column";
+            alertPanel.alignChildren = "left";
+            alertPanel.margins = [10, 15, 10, 8];
+            for (var mi = 0; mi < comparison.mismatches.length; mi++) {
+                var alertLine = alertPanel.add("statictext", undefined, comparison.mismatches[mi]);
+                alertLine.graphics.foregroundColor = alertLine.graphics.newPen(alertLine.graphics.PenType.SOLID_COLOR, [1, 0.15, 0.15], 1);
+                alertLine.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
             }
+        } else {
+            var okGroup = dialog.add("group");
+            okGroup.alignment = "center";
+            var okText = okGroup.add("statictext", undefined, "All expected items found - quantities match");
+            okText.graphics.foregroundColor = okText.graphics.newPen(okText.graphics.PenType.SOLID_COLOR, [0, 0.55, 0], 1);
+            okText.graphics.font = ScriptUI.newFont("dialog", "Bold", 12);
         }
-        
-        summaryContent.push("ATTENTION: " + summaryLowResCount + " LOW RESOLUTION IMAGES FOUND");
-        summaryContent.push("Images below 72 PPI may not print clearly!");
-        summaryContent.push("CHECK INDIVIDUAL DOCUMENT TABS FOR DETAILS");
-        summaryContent.push("");
+
+        // Side by side panels
+        var compGroup = dialog.add("group");
+        compGroup.orientation = "row";
+        compGroup.alignChildren = "fill";
+        compGroup.spacing = 10;
+
+        var expectedPanel = compGroup.add("panel", undefined, "EXPECTED (from proof)");
+        expectedPanel.orientation = "column";
+        expectedPanel.alignChildren = "fill";
+        expectedPanel.preferredSize.width = 520;
+        expectedPanel.margins = [10, 15, 10, 8];
+        var expectedEdit = expectedPanel.add("edittext", undefined, comparison.expectedText, {multiline: true, scrolling: true, readonly: true});
+        expectedEdit.preferredSize.height = 180;
+
+        var foundPanel = compGroup.add("panel", undefined, "FOUND (in files)");
+        foundPanel.orientation = "column";
+        foundPanel.alignChildren = "fill";
+        foundPanel.preferredSize.width = 520;
+        foundPanel.margins = [10, 15, 10, 8];
+        var foundEdit = foundPanel.add("edittext", undefined, comparison.foundText, {multiline: true, scrolling: true, readonly: true});
+        foundEdit.preferredSize.height = 180;
+
+    } else {
+        // No manifest data - show compact status
+        var noDataGroup = dialog.add("group");
+        noDataGroup.alignment = "left";
+        var noDataText = noDataGroup.add("statictext", undefined, "Manifest: " + (analysisData.manifestStatus || 'No proof data found'));
+        noDataText.graphics.font = ScriptUI.newFont("dialog", "Regular", 10);
     }
-    
-    summaryContent.push("ANALYSIS SUMMARY");
-    summaryContent.push("Documents: " + analysisData.totalDocuments);
-    summaryContent.push("Total Cut Paths: " + analysisData.totalPaths);
-    summaryContent.push("");
-    summaryContent.push("CUTTHROUGH BREAKDOWN");
-    
-    // Sort and format sizes
-    var sizes = [];
-    for (var size in analysisData.allCutThroughSizes) {
-        sizes.push(size);
-    }
-    sizes.sort();
-    
-    for (var s = 0; s < sizes.length; s++) {
-        var size = sizes[s];
-        var count = analysisData.allCutThroughSizes[size];
-        var countStr = count.toString() + "/ea";
-        var paddedCount = (countStr + "      ").substr(0, 6);
-        summaryContent.push(paddedCount + "\t" + size);
-    }
-    
-    summaryText.text = summaryContent.join("\n");
-    
-    // Add detailed summary tab
-    var detailedTab = tabGroup.add("tab", undefined, "Details");
-    detailedTab.orientation = "column";
-    detailedTab.alignChildren = "fill";
-    
-    var detailedText = detailedTab.add("edittext", undefined, "", {multiline: true, scrolling: true, readonly: true});
-    detailedText.alignment = ["fill", "fill"];
-    
-    // Add warnings to detailed view
-    var detailedContent = analysisData.reportText;
-    if (analysisData.hasCompoundPaths || analysisData.hasLowRes) {
-        var warningHeader = "";
-        
-        if (analysisData.hasCompoundPaths) {
-            warningHeader += "*** CRITICAL PRODUCTION ERROR ***\n";
-            warningHeader += "COMPOUND PATHS WITH CUTTHROUGH COLOR DETECTED!\n";
-            warningHeader += "Found " + analysisData.totalCompoundPaths + " compound path(s) with CutThrough color\n";
-            warningHeader += "This WILL cause cutting machine failures!\n";
-            warningHeader += "MUST BE FIXED before production!\n\n";
+
+    // -- ROW 3: Document details (sidebar + content) --
+    var contentGroup = dialog.add("group");
+    contentGroup.orientation = "row";
+    contentGroup.alignChildren = "fill";
+
+    // LEFT SIDEBAR
+    var sidebarGroup = contentGroup.add("group");
+    sidebarGroup.orientation = "column";
+    sidebarGroup.alignChildren = "fill";
+    sidebarGroup.preferredSize.width = 220;
+
+    var sidebarLabel = sidebarGroup.add("statictext", undefined, "Documents:");
+    sidebarLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
+
+    var listBox = sidebarGroup.add("listbox");
+    listBox.alignment = ["fill", "fill"];
+
+    // Build listbox items: Full Report + individual documents
+    var listItems = [];
+    listItems.push("Full Report");
+
+    if (analysisData.individualResults) {
+        for (var d = 0; d < analysisData.individualResults.length; d++) {
+            var result = analysisData.individualResults[d];
+            var displayName = result.materialName && result.materialName.length > 0 ? result.materialName : result.name;
+            listItems.push(displayName);
         }
-        
-        if (analysisData.hasLowRes) {
-            var detailedLowResCount = 0;
-            if (analysisData.individualResults) {
-                for (var lr = 0; lr < analysisData.individualResults.length; lr++) {
-                    if (analysisData.individualResults[lr].lowResImages) {
-                        detailedLowResCount += analysisData.individualResults[lr].lowResImages.length;
-                    }
-                }
-            }
-            
-            warningHeader += "ATTENTION: " + detailedLowResCount + " LOW RESOLUTION IMAGES FOUND\n";
-            warningHeader += "Images below 72 PPI may not print clearly!\n";
-            warningHeader += "CHECK INDIVIDUAL DOCUMENT TABS FOR DETAILS\n\n";
-        }
-        
-        detailedContent = warningHeader + detailedContent;
     }
-    
-    detailedText.text = detailedContent;
-    
-    // Individual document tabs
+
+    for (var li = 0; li < listItems.length; li++) {
+        listBox.add("item", listItems[li]);
+    }
+    listBox.selection = 0;
+
+    // RIGHT CONTENT
+    var contentDisplayGroup = contentGroup.add("group");
+    contentDisplayGroup.orientation = "column";
+    contentDisplayGroup.alignChildren = "fill";
+    contentDisplayGroup.preferredSize.width = 830;
+
+    var contentText = contentDisplayGroup.add("edittext", undefined, "", {multiline: true, scrolling: true, readonly: true});
+    contentText.alignment = ["fill", "fill"];
+    contentText.preferredSize.height = 300;
+
+    // Build content panels
+    var contentPanels = [];
+
+    // Panel 0: Full Report
+    contentPanels.push(analysisData.reportText);
+
+    // Panel 1+: Individual documents
     if (analysisData.individualResults) {
         for (var d = 0; d < analysisData.individualResults.length; d++) {
             var docResult = analysisData.individualResults[d];
-            var docTab = tabGroup.add("tab", undefined, "Doc " + (d + 1));
-            docTab.orientation = "column";
-            docTab.alignChildren = "fill";
-            
-            var docText = docTab.add("edittext", undefined, "", {multiline: true, scrolling: true, readonly: true});
-            docText.alignment = ["fill", "fill"];
-            
             var docReport = [];
-            docReport.push(docResult.name);
+            docReport.push("DOCUMENT: " + docResult.name);
+            docReport.push("Material: " + (docResult.materialName && docResult.materialName.length > 0 ? docResult.materialName : "Unknown"));
             docReport.push("Processing: " + docResult.analysisTime + "ms");
             docReport.push("Images: " + docResult.rasterCount);
             docReport.push("Cut Paths: " + docResult.totalCutThroughPaths);
-            
-            // Show compound path warnings prominently
+
             if (docResult.compoundPathWarnings && docResult.compoundPathWarnings.length > 0) {
                 docReport.push("");
                 docReport.push("*** CRITICAL: COMPOUND PATH ERRORS ***");
@@ -872,9 +1200,9 @@ function showResultsDialog(analysisData) {
                     docReport.push(docResult.compoundPathWarnings[w].text);
                 }
             }
-            
+
             docReport.push("");
-            
+
             if (docResult.totalCutThroughPaths > 0) {
                 docReport.push("CUTTHROUGH BREAKDOWN");
                 var docSizes = [];
@@ -882,19 +1210,15 @@ function showResultsDialog(analysisData) {
                     docSizes.push(size);
                 }
                 docSizes.sort();
-                
                 for (var s = 0; s < docSizes.length; s++) {
                     var size = docSizes[s];
                     var count = docResult.cutThroughSizes[size];
-                    var countStr = count.toString() + "/ea";
-                    var paddedCount = (countStr + "      ").substr(0, 6);
-                    docReport.push(paddedCount + "\t" + size);
+                    docReport.push("  " + count + "x  " + size);
                 }
             } else {
                 docReport.push("No CutThrough paths found");
             }
-            
-            // Show ALL image details in individual document tabs
+
             if (docResult.allImageDetails && docResult.allImageDetails.length > 0) {
                 docReport.push("");
                 docReport.push("ALL IMAGE DETAILS");
@@ -902,8 +1226,7 @@ function showResultsDialog(analysisData) {
                     docReport.push(docResult.allImageDetails[img].text);
                 }
             }
-            
-            // Add low-res image details if available
+
             if (docResult.lowResImages && docResult.lowResImages.length > 0) {
                 docReport.push("");
                 docReport.push("*** LOW RESOLUTION IMAGES ***");
@@ -911,20 +1234,32 @@ function showResultsDialog(analysisData) {
                     docReport.push(docResult.lowResImages[img].text);
                 }
             }
-            
-            docText.text = docReport.join("\n");
+
+            contentPanels.push(docReport.join("\n"));
         }
     }
-    
-    // Buttons - force to bottom
+
+    // Listbox change handler
+    listBox.onChange = function() {
+        var selectedIndex = listBox.selection ? listBox.selection.index : 0;
+        if (selectedIndex >= 0 && selectedIndex < contentPanels.length) {
+            contentText.text = contentPanels[selectedIndex];
+        }
+    };
+
+    // Initialize with first panel
+    if (contentPanels.length > 0) {
+        contentText.text = contentPanels[0];
+    }
+
+    // Buttons
     var buttonGroup = dialog.add("group");
-    buttonGroup.maximumSize.height = 50;
     buttonGroup.alignment = "center";
     buttonGroup.spacing = 10;
-    
+
     var exportBtn = buttonGroup.add("button", undefined, "Export Report");
     var closeBtn = buttonGroup.add("button", undefined, "Close");
-    
+
     exportBtn.onClick = function() {
         try {
             var saveFile = File.saveDialog("Save report as text file", "Text files:*.txt");
@@ -938,23 +1273,22 @@ function showResultsDialog(analysisData) {
             alert("Error saving file: " + e.toString());
         }
     };
-    
+
     closeBtn.onClick = function() {
         dialog.close();
     };
-    
+
     dialog.show();
 }
 
-function buildReport(docCount, documentNames, totalTime, timingReport, 
-                    totalImageCount, allLowResImages, allImageDetails, allCutThroughSizes, 
+function buildReport(docCount, documentNames, totalTime, timingReport,
+                    totalImageCount, allLowResImages, allImageDetails, allCutThroughSizes,
                     totalCutThroughPaths, totalCompoundPaths, allCompoundPathWarnings,
                     includePPI, individualDocumentResults) {
     var report = [];
     report.push("=== MULTI-DOCUMENT ANALYSIS SUMMARY ===");
     report.push("");
-    
-    // Check if any documents are Large Canvas
+
     var hasLargeCanvas = false;
     for (var i = 0; i < individualDocumentResults.length; i++) {
         if (individualDocumentResults[i].scaleFactor && individualDocumentResults[i].scaleFactor !== 1) {
@@ -962,14 +1296,13 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
             break;
         }
     }
-    
+
     if (hasLargeCanvas) {
         report.push("*** LARGE CANVAS DOCUMENTS DETECTED ***");
         report.push("Some documents use Large Canvas mode. Measurements have been corrected.");
         report.push("");
     }
-    
-    // Add compound path warnings prominently at top
+
     if (totalCompoundPaths > 0) {
         report.push("*** CRITICAL PRODUCTION ERROR ***");
         report.push("COMPOUND PATHS WITH CUTTHROUGH COLOR DETECTED!");
@@ -983,18 +1316,18 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
         }
         report.push("");
     }
-    
+
     report.push("Analysis Type: " + (includePPI ? "Full Analysis (with PPI calculations)" : "Quick Analysis (no PPI calculations)"));
     report.push("Documents Analyzed: " + docCount);
     report.push("Total Processing Time: " + Math.round(totalTime / 1000) + " seconds");
     report.push("");
-    
+
     report.push("Documents Processed:");
     for (var i = 0; i < documentNames.length; i++) {
         report.push("  " + (i + 1) + ". " + documentNames[i]);
     }
     report.push("");
-    
+
     report.push("=== KEY METRICS ===");
     report.push("Total Images: " + totalImageCount);
     if (includePPI && allLowResImages.length > 0) {
@@ -1007,19 +1340,21 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
         report.push("Compound Paths with CutThrough Color: " + totalCompoundPaths + " ** CRITICAL ERROR **");
     }
     report.push("");
-    
-    // Per-document breakdown
+
     report.push("=== PER-DOCUMENT BREAKDOWN ===");
-    
-    // Sort documents using localeCompare with numeric option
+
     var sortedResults = [];
     for (var i = 0; i < individualDocumentResults.length; i++) {
         sortedResults.push(individualDocumentResults[i]);
     }
     sortedResults.sort(function(a, b) {
-        return a.name.localeCompare(b.name, undefined, {numeric: true});
+        var nameA = a.name.toUpperCase();
+        var nameB = b.name.toUpperCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
     });
-    
+
     for (var i = 0; i < sortedResults.length; i++) {
         var docResult = sortedResults[i];
         report.push("");
@@ -1027,15 +1362,14 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
         if (docResult.scaleFactor && docResult.scaleFactor !== 1) {
             report.push("  ** Large Canvas (Scale Factor: " + docResult.scaleFactor + ") **");
         }
-        
-        // Show compound path warnings for this document
+
         if (docResult.compoundPathWarnings && docResult.compoundPathWarnings.length > 0) {
             report.push("  ** COMPOUND PATH ERRORS DETECTED **");
             for (var w = 0; w < docResult.compoundPathWarnings.length; w++) {
                 report.push("    " + docResult.compoundPathWarnings[w].text);
             }
         }
-        
+
         if (docResult.totalCutThroughPaths > 0) {
             var docSizes = [];
             for (var size in docResult.cutThroughSizes) {
@@ -1052,8 +1386,7 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
         }
     }
     report.push("");
-    
-    // Add all image details to report
+
     if (includePPI && allImageDetails && allImageDetails.length > 0) {
         report.push("=== ALL IMAGE DETAILS ===");
         for (var i = 0; i < allImageDetails.length; i++) {
@@ -1061,8 +1394,7 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
         }
         report.push("");
     }
-    
-    // CutThrough breakdown
+
     if (totalCutThroughPaths > 0) {
         report.push("=== CUTTHROUGH2-OUTSIDE BREAKDOWN ===");
         var sortedSizes = [];
@@ -1070,7 +1402,7 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
             sortedSizes.push(size);
         }
         sortedSizes.sort();
-        
+
         for (var i = 0; i < sortedSizes.length; i++) {
             var size = sortedSizes[i];
             var count = allCutThroughSizes[size];
@@ -1078,8 +1410,7 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
         }
         report.push("");
     }
-    
-    // Performance timing
+
     report.push("=== PERFORMANCE TIMING ===");
     report.push("Overall Processing: " + Math.round(totalTime) + "ms (" + Math.round(totalTime / 1000) + "s)");
     report.push("Average per Document: " + Math.round(totalTime / docCount) + "ms");
@@ -1088,6 +1419,6 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
     for (var i = 0; i < timingReport.length; i++) {
         report.push("  " + timingReport[i]);
     }
-    
+
     return report.join("\n");
 }
