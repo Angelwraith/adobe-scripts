@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.8",
+  "version": "1.9",
   "target": "illustrator",
   "tags": ["review", "check", "file"]
 }@END_METADATA*/
@@ -43,36 +43,91 @@
             }
         }
     }
-    
+
+    // Load XMP library once for reading proof metadata
+    try {
+        if (ExternalObject.AdobeXMPScript == undefined) {
+            ExternalObject.AdobeXMPScript = new ExternalObject('lib:AdobeXMPScript');
+        }
+        XMPMeta.registerNamespace('http://extremecolor.net/packing/', 'packing');
+    } catch (e) {
+        // XMP not available — dropdown will fall back to folder names
+    }
+
+    // Build display names by reading proof file metadata from each folder's PRIME subfolder
+    function getDisplayNameForFolder(folder) {
+        var folderName = folder.name.replace(/%20/g, " ");
+        try {
+            // Look for PRIME subfolder
+            var sep = ($.os.indexOf("Windows") !== -1) ? "\\" : "/";
+            var primeFolder = new Folder(folder.fsName + sep + "PRIME");
+            if (!primeFolder.exists) return folderName;
+
+            // Find proof PDF/AI in PRIME folder (filename contains "Proof")
+            var primeFiles = primeFolder.getFiles();
+            var proofFile = null;
+            for (var j = 0; j < primeFiles.length; j++) {
+                if (primeFiles[j] instanceof File) {
+                    var fname = primeFiles[j].name.toUpperCase();
+                    if (fname.indexOf("PROOF") !== -1 && (fname.indexOf(".PDF") !== -1 || fname.indexOf(".AI") !== -1)) {
+                        proofFile = primeFiles[j];
+                        break;
+                    }
+                }
+            }
+            if (!proofFile) return folderName;
+
+            // Read XMP metadata from the proof file without opening it in Illustrator
+            var xmpFile = new XMPFile(proofFile.fsName, XMPConst.FILE_PDF, XMPConst.OPEN_FOR_READ);
+            var xmp = xmpFile.getXMP();
+            xmpFile.closeFile();
+
+            if (!xmp.doesPropertyExist('http://extremecolor.net/packing/', 'data')) return folderName;
+
+            var packingJSON = xmp.getProperty('http://extremecolor.net/packing/', 'data').value;
+            var packingData = eval('(' + packingJSON + ')');
+
+            // Build label: Client - Property - Project (omit property if not available)
+            var parts = [];
+            if (packingData.client_name) parts.push(packingData.client_name);
+            if (packingData.property_name) parts.push(packingData.property_name);
+            if (packingData.project_name) parts.push(packingData.project_name);
+
+            if (parts.length > 0) return parts.join(" - ");
+        } catch (e) {
+            // Any error reading metadata — fall back to folder name
+        }
+        return folderName;
+    }
+
     // Create dialog window
     var dialog = new Window("dialog", "Print/Cut File Processor");
     dialog.alignChildren = "fill";
     dialog.spacing = 15;
     dialog.margins = 20;
-    
+
     // Dropdown selection (if folders exist in Downloads)
     var folderDropdown = null;
     if (subfolders.length > 0) {
         var dropdownGroup = dialog.add("group");
         dropdownGroup.orientation = "column";
         dropdownGroup.alignChildren = "left";
-        
+
         dropdownGroup.add("statictext", undefined, "Select folder from Downloads:");
-        
+
         var dropdownRow = dropdownGroup.add("group");
         dropdownRow.orientation = "row";
         dropdownRow.spacing = 10;
-        
+
         folderDropdown = dropdownRow.add("dropdownlist", undefined, []);
         folderDropdown.preferredSize.width = 400;
-        
+
         for (var i = 0; i < subfolders.length; i++) {
-            // Replace %20 with spaces in display name
-            var displayName = subfolders[i].name.replace(/%20/g, " ");
+            var displayName = getDisplayNameForFolder(subfolders[i]);
             folderDropdown.add("item", displayName);
         }
         folderDropdown.selection = 0;
-        
+
         dialog.add("panel");
     }
     
