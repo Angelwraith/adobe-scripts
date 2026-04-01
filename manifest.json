@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-03-26T14:19:40.298180",
+  "last_updated": "2026-04-01T14:03:00.591354",
   "deployer_version": "3.0",
-  "total_scripts": 26,
+  "total_scripts": 25,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -287,7 +287,7 @@
       "filename": "OpenProdFilesForReview.js",
       "metadata": {
         "name": "Open Production Files and organize for review",
-        "version": "1.8",
+        "version": "1.9",
         "description": "Open print and cut files, organize them together and tile the view to show them all",
         "author": "Unknown",
         "target": "illustrator",
@@ -297,10 +297,10 @@
           "file"
         ]
       },
-      "hash": "bbe20a0ef046f9a698b19b8146157386",
+      "hash": "c1ef22df3b3273d1f2bedd5ef7f35fbc",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\OpenProdFilesForReview.js",
-      "file_size": 12783,
-      "last_modified": "2026-03-23T15:04:05.492568",
+      "file_size": 15257,
+      "last_modified": "2026-04-01T14:01:56.146611",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
     },
