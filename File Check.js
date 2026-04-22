@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "File Check",
   "description": "Production file readiness analysis with manifest comparison",
-  "version": "3.0",
+  "version": "3.1",
   "target": "illustrator",
   "tags": ["file", "check", "report", "manifest"]
 }@END_METADATA*/
@@ -718,23 +718,22 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
     }
 
     function findPathsWithCutThroughColor(doc) {
-        var originalSelection = doc.selection;
-
         var cutThroughSizes = {};
         var totalPaths = 0;
         var compoundPathWarnings = [];
         var totalCompoundPaths = 0;
 
         try {
-            var targetSpot = null;
+            // Verify the spot color exists in this document
+            var hasSpot = false;
             for (var i = 0; i < doc.spots.length; i++) {
                 if (doc.spots[i].name == "CutThrough2-Outside") {
-                    targetSpot = doc.spots[i];
+                    hasSpot = true;
                     break;
                 }
             }
 
-            if (!targetSpot) {
+            if (!hasSpot) {
                 return {
                     cutThroughSizes: cutThroughSizes,
                     totalCutThroughPaths: 0,
@@ -743,73 +742,76 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                 };
             }
 
-            var spotColor = new SpotColor();
-            spotColor.spot = targetSpot;
-
-            doc.selection = null;
-            doc.defaultFillColor = spotColor;
-            app.executeMenuCommand("Find Fill Color menu item");
-
-            var fillSelection = [];
-            for (var i = 0; i < doc.selection.length; i++) {
-                fillSelection.push(doc.selection[i]);
+            // Check if a color references the CutThrough2-Outside spot
+            function isCutThroughColor(color) {
+                try {
+                    if (color && color.typename == "SpotColor" && color.spot && color.spot.name == "CutThrough2-Outside") {
+                        return true;
+                    }
+                } catch (e) {}
+                return false;
             }
 
-            doc.selection = null;
-            doc.defaultStrokeColor = spotColor;
-            app.executeMenuCommand("Find Stroke Color menu item");
-
-            var strokeSelection = [];
-            for (var i = 0; i < doc.selection.length; i++) {
-                strokeSelection.push(doc.selection[i]);
+            // Check if a path item has CutThrough color on fill or stroke
+            function pathHasCutThrough(pathItem) {
+                try {
+                    if (pathItem.filled && isCutThroughColor(pathItem.fillColor)) return true;
+                } catch (e) {}
+                try {
+                    if (pathItem.stroked && isCutThroughColor(pathItem.strokeColor)) return true;
+                } catch (e) {}
+                return false;
             }
 
             var allPaths = [];
-            var processedItems = [];
 
-            for (var i = 0; i < fillSelection.length; i++) {
-                if (fillSelection[i].typename == "PathItem") {
-                    allPaths.push(fillSelection[i]);
-                    processedItems.push(fillSelection[i]);
-                } else if (fillSelection[i].typename == "CompoundPathItem") {
-                    totalCompoundPaths++;
-                    var size = getPathDimensions(fillSelection[i]);
-                    compoundPathWarnings.push({
-                        text: "WARNING: CutThrough color on COMPOUND PATH (size: " + size + ") - This will cause production errors!"
-                    });
+            // Recursive traversal of all page items
+            function walkItems(container) {
+                var items;
+                try {
+                    items = container.pageItems;
+                } catch (e) {
+                    return;
+                }
+
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    try {
+                        if (item.typename == "PathItem") {
+                            if (pathHasCutThrough(item)) {
+                                allPaths.push(item);
+                            }
+                        } else if (item.typename == "CompoundPathItem") {
+                            // Check sub-paths for the spot color
+                            var hasColor = false;
+                            try {
+                                for (var p = 0; p < item.pathItems.length; p++) {
+                                    if (pathHasCutThrough(item.pathItems[p])) {
+                                        hasColor = true;
+                                        break;
+                                    }
+                                }
+                            } catch (e) {}
+                            if (hasColor) {
+                                totalCompoundPaths++;
+                                var size = getPathDimensions(item);
+                                compoundPathWarnings.push({
+                                    text: "WARNING: CutThrough color on COMPOUND PATH (size: " + size + ") - This will cause production errors!"
+                                });
+                            }
+                        } else if (item.typename == "GroupItem") {
+                            walkItems(item);
+                        }
+                    } catch (e) {}
                 }
             }
 
-            for (var i = 0; i < strokeSelection.length; i++) {
-                if (strokeSelection[i].typename == "PathItem") {
-                    var alreadyAdded = false;
-                    for (var j = 0; j < processedItems.length; j++) {
-                        if (processedItems[j] === strokeSelection[i]) {
-                            alreadyAdded = true;
-                            break;
-                        }
-                    }
-                    if (!alreadyAdded) {
-                        allPaths.push(strokeSelection[i]);
-                    }
-                } else if (strokeSelection[i].typename == "CompoundPathItem") {
-                    var alreadyCounted = false;
-                    for (var j = 0; j < fillSelection.length; j++) {
-                        if (fillSelection[j] === strokeSelection[i]) {
-                            alreadyCounted = true;
-                            break;
-                        }
-                    }
-                    if (!alreadyCounted) {
-                        totalCompoundPaths++;
-                        var size = getPathDimensions(strokeSelection[i]);
-                        compoundPathWarnings.push({
-                            text: "WARNING: CutThrough color on COMPOUND PATH (size: " + size + ") - This will cause production errors!"
-                        });
-                    }
-                }
+            // Walk all layers (including locked/hidden — we still want to count them)
+            for (var layerIdx = 0; layerIdx < doc.layers.length; layerIdx++) {
+                walkItems(doc.layers[layerIdx]);
             }
 
+            // Tally sizes
             for (var i = 0; i < allPaths.length; i++) {
                 var size = getPathDimensions(allPaths[i]);
                 if (cutThroughSizes[size]) {
@@ -820,12 +822,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                 totalPaths++;
             }
 
-        } catch (e) {
-        } finally {
-            try {
-                doc.selection = originalSelection;
-            } catch (e) {}
-        }
+        } catch (e) {}
 
         return {
             cutThroughSizes: cutThroughSizes,
