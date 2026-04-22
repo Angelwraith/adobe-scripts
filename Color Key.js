@@ -3,7 +3,7 @@
 {
   "name": "Color Key Creator",
   "description": "Create A Prepositioned Color Key On Proofs",
-  "version": "1.2",
+  "version": "1.3",
   "target": "illustrator",
   "tags": ["proof", "color", "key"]
 }
@@ -204,7 +204,7 @@ if (app.documents.length == 0) {
                 var artboardLeft = artboardBounds[0]; // Left X coordinate
                 var artboardTop = artboardBounds[1]; // Top Y coordinate
                 var startX = artboardLeft + (6.75 * 72); // 6.75 inches from left edge of artboard
-                var startY = artboardTop - (7.125 * 72); // 7.125 inches down from top edge of artboard
+                var startY = artboardTop - (7.145 * 72); // 7.145 inches down from top edge of artboard
                 var yPosition = startY;
                 var lineSpacing = 12.6; // Space between color entries (0.875" / 5 colors = 0.175" per entry = 12.6 points)
                 var colorsPerColumn = 5; // Maximum colors per column
@@ -215,24 +215,10 @@ if (app.documents.length == 0) {
                 var originalSelection = doc.selection;
                 doc.selection = null;
                 
-                // Create all objects and collect them in an array
-                var createdObjects = [];
+                // Create parent group to hold all color label subgroups
+                var colorLabelsGroup = doc.groupItems.add();
+                colorLabelsGroup.name = "Color Labels";
                 
-                // Reset Illustrator's session-level character attributes before creating any text.
-                // app.currentCharacterAttributes persists across scripts and user actions within
-                // a session — if a large font was active (type tool, selected headline, etc.),
-                // new textFrames inherit that stale size and characterAttributes.size fights it.
-                // Resetting here ensures a clean baseline. "Restart fixes it" = this exact bug.
-                try {
-                    app.currentCharacterAttributes.size = 7;
-                    app.currentCharacterAttributes.horizontalScale = 100;
-                    app.currentCharacterAttributes.verticalScale = 100;
-                    app.currentCharacterAttributes.tracking = 0;
-                    app.currentCharacterAttributes.baselineShift = 0;
-                } catch (e) {
-                    // Non-fatal — proceed if this fails (e.g., older AI versions)
-                }
-
                 // Pre-cache font for better performance
                 var boldFont = null;
                 try {
@@ -245,13 +231,10 @@ if (app.documents.length == 0) {
                 function addText(text, x, y, fontSize, isWarning) {
                     try {
                         var textFrame = doc.textFrames.add();
+                        textFrame.contents = text;
                         textFrame.left = x;
                         textFrame.top = y;
-                        // Set font size BEFORE setting contents — Illustrator's text engine
-                        // applies characterAttributes at insertion time. Setting size after
-                        // contents can lose to inherited session state in some builds.
                         textFrame.textRange.characterAttributes.size = fontSize;
-                        textFrame.contents = text;
                         
                         // Set color based on warning status
                         if (isWarning) {
@@ -287,18 +270,15 @@ if (app.documents.length == 0) {
                 // Add each color with swatch
                 for (var i = 0; i < colorNames.length; i++) {
                     var colorName = colorNames[i];
-                    
+
                     // Check if this is a warning color (CutContour or Spot1 used as Process)
                     var isCutContourProcess = (colorName === "CutContour" && usedColors[colorName] === " (Process)");
                     var isSpot1Process = (colorName === "Spot1" && usedColors[colorName] === " (Process)");
                     var isWarningColor = isCutContourProcess || isSpot1Process;
-                    
+
                     // Add the color name text (offset to make room for color circle)
                     var columnOffset = currentColumn * columnSpacing;
-                    var textFrame = addText(colorName, startX + 15 + columnOffset, yPosition, 7, isWarningColor);
-                    if (textFrame) {
-                        createdObjects.push(textFrame);
-                    }
+                    var textFrame = addText(colorName, startX + 15 + 1.44 + columnOffset, yPosition + 5.76, 7, isWarningColor);
                     
                     // Create color swatch circle
                     try {
@@ -474,31 +454,39 @@ if (app.documents.length == 0) {
                         strokeColor.yellow = 0;
                         strokeColor.black = 100;
                         colorCircle.strokeColor = strokeColor;
-                        colorCircle.strokeWidth = 0.75;
+                        colorCircle.strokeWidth = 0.5;
                         
-                        // Align circle vertically to text center
-                        if (textFrame && colorCircle) {
-                            try {
-                                // Get center point of text
-                                var textCenterPoint = {
-                                    "h": textFrame.left + textFrame.width / 2,
-                                    "v": textFrame.top - textFrame.height / 2
-                                };
-                                
-                                // Align circle vertically to text center
-                                colorCircle.top = textCenterPoint.v + (colorCircle.height / 2);
-                                
-                            } catch (alignError) {
-                                // If alignment calculation fails, continue without it
-                            }
+                        // Align circle vertically to text center using fixed offset
+                        // (Reading textFrame.height/.width right after creation is unreliable
+                        // in Illustrator — the geometry isn't recalculated until a redraw,
+                        // which causes the alignment drift that only a restart fixes.)
+                        // Font size is 7pt, circle is 9pt, so the text visual center is ~3.5pt
+                        // below textFrame.top. Circle top = textCenter + circleSize/2.
+                        if (colorCircle) {
+                            colorCircle.top = yPosition - 2 + (circleSize / 2);
                         }
-                        
-                        createdObjects.push(colorCircle);
                         
                     } catch (e) {
                         // If circle creation fails, continue without it
+                        colorCircle = null;
                     }
-                    
+
+                    // Create a subgroup for this color entry (circle + text)
+                    // and move both items into it inside the parent group
+                    try {
+                        var entryGroup = doc.groupItems.add();
+                        entryGroup.name = colorName;
+                        if (textFrame) {
+                            textFrame.moveToBeginning(entryGroup);
+                        }
+                        if (colorCircle) {
+                            colorCircle.moveToBeginning(entryGroup);
+                        }
+                        entryGroup.moveToBeginning(colorLabelsGroup);
+                    } catch (eg) {
+                        // If subgrouping fails, items remain ungrouped in the doc
+                    }
+
                     // Move to next position (column wrapping logic)
                     if ((i + 1) % colorsPerColumn === 0 && i < colorNames.length - 1) {
                         // Move to next column
@@ -507,35 +495,6 @@ if (app.documents.length == 0) {
                     } else {
                         // Move down in current column
                         yPosition -= lineSpacing;
-                    }
-                }
-                
-                // Group all created objects
-                if (createdObjects.length > 0) {
-                    try {
-                        // Clear any existing selection first
-                        doc.selection = null;
-                        // Select only the objects we created
-                        doc.selection = createdObjects;
-                        // Group them using the menu command
-                        app.executeMenuCommand("group");
-                        // Name the group if it was created successfully
-                        if (doc.selection.length == 1 && doc.selection[0].typename == "GroupItem") {
-                            doc.selection[0].name = "Color Labels";
-                        }
-                        // Clear selection
-                        doc.selection = null;
-                    } catch (e) {
-                        // If grouping fails, try alternative method
-                        try {
-                            var colorGroup = doc.groupItems.add();
-                            colorGroup.name = "Color Labels";
-                            for (var g = 0; g < createdObjects.length; g++) {
-                                createdObjects[g].moveToBeginning(colorGroup);
-                            }
-                        } catch (e2) {
-                            // If both methods fail, continue without grouping
-                        }
                     }
                 }
                 
