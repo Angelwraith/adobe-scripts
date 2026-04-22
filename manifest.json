@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-01T14:03:00.591354",
+  "last_updated": "2026-04-22T12:50:00.469854",
   "deployer_version": "3.0",
   "total_scripts": 25,
   "launcher_version": "4.0",
@@ -9,7 +9,7 @@
       "filename": "Color Key.js",
       "metadata": {
         "name": "Color Key Creator",
-        "version": "1.2",
+        "version": "1.3",
         "description": "Create A Prepositioned Color Key On Proofs",
         "author": "Unknown",
         "target": "illustrator",
@@ -19,10 +19,10 @@
           "key"
         ]
       },
-      "hash": "56fc7ed4a32eaa5f60b427b98c1b6915",
+      "hash": "d48af7d1aeb3fd2e01d19409b267cd98",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Color Key.js",
-      "file_size": 29294,
-      "last_modified": "2026-03-23T15:01:21.582666",
+      "file_size": 27018,
+      "last_modified": "2026-04-22T12:48:44.657514",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js"
     },
@@ -96,7 +96,7 @@
       "filename": "File Check.js",
       "metadata": {
         "name": "File Check",
-        "version": "3.0",
+        "version": "3.1",
         "description": "Production file readiness analysis with manifest comparison",
         "author": "Unknown",
         "target": "illustrator",
@@ -107,10 +107,10 @@
           "manifest"
         ]
       },
-      "hash": "9823f099ee2def29365c900d4b556f8c",
+      "hash": "b565e03013c4c4d150b656c8533e1884",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\File Check.js",
-      "file_size": 57317,
-      "last_modified": "2026-03-26T14:10:54.348098",
+      "file_size": 57339,
+      "last_modified": "2026-04-01T14:32:17.211247",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js"
     },
