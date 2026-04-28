@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-04-22T12:50:00.469854",
+  "last_updated": "2026-04-28T09:47:54.888363",
   "deployer_version": "3.0",
-  "total_scripts": 25,
+  "total_scripts": 27,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -9,7 +9,7 @@
       "filename": "Color Key.js",
       "metadata": {
         "name": "Color Key Creator",
-        "version": "1.3",
+        "version": "1.4",
         "description": "Create A Prepositioned Color Key On Proofs",
         "author": "Unknown",
         "target": "illustrator",
@@ -19,10 +19,10 @@
           "key"
         ]
       },
-      "hash": "d48af7d1aeb3fd2e01d19409b267cd98",
+      "hash": "ea634170c0ab9c564fb77588660fd8ec",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Color Key.js",
-      "file_size": 27018,
-      "last_modified": "2026-04-22T12:48:44.657514",
+      "file_size": 26959,
+      "last_modified": "2026-04-28T09:46:07.708731",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js"
     },
@@ -262,6 +262,28 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement%20Converter.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement%20Converter.js"
     },
+    "Merge Text.js": {
+      "filename": "Merge Text.js",
+      "metadata": {
+        "name": "Merge Text",
+        "version": "1.0",
+        "description": "Merges selected text frames top-to-bottom into a single frame, preserving character formatting (kerning, tracking, color, fonts) and exact vertical pixel spacing via per-line leading",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "text",
+          "merge",
+          "combine",
+          "labels"
+        ]
+      },
+      "hash": "ee68a8f036fb67d6c213e9da88851e84",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Merge Text.js",
+      "file_size": 4896,
+      "last_modified": "2026-04-27T09:03:47.352273",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js"
+    },
     "Move CUTS to PRINTS.js": {
       "filename": "Move CUTS to PRINTS.js",
       "metadata": {
@@ -409,6 +431,29 @@
       "last_modified": "2025-10-29T09:48:16.326015",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rearrange_Registration_Dots.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rearrange_Registration_Dots.js"
+    },
+    "RGB to CMYK Batch.js": {
+      "filename": "RGB to CMYK Batch.js",
+      "metadata": {
+        "name": "RGB to CMYK Batch",
+        "version": "1.0",
+        "description": "Convert and save selected open documents from RGB to CMYK",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "color",
+          "cmyk",
+          "rgb",
+          "batch",
+          "convert"
+        ]
+      },
+      "hash": "adb8a391f17e29aef275237e86ac1e1a",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\RGB to CMYK Batch.js",
+      "file_size": 7314,
+      "last_modified": "2026-04-23T14:33:34.355609",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/RGB%20to%20CMYK%20Batch.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/RGB%20to%20CMYK%20Batch.js"
     },
     "scale_repeat_script.js": {
       "filename": "scale_repeat_script.js",
