@@ -3,7 +3,7 @@
 {
   "name": "Color Key Creator",
   "description": "Create A Prepositioned Color Key On Proofs",
-  "version": "1.3",
+  "version": "1.4",
   "target": "illustrator",
   "tags": ["proof", "color", "key"]
 }
@@ -219,6 +219,8 @@ if (app.documents.length == 0) {
                 var colorLabelsGroup = doc.groupItems.add();
                 colorLabelsGroup.name = "Color Labels";
                 
+
+
                 // Pre-cache font for better performance
                 var boldFont = null;
                 try {
@@ -234,30 +236,29 @@ if (app.documents.length == 0) {
                         textFrame.contents = text;
                         textFrame.left = x;
                         textFrame.top = y;
-                        textFrame.textRange.characterAttributes.size = fontSize;
-                        
-                        // Set color based on warning status
+                        // Apply size and color per-character to override any
+                        // inherited app defaults (prevents stale size bug)
+                        var fillColor;
                         if (isWarning) {
-                            // Red color for warnings
-                            var redColor = new CMYKColor();
-                            redColor.cyan = 0;
-                            redColor.magenta = 100;
-                            redColor.yellow = 100;
-                            redColor.black = 0;
-                            textFrame.textRange.characterAttributes.fillColor = redColor;
-                            
-                            // Use cached bold font
-                            if (boldFont) {
-                                textFrame.textRange.characterAttributes.textFont = boldFont;
-                            }
+                            fillColor = new CMYKColor();
+                            fillColor.cyan = 0;
+                            fillColor.magenta = 100;
+                            fillColor.yellow = 100;
+                            fillColor.black = 0;
                         } else {
-                            // Black color for regular text
-                            var blackColor = new CMYKColor();
-                            blackColor.cyan = 0;
-                            blackColor.magenta = 0;
-                            blackColor.yellow = 0;
-                            blackColor.black = 100;
-                            textFrame.textRange.characterAttributes.fillColor = blackColor;
+                            fillColor = new CMYKColor();
+                            fillColor.cyan = 0;
+                            fillColor.magenta = 0;
+                            fillColor.yellow = 0;
+                            fillColor.black = 100;
+                        }
+                        for (var ci = 0; ci < textFrame.characters.length; ci++) {
+                            var charAttrs = textFrame.characters[ci].characterAttributes;
+                            charAttrs.size = fontSize;
+                            charAttrs.fillColor = fillColor;
+                            if (isWarning && boldFont) {
+                                charAttrs.textFont = boldFont;
+                            }
                         }
                         
                         return textFrame;
