@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.8",
+  "version": "3.9",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -1260,6 +1260,28 @@ function createArtboards(config) {
         }
         
         if (config.docChoice.mode === "new") {
+            // Add and delete a shape on PRINT layer to ensure it's the active layer
+            try {
+                $.writeln("\n=== Setting PRINT as active layer ===");
+                var printLayerForActivation = null;
+                for (var pi = 0; pi < doc.layers.length; pi++) {
+                    if (doc.layers[pi].name === "PRINT") {
+                        printLayerForActivation = doc.layers[pi];
+                        break;
+                    }
+                }
+                if (printLayerForActivation) {
+                    doc.activeLayer = printLayerForActivation;
+                    var tempShape = printLayerForActivation.pathItems.rectangle(0, 0, 1, 1);
+                    tempShape.remove();
+                    $.writeln("PRINT layer set as active");
+                } else {
+                    $.writeln("PRINT layer not found, skipping active layer set");
+                }
+            } catch (e) {
+                $.writeln("Error setting PRINT as active: " + e.toString());
+            }
+
             $.writeln("\n=== SAVING DOCUMENT ===");
             saveAsPrimePDF(doc, config.docChoice.primeFolder);
         }
