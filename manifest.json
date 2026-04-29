@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-28T09:47:54.888363",
+  "last_updated": "2026-04-29T09:51:01.727234",
   "deployer_version": "3.0",
   "total_scripts": 27,
   "launcher_version": "4.0",
@@ -373,7 +373,7 @@
       "filename": "PRIME Flex Template.js",
       "metadata": {
         "name": "PRIME Flex Template",
-        "version": "3.8",
+        "version": "3.9",
         "description": "Create artboards with reg dots for flexible materials",
         "author": "Unknown",
         "target": "illustrator",
@@ -383,10 +383,10 @@
           "setup"
         ]
       },
-      "hash": "e90ec6a808c7750a0570a0b0ab98bc83",
+      "hash": "3d8852377f2296888aa094cf5a0ff1b3",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\PRIME Flex Template.js",
-      "file_size": 64953,
-      "last_modified": "2026-02-03T15:25:46.980319",
+      "file_size": 65986,
+      "last_modified": "2026-04-29T09:49:53.117677",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js"
     },
