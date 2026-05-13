@@ -3,7 +3,7 @@
 {
   "name": "Color Key Creator",
   "description": "Create A Prepositioned Color Key On Proofs",
-  "version": "1.4",
+  "version": "1.5",
   "target": "illustrator",
   "tags": ["proof", "color", "key"]
 }
@@ -215,104 +215,99 @@ if (app.documents.length == 0) {
                 var originalSelection = doc.selection;
                 doc.selection = null;
                 
-                // Create parent group to hold all color label subgroups
-                var colorLabelsGroup = doc.groupItems.add();
-                colorLabelsGroup.name = "Color Labels";
-                
-
-
-                // Pre-cache font for better performance
+                // Pre-cache fonts for reliable text creation
+                var regularFont = null;
                 var boldFont = null;
                 try {
+                    regularFont = app.textFonts.getByName("ArialMT");
+                } catch (e) {}
+                try {
                     boldFont = app.textFonts.getByName("ArialMT-Bold");
-                } catch (e) {
-                    // Bold font not available
+                } catch (e) {}
+
+                // Create character styles to force consistent text attributes
+                // CharacterStyle.applyTo() is more reliable than direct attribute setting
+                var normalStyle = doc.characterStyles.add("_ColorKeyNormal");
+                normalStyle.characterAttributes.size = 7;
+                var normalFill = new CMYKColor();
+                normalFill.cyan = 0; normalFill.magenta = 0; normalFill.yellow = 0; normalFill.black = 100;
+                normalStyle.characterAttributes.fillColor = normalFill;
+                if (regularFont) {
+                    normalStyle.characterAttributes.textFont = regularFont;
                 }
-                
-                // Helper function to add text
-                function addText(text, x, y, fontSize, isWarning) {
-                    try {
-                        var textFrame = doc.textFrames.add();
-                        textFrame.contents = text;
-                        textFrame.left = x;
-                        textFrame.top = y;
-                        // Apply size and color per-character to override any
-                        // inherited app defaults (prevents stale size bug)
-                        var fillColor;
-                        if (isWarning) {
-                            fillColor = new CMYKColor();
-                            fillColor.cyan = 0;
-                            fillColor.magenta = 100;
-                            fillColor.yellow = 100;
-                            fillColor.black = 0;
-                        } else {
-                            fillColor = new CMYKColor();
-                            fillColor.cyan = 0;
-                            fillColor.magenta = 0;
-                            fillColor.yellow = 0;
-                            fillColor.black = 100;
-                        }
-                        for (var ci = 0; ci < textFrame.characters.length; ci++) {
-                            var charAttrs = textFrame.characters[ci].characterAttributes;
-                            charAttrs.size = fontSize;
-                            charAttrs.fillColor = fillColor;
-                            if (isWarning && boldFont) {
-                                charAttrs.textFont = boldFont;
-                            }
-                        }
-                        
-                        return textFrame;
-                    } catch (e) {
-                        // If text creation fails, return null
-                        return null;
-                    }
+
+                var warningStyle = doc.characterStyles.add("_ColorKeyWarning");
+                warningStyle.characterAttributes.size = 7;
+                var warningFill = new CMYKColor();
+                warningFill.cyan = 0; warningFill.magenta = 100; warningFill.yellow = 100; warningFill.black = 0;
+                warningStyle.characterAttributes.fillColor = warningFill;
+                if (boldFont) {
+                    warningStyle.characterAttributes.textFont = boldFont;
                 }
-                
-                // Add each color with swatch
+
+                // Collect all entry subgroups for final parent grouping
+                var entryGroups = [];
+
                 for (var i = 0; i < colorNames.length; i++) {
                     var colorName = colorNames[i];
 
-                    // Check if this is a warning color (CutContour or Spot1 used as Process)
                     var isCutContourProcess = (colorName === "CutContour" && usedColors[colorName] === " (Process)");
                     var isSpot1Process = (colorName === "Spot1" && usedColors[colorName] === " (Process)");
                     var isWarningColor = isCutContourProcess || isSpot1Process;
 
-                    // Add the color name text (offset to make room for color circle)
                     var columnOffset = currentColumn * columnSpacing;
-                    var textFrame = addText(colorName, startX + 15 + 1.44 + columnOffset, yPosition + 5.76, 7, isWarningColor);
-                    
-                    // Create color swatch circle
+
+                    // --- Create text frame ---
+                    var textFrame = null;
                     try {
-                        var circleSize = 9; // 0.125 inches = 9 points
+                        textFrame = doc.textFrames.add();
+                        textFrame.contents = colorName;
+                        textFrame.left = startX + 15 + 1.44 + columnOffset;
+                        textFrame.top = yPosition + 5.76;
+                    } catch (e) {
+                        textFrame = null;
+                    }
+
+                    // Apply character style to force consistent size/font/color
+                    // applyTo() forcefully overrides all inherited defaults
+                    if (textFrame) {
+                        try {
+                            var style = isWarningColor ? warningStyle : normalStyle;
+                            style.applyTo(textFrame.textRange);
+                        } catch (e) {
+                            // Fallback: try per-character if style fails
+                            for (var ci = 0; ci < textFrame.characters.length; ci++) {
+                                try {
+                                    textFrame.characters[ci].characterAttributes.size = 7;
+                                } catch (e2) {}
+                            }
+                        }
+                    }
+
+                    // --- Create color swatch circle ---
+                    var colorCircle = null;
+                    try {
+                        var circleSize = 9;
                         var circleLeft = startX + 5 + columnOffset;
-                        var circleTop = yPosition;
-                        
-                        // Create circle using ellipse
-                        var colorCircle = doc.pathItems.ellipse(circleTop, circleLeft, circleSize, circleSize);
-                        
-                        // Determine the color for the circle based on document color mode
+                        colorCircle = doc.pathItems.ellipse(yPosition, circleLeft, circleSize, circleSize);
+
+                        // Determine fill color based on document color mode
                         var circleColor;
-                        
+
                         if (doc.documentColorSpace == DocumentColorSpace.RGB) {
-                            // RGB Document - create RGB colors
                             circleColor = new RGBColor();
-                            
                             if (colorName.indexOf("CMYK (C:") === 0) {
-                                // Convert CMYK to RGB for display
                                 var cmykMatch = colorName.match(/C:(\d+) M:(\d+) Y:(\d+) K:(\d+)/);
                                 if (cmykMatch) {
                                     var c = parseInt(cmykMatch[1]) / 100;
                                     var m = parseInt(cmykMatch[2]) / 100;
                                     var y = parseInt(cmykMatch[3]) / 100;
                                     var k = parseInt(cmykMatch[4]) / 100;
-                                    
-                                    // Convert CMYK to RGB
                                     circleColor.red = Math.round(255 * (1 - c) * (1 - k));
                                     circleColor.green = Math.round(255 * (1 - m) * (1 - k));
                                     circleColor.blue = Math.round(255 * (1 - y) * (1 - k));
                                 }
                             } else if (colorName.indexOf("RGB (R:") === 0) {
-                                // Extract RGB values directly
                                 var rgbMatch = colorName.match(/R:(\d+) G:(\d+) B:(\d+)/);
                                 if (rgbMatch) {
                                     circleColor.red = parseInt(rgbMatch[1]);
@@ -320,35 +315,21 @@ if (app.documents.length == 0) {
                                     circleColor.blue = parseInt(rgbMatch[3]);
                                 }
                             } else if (colorName === "CMYK Black") {
-                                circleColor.red = 0;
-                                circleColor.green = 0;
-                                circleColor.blue = 0;
+                                circleColor.red = 0; circleColor.green = 0; circleColor.blue = 0;
                             } else if (colorName === "CMYK White") {
-                                circleColor.red = 255;
-                                circleColor.green = 255;
-                                circleColor.blue = 255;
+                                circleColor.red = 255; circleColor.green = 255; circleColor.blue = 255;
                             } else if (colorName.indexOf("Gray (") === 0) {
                                 var grayMatch = colorName.match(/(\d+)%/);
                                 if (grayMatch) {
-                                    var grayValue = parseInt(grayMatch[1]);
-                                    var rgbGray = Math.round(grayValue * 2.55); // Convert percentage to 0-255
-                                    circleColor.red = rgbGray;
-                                    circleColor.green = rgbGray;
-                                    circleColor.blue = rgbGray;
+                                    var rgbGray = Math.round(parseInt(grayMatch[1]) * 2.55);
+                                    circleColor.red = rgbGray; circleColor.green = rgbGray; circleColor.blue = rgbGray;
                                 }
                             } else {
-                                // For spot colors or unknown, try to get RGB equivalent or use gray
-                                circleColor.red = 128;
-                                circleColor.green = 128;
-                                circleColor.blue = 128;
+                                circleColor.red = 128; circleColor.green = 128; circleColor.blue = 128;
                             }
-                            
                         } else {
-                            // CMYK Document - create CMYK colors (existing logic)
                             circleColor = new CMYKColor();
-                        
                             if (colorName.indexOf("CMYK (C:") === 0) {
-                                // Extract CMYK values from process color name
                                 var cmykMatch = colorName.match(/C:(\d+) M:(\d+) Y:(\d+) K:(\d+)/);
                                 if (cmykMatch) {
                                     circleColor.cyan = parseInt(cmykMatch[1]);
@@ -357,65 +338,32 @@ if (app.documents.length == 0) {
                                     circleColor.black = parseInt(cmykMatch[4]);
                                 }
                             } else if (colorName.indexOf("RGB (R:") === 0) {
-                                // Convert RGB to CMYK approximation
                                 var rgbMatch = colorName.match(/R:(\d+) G:(\d+) B:(\d+)/);
                                 if (rgbMatch) {
                                     var r = parseInt(rgbMatch[1]);
                                     var g = parseInt(rgbMatch[2]);
                                     var b = parseInt(rgbMatch[3]);
-                                    
-                                    // Convert RGB to CMYK
-                                    var rPercent = r / 255;
-                                    var gPercent = g / 255;
-                                    var bPercent = b / 255;
-                                    
-                                    var k = 1 - Math.max(rPercent, Math.max(gPercent, bPercent));
-                                    var c = (k < 1) ? (1 - rPercent - k) / (1 - k) : 0;
-                                    var m = (k < 1) ? (1 - gPercent - k) / (1 - k) : 0;
-                                    var y = (k < 1) ? (1 - bPercent - k) / (1 - k) : 0;
-                                    
-                                    circleColor.cyan = Math.round(c * 100);
-                                    circleColor.magenta = Math.round(m * 100);
-                                    circleColor.yellow = Math.round(y * 100);
+                                    var rP = r / 255, gP = g / 255, bP = b / 255;
+                                    var k = 1 - Math.max(rP, Math.max(gP, bP));
+                                    circleColor.cyan = (k < 1) ? Math.round((1 - rP - k) / (1 - k) * 100) : 0;
+                                    circleColor.magenta = (k < 1) ? Math.round((1 - gP - k) / (1 - k) * 100) : 0;
+                                    circleColor.yellow = (k < 1) ? Math.round((1 - bP - k) / (1 - k) * 100) : 0;
                                     circleColor.black = Math.round(k * 100);
                                 }
                             } else if (colorName.indexOf("Gray (") === 0) {
-                                // Extract gray percentage
                                 var grayMatch = colorName.match(/(\d+)%/);
                                 if (grayMatch) {
-                                    var grayValue = parseInt(grayMatch[1]);
-                                    circleColor.cyan = 0;
-                                    circleColor.magenta = 0;
-                                    circleColor.yellow = 0;
-                                    circleColor.black = 100 - grayValue;
+                                    circleColor.cyan = 0; circleColor.magenta = 0; circleColor.yellow = 0;
+                                    circleColor.black = 100 - parseInt(grayMatch[1]);
                                 }
                             } else if (colorName === "CMYK Black") {
-                                circleColor.cyan = 0;
-                                circleColor.magenta = 0;
-                                circleColor.yellow = 0;
-                                circleColor.black = 100;
-                            } else if (colorName === "CMYK White") {
-                                circleColor.cyan = 0;
-                                circleColor.magenta = 0;
-                                circleColor.yellow = 0;
-                                circleColor.black = 0;
-                            } else if (colorName === "No Color") {
-                                // White with dashed stroke to indicate transparency
-                                circleColor.cyan = 0;
-                                circleColor.magenta = 0;
-                                circleColor.yellow = 0;
-                                circleColor.black = 0;
+                                circleColor.cyan = 0; circleColor.magenta = 0; circleColor.yellow = 0; circleColor.black = 100;
+                            } else if (colorName === "CMYK White" || colorName === "No Color") {
+                                circleColor.cyan = 0; circleColor.magenta = 0; circleColor.yellow = 0; circleColor.black = 0;
                             } else if (colorName.indexOf("Gradient:") === 0 || colorName.indexOf("Pattern:") === 0 || colorName.indexOf("LAB (") === 0) {
-                                // For complex colors, use a neutral gray
-                                circleColor.cyan = 0;
-                                circleColor.magenta = 0;
-                                circleColor.yellow = 0;
-                                circleColor.black = 50;
+                                circleColor.cyan = 0; circleColor.magenta = 0; circleColor.yellow = 0; circleColor.black = 50;
                             } else {
-                                // For spot colors, use lookup table for better performance
                                 var spotFound = false;
-                                
-                                // First try to find by name in our lookup
                                 for (var lookupKey in spotColorLookup) {
                                     if (spotColorLookup[lookupKey].name === colorName) {
                                         var spotData = spotColorLookup[lookupKey];
@@ -427,78 +375,74 @@ if (app.documents.length == 0) {
                                         break;
                                     }
                                 }
-                                
                                 if (!spotFound) {
-                                    // Default color for unknown spots or colors
-                                    circleColor.cyan = 50;
-                                    circleColor.magenta = 50;
-                                    circleColor.yellow = 50;
-                                    circleColor.black = 50;
+                                    circleColor.cyan = 50; circleColor.magenta = 50; circleColor.yellow = 50; circleColor.black = 50;
                                 }
                             }
                         }
-                        
+
                         colorCircle.fillColor = circleColor;
-                        
-                        // Debug: Force a known RGB color to test if assignment works
-                        // var testColor = new RGBColor();
-                        // testColor.red = 255;
-                        // testColor.green = 0;
-                        // testColor.blue = 0;
-                        // colorCircle.fillColor = testColor;
-                        
-                        // Add thin black stroke
                         colorCircle.stroked = true;
                         var strokeColor = new CMYKColor();
-                        strokeColor.cyan = 0;
-                        strokeColor.magenta = 0;
-                        strokeColor.yellow = 0;
-                        strokeColor.black = 100;
+                        strokeColor.cyan = 0; strokeColor.magenta = 0; strokeColor.yellow = 0; strokeColor.black = 100;
                         colorCircle.strokeColor = strokeColor;
                         colorCircle.strokeWidth = 0.5;
-                        
-                        // Align circle vertically to text center using fixed offset
-                        // (Reading textFrame.height/.width right after creation is unreliable
-                        // in Illustrator — the geometry isn't recalculated until a redraw,
-                        // which causes the alignment drift that only a restart fixes.)
-                        // Font size is 7pt, circle is 9pt, so the text visual center is ~3.5pt
-                        // below textFrame.top. Circle top = textCenter + circleSize/2.
-                        if (colorCircle) {
-                            colorCircle.top = yPosition - 2 + (circleSize / 2);
-                        }
-                        
+
+                        // Fixed vertical alignment: center circle to text
+                        colorCircle.top = yPosition - 2 + (circleSize / 2);
+
                     } catch (e) {
-                        // If circle creation fails, continue without it
                         colorCircle = null;
                     }
 
-                    // Create a subgroup for this color entry (circle + text)
-                    // and move both items into it inside the parent group
+                    // --- Immediately group this pair using selection ---
+                    // Using executeMenuCommand("group") is more reliable than moveToBeginning
                     try {
-                        var entryGroup = doc.groupItems.add();
-                        entryGroup.name = colorName;
-                        if (textFrame) {
-                            textFrame.moveToBeginning(entryGroup);
+                        var itemsToGroup = [];
+                        if (textFrame) itemsToGroup.push(textFrame);
+                        if (colorCircle) itemsToGroup.push(colorCircle);
+
+                        if (itemsToGroup.length > 0) {
+                            doc.selection = null;
+                            doc.selection = itemsToGroup;
+                            app.executeMenuCommand("group");
+
+                            if (doc.selection.length == 1) {
+                                doc.selection[0].name = colorName;
+                                entryGroups.push(doc.selection[0]);
+                            }
+                            doc.selection = null;
                         }
-                        if (colorCircle) {
-                            colorCircle.moveToBeginning(entryGroup);
-                        }
-                        entryGroup.moveToBeginning(colorLabelsGroup);
                     } catch (eg) {
-                        // If subgrouping fails, items remain ungrouped in the doc
+                        // If grouping fails, skip this entry
                     }
 
                     // Move to next position (column wrapping logic)
                     if ((i + 1) % colorsPerColumn === 0 && i < colorNames.length - 1) {
-                        // Move to next column
                         currentColumn++;
                         yPosition = startY;
                     } else {
-                        // Move down in current column
                         yPosition -= lineSpacing;
                     }
                 }
-                
+
+                // Group all entry subgroups into a parent "Color Labels" group
+                if (entryGroups.length > 0) {
+                    try {
+                        doc.selection = null;
+                        doc.selection = entryGroups;
+                        app.executeMenuCommand("group");
+                        if (doc.selection.length == 1) {
+                            doc.selection[0].name = "Color Labels";
+                        }
+                        doc.selection = null;
+                    } catch (e) {}
+                }
+
+                // Clean up temporary character styles
+                try { normalStyle.remove(); } catch (e) {}
+                try { warningStyle.remove(); } catch (e) {}
+
                 // Restore original selection
                 doc.selection = originalSelection;
                 
