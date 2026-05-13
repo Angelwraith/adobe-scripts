@@ -432,29 +432,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rearrange_Registration_Dots.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rearrange_Registration_Dots.js"
     },
-    "RGB to CMYK Batch.js": {
-      "filename": "RGB to CMYK Batch.js",
-      "metadata": {
-        "name": "RGB to CMYK Batch",
-        "version": "1.0",
-        "description": "Convert and save selected open documents from RGB to CMYK",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "color",
-          "cmyk",
-          "rgb",
-          "batch",
-          "convert"
-        ]
-      },
-      "hash": "adb8a391f17e29aef275237e86ac1e1a",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\RGB to CMYK Batch.js",
-      "file_size": 7314,
-      "last_modified": "2026-04-23T14:33:34.355609",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/RGB%20to%20CMYK%20Batch.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/RGB%20to%20CMYK%20Batch.js"
-    },
     "scale_repeat_script.js": {
       "filename": "scale_repeat_script.js",
       "metadata": {
