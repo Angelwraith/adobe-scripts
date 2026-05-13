@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-04-29T09:51:01.727234",
+  "last_updated": "2026-05-13T12:38:35.318259",
   "deployer_version": "3.0",
   "total_scripts": 27,
   "launcher_version": "4.0",
@@ -9,7 +9,7 @@
       "filename": "Color Key.js",
       "metadata": {
         "name": "Color Key Creator",
-        "version": "1.4",
+        "version": "1.5",
         "description": "Create A Prepositioned Color Key On Proofs",
         "author": "Unknown",
         "target": "illustrator",
@@ -19,10 +19,10 @@
           "key"
         ]
       },
-      "hash": "ea634170c0ab9c564fb77588660fd8ec",
+      "hash": "529d94950b748e52f9d4cbb4140411bc",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Color Key.js",
-      "file_size": 26959,
-      "last_modified": "2026-04-28T09:46:07.708731",
+      "file_size": 23822,
+      "last_modified": "2026-05-13T12:35:36.046672",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js"
     },
@@ -394,7 +394,7 @@
       "filename": "Qty Sum.js",
       "metadata": {
         "name": "Qty: Sum",
-        "version": "1.0",
+        "version": "1.1",
         "description": "Sum Quantities from Selected Text Objects",
         "author": "Unknown",
         "target": "illustrator",
@@ -404,10 +404,10 @@
           "utility"
         ]
       },
-      "hash": "6e12620ca29394fb3c312caa8a219f23",
+      "hash": "7a566742c0abbe9aa7b654727b70c3ac",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Qty Sum.js",
-      "file_size": 2921,
-      "last_modified": "2025-08-30T13:03:27.975168",
+      "file_size": 2974,
+      "last_modified": "2026-05-01T12:57:32.526671",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty%20Sum.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty%20Sum.js"
     },
@@ -520,8 +520,8 @@
       "filename": "WrapProcessor.js",
       "metadata": {
         "name": "Wrap Processor",
-        "version": "1.0",
-        "description": "Export proofs/prints or convert wrap templates with proof-based path prefilling",
+        "version": "2.0",
+        "description": "Export proofs/prints or convert wrap templates with proof-based path prefilling. Convert mode auto-converts RGB docs to CMYK via BridgeTalk-isolated calls.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -531,15 +531,39 @@
           "proof",
           "print",
           "wrap",
-          "template"
+          "template",
+          "cmyk"
         ]
       },
-      "hash": "81481d68bbdc9d4db4d53acd13ebb067",
+      "hash": "2ae2de7fc667a04db38f7d07d9eab3fe",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\WrapProcessor.js",
-      "file_size": 38855,
-      "last_modified": "2026-01-09T11:27:55.191044",
+      "file_size": 61580,
+      "last_modified": "2026-05-13T12:15:57.144558",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js"
+    },
+    "List_Artboard_Sizes.jsx": {
+      "filename": "List_Artboard_Sizes.jsx",
+      "metadata": {
+        "name": "List Artboard Sizes",
+        "version": "1.2",
+        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Includes copy buttons for spreadsheet TSV and shape duplicates.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "artboard",
+          "size",
+          "measure",
+          "list",
+          "multi-document"
+        ]
+      },
+      "hash": "cda444db2c35aeda916b62fef1aaef0e",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\List_Artboard_Sizes.jsx",
+      "file_size": 41825,
+      "last_modified": "2026-05-08T12:48:21.936673",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx"
     },
     "Sort_Text_Numerically.jsx": {
       "filename": "Sort_Text_Numerically.jsx",
