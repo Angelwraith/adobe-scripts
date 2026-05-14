@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-05-13T12:38:35.318259",
+  "last_updated": "2026-05-14T10:30:00.678067",
   "deployer_version": "3.0",
-  "total_scripts": 27,
+  "total_scripts": 28,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -473,6 +473,29 @@
       "last_modified": "2025-10-09T07:24:33.675066",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js"
+    },
+    "Sherwin-Williams Color Picker.js": {
+      "filename": "Sherwin-Williams Color Picker.js",
+      "metadata": {
+        "name": "Sherwin-Williams Color Picker",
+        "version": "1.0",
+        "description": "Search the full SW color library and copy hex or add as a spot swatch",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "color",
+          "swatches",
+          "spot",
+          "sherwin-williams",
+          "paint"
+        ]
+      },
+      "hash": "4b57c59b17b907581d4656d37cad8989",
+      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Sherwin-Williams Color Picker.js",
+      "file_size": 84794,
+      "last_modified": "2026-05-14T10:26:44.576787",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js"
     },
     "SmartDimensionTool.js": {
       "filename": "SmartDimensionTool.js",
