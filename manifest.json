@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-14T10:30:00.678067",
+  "last_updated": "2026-05-14T16:43:00.456568",
   "deployer_version": "3.0",
   "total_scripts": 28,
   "launcher_version": "4.0",
@@ -478,7 +478,7 @@
       "filename": "Sherwin-Williams Color Picker.js",
       "metadata": {
         "name": "Sherwin-Williams Color Picker",
-        "version": "1.0",
+        "version": "1.1",
         "description": "Search the full SW color library and copy hex or add as a spot swatch",
         "author": "Unknown",
         "target": "illustrator",
@@ -490,10 +490,10 @@
           "paint"
         ]
       },
-      "hash": "4b57c59b17b907581d4656d37cad8989",
+      "hash": "3117ae2bf98621ac42f801aaaac4bc0b",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Sherwin-Williams Color Picker.js",
-      "file_size": 84794,
-      "last_modified": "2026-05-14T10:26:44.576787",
+      "file_size": 83968,
+      "last_modified": "2026-05-14T16:41:58.046328",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js"
     },
