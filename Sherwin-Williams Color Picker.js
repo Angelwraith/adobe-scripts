@@ -1,0 +1,2175 @@
+/*
+@METADATA
+{
+  "name": "Sherwin-Williams Color Picker",
+  "description": "Search the full SW color library and copy hex or add as a spot swatch",
+  "version": "1.0",
+  "target": "illustrator",
+  "tags": ["color", "swatches", "spot", "sherwin-williams", "paint"]
+}
+@END_METADATA
+*/
+
+#target illustrator
+
+(function() {
+    // ===== Cleanup any prior instance =====
+    try {
+        if (typeof swColorPalette !== 'undefined' && swColorPalette instanceof Window) {
+            swColorPalette.close();
+        }
+    } catch (e) {}
+
+    // ===== Color data: [number, name, hexRRGGBB] x ~1,535 entries =====
+    // Source: official Sherwin-Williams Color RGB Values PDF (sw-pdf-sherwin-williams-color.pdf)
+    var SW_COLORS = [
+  ["0001","Mulberry Silk","94766C",""],
+  ["0002","Chelsea Mauve","BEAC9F",""],
+  ["0003","Cabbage Rose","C59F91",""],
+  ["0004","Rose Brocade","996C6E",""],
+  ["0005","Deepest Mauve","6D595A",""],
+  ["0006","Toile Red","8B534E",""],
+  ["0007","Decorous Amber","AC7559",""],
+  ["0008","Cajun Red","8D422F",""],
+  ["0009","Eastlake Gold","C28E61",""],
+  ["0010","Wickerwork","C19E80",""],
+  ["0011","Crewel Tan","CBB99B",""],
+  ["0012","Empire Gold","C19F6E",""],
+  ["0013","Majolica Green","AEB08F",""],
+  ["0014","Sheraton Sage","8F8666",""],
+  ["0015","Gallery Green","708672",""],
+  ["0016","Billiard Green","45584D",""],
+  ["0017","Calico","8CA49C",""],
+  ["0018","Teal Stencil","627F7B",""],
+  ["0019","Festoon Aqua","A0BBB8",""],
+  ["0020","Peacock Plume","739694",""],
+  ["0021","Queen Anne Lilac","C0B6B4",""],
+  ["0022","Patchwork Plum","7E696A",""],
+  ["0023","Pewter Tankard","A39B90",""],
+  ["0024","Curio Gray","988977",""],
+  ["0025","Rosedust","CC8D84",""],
+  ["0026","Rachel Pink","E8B9AE",""],
+  ["0027","Aristocrat Peach","ECCEB9",""],
+  ["0028","Caen Stone","ECD0B1",""],
+  ["0029","Acanthus","CDCDB4",""],
+  ["0030","Colonial Yellow","EFC488",""],
+  ["0031","Dutch Tile Blue","9AABAB",""],
+  ["0032","Needlepoint Navy","546670",""],
+  ["0033","Rembrandt Ruby","974F49",""],
+  ["0034","Roycroft Rose","C08F80",""],
+  ["0035","Warm Beige","EEDAC3",""],
+  ["0036","Buckram Binding","D9C3A6",""],
+  ["0037","Morris Room Grey","ADA193",""],
+  ["0038","Library Pewter","7F7263",""],
+  ["0039","Mellow Mauve","C4957A",""],
+  ["0040","Roycroft Adobe","A76251",""],
+  ["0041","Dard Hunter Green","3A4A3F",""],
+  ["0042","Ruskin Room Green","ACA17D",""],
+  ["0043","Peristyle Brass","AE905E",""],
+  ["0044","Hubbard Squash","E9BF8C",""],
+  ["0045","Antiquarian Brown","946644",""],
+  ["0046","White Hyacinth","F3E5D1",""],
+  ["0047","Studio Blue Green","6D817B",""],
+  ["0048","Bunglehouse Blue","47626F",""],
+  ["0049","Silver Gray","B8B2A2",""],
+  ["0050","Classic Light Buff","F0EADC",""],
+  ["0051","Classic Ivory","F2E0C3",""],
+  ["0052","Pearl Gray","CBCEC5",""],
+  ["0053","Porcelain","E9E0D5",""],
+  ["0054","Twilight Gray","C8BFB5",""],
+  ["0055","Light French Gray","C2C0BB",""],
+  ["0056","Classic Sand","D6BCAA",""],
+  ["0057","Chinese Red","9E3E33",""],
+  ["0058","Jazz Age Coral","F1BFB1",""],
+  ["0059","Frostwork","CBD0C2",""],
+  ["0060","Alexandrite","598C74",""],
+  ["0061","Salon Rose","AB7878",""],
+  ["0062","Studio Mauve","C6B9B8",""],
+  ["0063","Blue Sky","ABD1C9",""],
+  ["0064","Blue Peacock","014E4C",""],
+  ["0065","Vogue Green","4B5645",""],
+  ["0066","Cascade Green","ACB19F",""],
+  ["0067","Belvedere Cream","F0CDA0",""],
+  ["0068","Copen Blue","C2CCC4",""],
+  ["0069","Rose Tan","CD9C85",""],
+  ["0070","Pink Shadow","DEC3B9",""],
+  ["0071","Orchid","BC9C9E",""],
+  ["0072","Deep Maroon","623F45",""],
+  ["0073","Chartreuse","E1D286",""],
+  ["0074","Radiant Lilac","A489A0",""],
+  ["0075","Holiday Turquoise","8AC6BD",""],
+  ["0076","Appleblossom","DAB5B4",""],
+  ["0077","Classic French Gray","888782",""],
+  ["0078","Sunbeam Yellow","F0D39D",""],
+  ["0079","Pinky Beige","C9AA98",""],
+  ["0080","Pink Flamingo","CD717B",""],
+  ["1015","Skyline Steel","C6BFB3",""],
+  ["1666","Venetian Yellow","F6E3A1",""],
+  ["1667","Icy Lemonade","F4E8B2",""],
+  ["1668","Pineapple Cream","F2EAC3",""],
+  ["2704","Merlot","51323B",""],
+  ["2735","Rockweed","443735",""],
+  ["2739","Charcoal Blue","3D4450",""],
+  ["2740","Mineral Gray","515763",""],
+  ["2801","Rookwood Dark Red","4B2929",""],
+  ["2802","Rookwood Red","622F2D",""],
+  ["2803","Rookwood Terra Cotta","975840",""],
+  ["2804","Renwick Rose Beige","AF8871",""],
+  ["2805","Renwick Beige","C3B09D",""],
+  ["2806","Rookwood Brown","7F614A",""],
+  ["2807","Rookwood Medium Brown","6E5440","~"],
+  ["2808","Rookwood Dark Brown","5F4D43",""],
+  ["2809","Rookwood Shutter Green","303B39","~"],
+  ["2810","Rookwood Sash Green","506A67",""],
+  ["2811","Rookwood Blue Green","738478",""],
+  ["2812","Rookwood Jade","979F7F",""],
+  ["2813","Downing Straw","CAAB7D",""],
+  ["2814","Rookwood Antique Gold","9F834F","~"],
+  ["2815","Renwick Olive","97896A",""],
+  ["2816","Rookwood Dark Green","565C4A",""],
+  ["2817","Rookwood Amber","C08650",""],
+  ["2818","Renwick Heather","8B7D7B",""],
+  ["2819","Downing Slate","777F86",""],
+  ["2820","Downing Earth","887B67",""],
+  ["2821","Downing Stone","A6A397",""],
+  ["2822","Downing Sand","CBBCA5",""],
+  ["2823","Rookwood Clay","9A7E64",""],
+  ["2824","Renwick Golden Oak","96724C",""],
+  ["2825","Colonial Revival Sea Green","ABC1A7","~"],
+  ["2826","Colonial Revival Green Stone","A29F7E","~"],
+  ["2827","Colonial Revival Stone","A7947C",""],
+  ["2828","Colonial Revival Tan","D3B699",""],
+  ["2829","Classical White","ECE1CB",""],
+  ["2831","Classical Gold","EBB875",""],
+  ["2832","Colonial Revival Gray","B4B9B9",""],
+  ["2833","Roycroft Vellum","E8D9BD",""],
+  ["2834","Birdseye Maple","E4C495",""],
+  ["2835","Craftsman Brown","AE9278",""],
+  ["2836","Quartersawn Oak","85695B",""],
+  ["2837","Aurora Brown","6A4238",""],
+  ["2838","Polished Mahogany","432722",""],
+  ["2839","Roycroft Copper Red","7B3728",""],
+  ["2840","Hammered Silver","978A7F",""],
+  ["2841","Weathered Shingle","937F68",""],
+  ["2842","Roycroft Suede","A79473",""],
+  ["2843","Roycroft Brass","7A6A51",""],
+  ["2844","Roycroft Mist Gray","C2BDB1",""],
+  ["2845","Bunglehouse Gray","988F7B",""],
+  ["2846","Roycroft Bronze Green","575449",""],
+  ["2847","Roycroft Bottle Green","324038",""],
+  ["2848","Roycroft Pewter","616564",""],
+  ["2849","Westchester Gray","797978",""],
+  ["2850","Chelsea Gray","B6B7B0",""],
+  ["2851","Sage Green Light","73705E",""],
+  ["2852","Plymouth Green","AEB996","~"],
+  ["2853","New Colonial Yellow","D9AD7F",""],
+  ["2854","Caribbean Coral","BE795E",""],
+  ["2855","Sycamore Tan","9C8A79",""],
+  ["2856","Fairfax Brown","61463A",""],
+  ["2857","Peace Yellow","EECF9E",""],
+  ["2858","Harvest Gold","D9A06A",""],
+  ["2859","Beige","DFC8B5",""],
+  ["2860","Sage","B3AE95",""],
+  ["2861","Avocado","857C5D",""],
+  ["2862","Burma Jade","92B3A1","~"],
+  ["2863","Powder Blue","89A4AD",""],
+  ["2864","Stratford Blue","57889B","~"],
+  ["2865","Classical Yellow","F8D492",""],
+  ["2901","Wine Country","602234","~"],
+  ["2902","Elderberry","7C243D","~"],
+  ["2903","Pomegranate","8D1D30","~"],
+  ["2904","Poppy Flower","87141F","~"],
+  ["2905","Carmine","801522","~"],
+  ["2906","Crimson Red","711922","~"],
+  ["2907","Scarlet","B5001A","~"],
+  ["2908","Cardinal","9D101C","~"],
+  ["2909","Redwing","98010D","~"],
+  ["2910","Primary Red","AC0000","~"],
+  ["2911","Pompeii Red","940000","~"],
+  ["2912","Chanticleer","870000","~"],
+  ["2913","Classy Red","911F21","~"],
+  ["2914","Vermilion","7E191B","~"],
+  ["2916","Red Prairie","8E3928","~"],
+  ["2917","Clay Pot","9A4A33","~"],
+  ["2923","Bramble Bush","503629","~"],
+  ["2924","Woodsy Brown","3D271D","~"],
+  ["2926","Iron Gate","3F352B","~"],
+  ["2927","Weathervane","2C201A","~"],
+  ["2929","Garden Path","424330","~"],
+  ["2930","Marsh Fern","4C4527","~"],
+  ["2936","Black Emerald","12221D","~"],
+  ["6000","Snowfall","E0DEDA",""],
+  ["6001","Grayish","CFCAC7",""],
+  ["6002","Essential Gray","BCB8B6",""],
+  ["6003","Proper Gray","ADA8A5",""],
+  ["6004","Mink","847B77",""],
+  ["6005","Folkstone","6D6562",""],
+  ["6006","Black Bean","403330",""],
+  ["6007","Smart White","E4DBD8",""],
+  ["6008","Individual White","D4CDCA",""],
+  ["6009","Imagine","C2B6B6",""],
+  ["6010","Flexible Gray","B1A3A1",""],
+  ["6011","Chinchilla","867875",""],
+  ["6012","Browse Brown","6E615F",""],
+  ["6013","Bitter Chocolate","4D3C3C",""],
+  ["6014","Quartz White","E2DAD7","~"],
+  ["6015","Vaguely Mauve","D1C5C4",""],
+  ["6016","Chaise Mauve","C1B2B3",""],
+  ["6017","Intuitive","B3A3A5",""],
+  ["6018","Enigma","8B7C7E",""],
+  ["6019","Poetry Plum","6F5C5F",""],
+  ["6020","Marooned","4E3132",""],
+  ["6021","Dreamy White","E3D9D5",""],
+  ["6022","Breathless","D6C2BE",""],
+  ["6023","Insightful Rose","C9B0AB",""],
+  ["6024","Dressy Rose","B89D9A",""],
+  ["6025","Socialite","907676",""],
+  ["6026","River Rouge","76595D",""],
+  ["6027","Cordovan","5F3D3F",""],
+  ["6028","Cultured Pearl","E5DCD6",""],
+  ["6029","White Truffle","D7C8C2",""],
+  ["6030","Artistic Taupe","C3B1AC",""],
+  ["6031","Glamour","B6A09A",""],
+  ["6032","Dutch Cocoa","8C706A",""],
+  ["6033","Bateau Brown","7A5F5A",""],
+  ["6034","Dark Auburn","5A3532",""],
+  ["6035","Gauzy White","E3DBD4",""],
+  ["6036","Angora","D1C5BE",""],
+  ["6037","Temperate Taupe","BFB1AA",""],
+  ["6038","Truly Taupe","AC9E97",""],
+  ["6039","Poised Taupe","8C7E78",""],
+  ["6040","Nutshell","756761",""],
+  ["6041","Otter","56433B",""],
+  ["6042","Hush White","E5DAD4",""],
+  ["6043","Unfussy Beige","D6C8C0",""],
+  ["6044","Doeskin","C6B3A9",""],
+  ["6045","Emerging Taupe","B8A196",""],
+  ["6046","Swing Brown","947569",""],
+  ["6047","Hot Cocoa","806257",""],
+  ["6048","Terra Brun","5A382D",""],
+  ["6049","Gorgeous White","E7DBD3",""],
+  ["6050","Abalone Shell","DBC7BD",""],
+  ["6051","Sashay Sand","CFB4A8",""],
+  ["6052","Sandbank","C3A497",""],
+  ["6053","Reddened Earth","9C6E63",""],
+  ["6054","Canyon Clay","85594F",""],
+  ["6055","Fiery Brown","5D3831",""],
+  ["6056","Polite White","E9DDD4",""],
+  ["6057","Malted Milk","DECABD",""],
+  ["6058","Likeable Sand","D1B7A8",""],
+  ["6059","Interface Tan","C1A392",""],
+  ["6060","Moroccan Spice","9D7868",""],
+  ["6061","Tanbark","896656",""],
+  ["6062","Vintage Leather","694336",""],
+  ["6063","Nice White","E6DDD5",""],
+  ["6064","Reticence","D9CDC3",""],
+  ["6065","Bona Fide Beige","CBB9AB",""],
+  ["6066","Sand Trap","BBA595",""],
+  ["6067","Mocha","967A6A",""],
+  ["6068","Brevity Brown","715243",""],
+  ["6069","French Roast","4F3426",""],
+  ["6070","Heron Plume","E5E1D8",""],
+  ["6071","Popular Gray","D4CCC3",""],
+  ["6072","Versatile Gray","C1B6AB",""],
+  ["6073","Perfect Greige","B7AB9F",""],
+  ["6074","Spalding Gray","8D7F75",""],
+  ["6075","Garret Gray","756861",""],
+  ["6076","Turkish Coffee","4D3930",""],
+  ["6077","Everyday White","E4DCD4",""],
+  ["6078","Realist Beige","D3C8BD",""],
+  ["6079","Diverse Beige","C2B4A7",""],
+  ["6080","Utterly Beige","B5A597",""],
+  ["6081","Down Home","907865",""],
+  ["6082","Cobble Brown","7A6455",""],
+  ["6083","Sable","5F4B3F",""],
+  ["6084","Modest White","E6DDD4",""],
+  ["6085","Simplify Beige","D6C7B9",""],
+  ["6086","Sand Dune","C5B1A2",""],
+  ["6087","Trusty Tan","B59F8F",""],
+  ["6088","Nuthatch","8E725F",""],
+  ["6089","Grounded","785B47",""],
+  ["6090","Java","634533",""],
+  ["6091","Reliable White","E8DED3",""],
+  ["6092","Lightweight Beige","DAC8B8",""],
+  ["6093","Familiar Beige","CAB3A0",""],
+  ["6094","Sensational Sand","BFA38D",""],
+  ["6095","Toasty","957258",""],
+  ["6096","Jute Brown","815D40",""],
+  ["6097","Sturdy Brown","69482C",""],
+  ["6098","Pacer White","E5DDD0",""],
+  ["6099","Sand Dollar","D7C5B3",""],
+  ["6100","Practical Beige","C9B29C",""],
+  ["6101","Sands of Time","BCA38B",""],
+  ["6102","Portabello","947A62",""],
+  ["6103","Tea Chest","7D644D",""],
+  ["6104","Kaffee","65503D",""],
+  ["6105","Divine White","E6DCCD",""],
+  ["6106","Kilim Beige","D7C5AE",""],
+  ["6107","Nomadic Desert","C7B198",""],
+  ["6108","Latte","BAA185",""],
+  ["6109","Hopsack","9E8163",""],
+  ["6110","Steady Brown","8A6B4D",""],
+  ["6111","Coconut Husk","70573F",""],
+  ["6112","Biscuit","EBDDCB",""],
+  ["6113","Interactive Cream","E4CAAD",""],
+  ["6114","Bagel","D7B593",""],
+  ["6115","Totally Tan","CCA683",""],
+  ["6116","Tatami Tan","BA8C64",""],
+  ["6117","Smokey Topaz","A57955",""],
+  ["6118","Leather Bound","8D623D",""],
+  ["6119","Antique White","E8DCC6",""],
+  ["6120","Believable Buff","DBC7A8",""],
+  ["6121","Whole Wheat","CDB592",""],
+  ["6122","Camelback","C5AA85",""],
+  ["6123","Baguette","B39167",""],
+  ["6124","Cardboard","9C7A56",""],
+  ["6125","Craft Paper","8A6645",""],
+  ["6126","Navajo White","E9DCC6",""],
+  ["6127","Ivoire","E4CEAC",""],
+  ["6128","Blonde","DCBD92",""],
+  ["6129","Restrained Gold","D2B084",""],
+  ["6130","Mannered Gold","C19763",""],
+  ["6131","Chamois","AD8451",""],
+  ["6132","Relic Bronze","906A3A",""],
+  ["6133","Muslin","EADFC9",""],
+  ["6134","Netsuke","E0CFB0",""],
+  ["6135","Ecru","D0BA94",""],
+  ["6136","Harmonic Tan","C6B08A",""],
+  ["6137","Burlap","AC9571",""],
+  ["6138","Artifact","9A815E",""],
+  ["6139","Mossy Gold","7F6743",""],
+  ["6140","Moderate White","E9DECF",""],
+  ["6141","Softer Tan","DACAB2",""],
+  ["6142","Macadamia","CCB79B",""],
+  ["6143","Basket Beige","C0A98B",""],
+  ["6144","Dapper Tan","947F65",""],
+  ["6145","Thatch Brown","867057",""],
+  ["6146","Umber","6E543C",""],
+  ["6147","Panda White","EAE2D4",""],
+  ["6148","Wool Skein","D9CFBA",""],
+  ["6149","Relaxed Khaki","C8BBA3",""],
+  ["6150","Universal Khaki","B8A992",""],
+  ["6151","Quiver Tan","8E7F6A",""],
+  ["6152","Superior Bronze","786957",""],
+  ["6153","Protégé Bronze","66543E",""],
+  ["6154","Nacre","E8E2D4",""],
+  ["6155","Rice Grain","DBD0B9",""],
+  ["6156","Ramie","CDBDA2",""],
+  ["6157","Favorite Tan","C1AE91",""],
+  ["6158","Sawdust","998970",""],
+  ["6159","High Tea","7E6F59",""],
+  ["6160","Best Bronze","5D513E",""],
+  ["6161","Nonchalant White","DEDDD1",""],
+  ["6162","Ancient Marble","D1CCB9",""],
+  ["6163","Grassland","C1BCA7",""],
+  ["6164","Svelte Sage","B2AC96",""],
+  ["6165","Connected Gray","898473",""],
+  ["6166","Eclipse","6B6757",""],
+  ["6167","Garden Gate","5E5949",""],
+  ["6168","Moderne White","E2E0D7",""],
+  ["6169","Sedate Gray","D1CDBF",""],
+  ["6170","Techno Gray","BFB9AA",""],
+  ["6171","Chatroom","B0AB9C",""],
+  ["6172","Hardware","8B8372",""],
+  ["6173","Cocoon","726B5B",""],
+  ["6174","Andiron","424036",""],
+  ["6175","Sagey","E2E2D1",""],
+  ["6176","Liveable Green","CECEBD",""],
+  ["6177","Softened Green","BBBCA7",""],
+  ["6178","Clary Sage","ACAD97",""],
+  ["6179","Artichoke","7F8266",""],
+  ["6180","Oakmoss","65684C",""],
+  ["6181","Secret Garden","4F523A",""],
+  ["6182","Ethereal White","E3E2D9",""],
+  ["6183","Conservative Gray","D1D0C6",""],
+  ["6184","Austere Gray","BEBFB2",""],
+  ["6185","Escape Gray","ABAC9F",""],
+  ["6186","Dried Thyme","7B8070",""],
+  ["6187","Rosemary","64695C",""],
+  ["6188","Shade-Grown","4E5147",""],
+  ["6189","Opaline","DCDFD7",""],
+  ["6190","Filmy Green","D1D3C7",""],
+  ["6191","Contented","BDC0B3",""],
+  ["6192","Coastal Plain","9FA694",""],
+  ["6193","Privilege Green","7A8775",""],
+  ["6194","Basil","626E60",""],
+  ["6195","Rock Garden","465448",""],
+  ["6196","Frosty White","DDDDD6",""],
+  ["6197","Aloof Gray","C9C9C0",""],
+  ["6198","Sensible Hue","B6B5AB",""],
+  ["6199","Rare Gray","A6A69B",""],
+  ["6200","Link Gray","7F7E72",""],
+  ["6201","Thunderous","6D6C62",""],
+  ["6202","Cast Iron","64645A",""],
+  ["6203","Spare White","E4E4DD",""],
+  ["6204","Sea Salt","CDD2CA",""],
+  ["6205","Comfort Gray","BEC3BB",""],
+  ["6206","Oyster Bay","AEB3A9",""],
+  ["6207","Retreat","7A8076",""],
+  ["6208","Pewter Green","5E6259",""],
+  ["6209","Ripe Olive","44483D",""],
+  ["6210","Window Pane","D7DFD8",""],
+  ["6211","Rainwashed","C2CDC5",""],
+  ["6212","Quietude","ADBBB2",""],
+  ["6213","Halcyon Green","9BAAA2",""],
+  ["6214","Underseas","7C8E87",""],
+  ["6215","Rocky River","5E706A",""],
+  ["6216","Jasper","343B36",""],
+  ["6217","Topsail","DAE2E0",""],
+  ["6218","Tradewind","C2CFCF",""],
+  ["6219","Rain","ABBEBF",""],
+  ["6220","Interesting Aqua","9BAFB2",""],
+  ["6221","Moody Blue","7A9192",""],
+  ["6222","Riverway","5D7274",""],
+  ["6223","Still Water","4A5D5F",""],
+  ["6224","Mountain Air","D8E0DF",""],
+  ["6225","Sleepy Blue","BCCBCE",""],
+  ["6226","Languid Blue","A4B7BD",""],
+  ["6227","Meditative","96AAB0",""],
+  ["6228","Refuge","607D84",""],
+  ["6229","Tempe Star","47626A",""],
+  ["6230","Rainstorm","244653",""],
+  ["6231","Rock Candy","DEE1DF",""],
+  ["6232","Misty","CDD2D2",""],
+  ["6233","Samovar Silver","B8BEBE",""],
+  ["6234","Uncertain Gray","A9B0B1",""],
+  ["6235","Foggy Day","727C7F",""],
+  ["6236","Grays Harbor","596368",""],
+  ["6237","Dark Night","23383F",""],
+  ["6238","Icicle","DBDFE0",""],
+  ["6239","Upward","BFC9D0",""],
+  ["6240","Windy Blue","AABAC6",""],
+  ["6241","Aleutian","98A9B7",""],
+  ["6242","Bracing Blue","768B9A",""],
+  ["6243","Distance","5D6F7F",""],
+  ["6244","Naval","2F3D4C",""],
+  ["6245","Quicksilver","DDE2E0",""],
+  ["6246","North Star","CAD0D2",""],
+  ["6247","Krypton","B8C0C3",""],
+  ["6248","Jubilee","ADB5B9",""],
+  ["6249","Storm Cloud","7A848D",""],
+  ["6250","Granite Peak","606B75",""],
+  ["6251","Outerspace","586168",""],
+  ["6252","Ice Cube","E3E4E1",""],
+  ["6253","Olympus White","D4D8D7",""],
+  ["6254","Lazy Gray","BEC1C3",""],
+  ["6255","Morning Fog","A8AEB1",""],
+  ["6256","Serious Gray","7D848B",""],
+  ["6257","Gibraltar","626970",""],
+  ["6258","Tricorn Black","2F2F30",""],
+  ["6259","Spatial White","DDDCDB",""],
+  ["6260","Unique Gray","CBC9C9",""],
+  ["6261","Swanky Gray","B5B1B5",""],
+  ["6262","Mysterious Mauve","A6A3A9",""],
+  ["6263","Exclusive Plum","736F78",""],
+  ["6264","Midnight","5D5962",""],
+  ["6265","Quixotic Plum","4A4653",""],
+  ["6266","Discreet White","E0DCDC","~"],
+  ["6267","Sensitive Tint","CEC9CC",""],
+  ["6268","Veiled Violet","BDB5B9",""],
+  ["6269","Beguiling Mauve","AFA7AC",""],
+  ["6270","Soulmate","85777B",""],
+  ["6271","Expressive Plum","695C62",""],
+  ["6272","Plum Brown","4E4247",""],
+  ["6273","Nouvelle White","E2DDDA","~"],
+  ["6274","Destiny","CFC9C8",""],
+  ["6275","Fashionable Gray","BDB8B8",""],
+  ["6276","Mystical Shade","AEA9AA",""],
+  ["6277","Special Gray","7B787D",""],
+  ["6278","Cloak Gray","605E63",""],
+  ["6279","Black Swan","3A373E",""],
+  ["6280","Mauve Tinge","E9E2E2","~"],
+  ["6281","Wallflower","DBCFD4",""],
+  ["6282","Mauve Finery","CBB8C0",""],
+  ["6283","Thistle","AA8E9A",""],
+  ["6284","Plum Dandy","8B6878",""],
+  ["6285","Grape Harvest","7E5A6D",""],
+  ["6286","Mature Grape","5F3F54",""],
+  ["6287","White Beet","ECE0DE","~"],
+  ["6288","Rosebud","E0CDD1",""],
+  ["6289","Delightful","D2B6BE",""],
+  ["6290","Rosé","B995A1",""],
+  ["6291","Moss Rose","9E6D79",""],
+  ["6292","Berry Bush","8D5869",""],
+  ["6293","Fabulous Grape","6D344F",""],
+  ["6294","Rose Of Sharon","EBDCDC","~"],
+  ["6295","Demure","E8D4D5",""],
+  ["6296","Fading Rose","DABDC1",""],
+  ["6297","Rose Embroidery","C79EA2",""],
+  ["6298","Concerto","9E6B75",""],
+  ["6299","Aged Wine","895460",""],
+  ["6300","Burgundy","63333E",""],
+  ["6301","Patient White","F0E2DE","~"],
+  ["6302","Innocence","EBD1CF",""],
+  ["6303","Rose Colored","DCB6B5",""],
+  ["6304","Pressed Flower","C39393",""],
+  ["6305","Rambling Rose","995D62",""],
+  ["6306","Cordial","864C52",""],
+  ["6307","Fine Wine","723941",""],
+  ["6308","Possibly Pink","F0DFDC","~"],
+  ["6309","Charming Pink","EDD3D2",""],
+  ["6310","Lotus Flower","E6BDBD",""],
+  ["6311","Memorable Rose","CF8A8D",""],
+  ["6312","Redbud","AD5E65",""],
+  ["6313","Kirsch Red","974953",""],
+  ["6314","Luxurious Red","863A42",""],
+  ["6315","White Dogwood","EFDDD7","~"],
+  ["6316","Rosy Outlook","EBCECB",""],
+  ["6317","Gracious Rose","E3B7B1",""],
+  ["6318","Resounding Rose","CD8E89",""],
+  ["6319","Reddish","B56966",""],
+  ["6320","Bravado Red","A0524E",""],
+  ["6321","Red Bay","8E3738",""],
+  ["6322","Intimate White","F0E1D8",""],
+  ["6323","Romance","EBCFC3",""],
+  ["6324","Mellow Coral","E3B5A8",""],
+  ["6325","Constant Coral","CD8E7F",""],
+  ["6326","Henna Shade","B3675D",""],
+  ["6327","Bold Brick","A0584F",""],
+  ["6328","Fireweed","7B3730",""],
+  ["6329","Faint Coral","EEDED5",""],
+  ["6330","Quaint Peche","EACDC1",""],
+  ["6331","Smoky Salmon","E2B6A7",""],
+  ["6332","Coral Island","CE9382",""],
+  ["6333","Foxy","A85E53",""],
+  ["6334","Flower Pot","8F4438",""],
+  ["6335","Fired Brick","83382A",""],
+  ["6336","Nearly Peach","EFDED1",""],
+  ["6337","Spun Sugar","EDD2C0",""],
+  ["6338","Warming Peach","E4B9A2",""],
+  ["6339","Persimmon","D9987C",""],
+  ["6340","Baked Clay","C1785C",""],
+  ["6341","Red Cent","AD654C",""],
+  ["6342","Spicy Hue","994B35",""],
+  ["6343","Alluring White","EFE1D2",""],
+  ["6344","Peach Fuzz","ECCFBB",""],
+  ["6345","Sumptuous Peach","E5B99B",""],
+  ["6346","Fame Orange","DB9C7B",""],
+  ["6347","Chrysanthemum","C47B5B",""],
+  ["6348","Reynard","B46848",""],
+  ["6349","Pennywise","A2583A",""],
+  ["6350","Intricate Ivory","EDDDCA",""],
+  ["6351","Sweet Orange","EBCCB3",""],
+  ["6352","Soft Apricot","E0B392",""],
+  ["6353","Chivalry Copper","D4966E",""],
+  ["6354","Armagnac","C38058",""],
+  ["6355","Truepenny","B46C42",""],
+  ["6356","Copper Mountain","A6613C",""],
+  ["6357","Choice Cream","F0E1D0",""],
+  ["6358","Creamery","EDD0B6",""],
+  ["6359","Sociable","E8BE9B",""],
+  ["6360","Folksy Gold","D69969",""],
+  ["6361","Autumnal","CD8C5D",""],
+  ["6362","Tigereye","BB7748",""],
+  ["6363","Gingery","B06C3E",""],
+  ["6364","Eggwhite","F3E5D2",""],
+  ["6365","Cachet Cream","F3D9BA",""],
+  ["6366","Ambitious Amber","F0CB97",""],
+  ["6367","Viva Gold","E3AC72",""],
+  ["6368","Bakelite Gold","D7995D",""],
+  ["6369","Tassel","C6884A",""],
+  ["6370","Saucy Gold","B6743B",""],
+  ["6371","Vanillin","F2E3CA",""],
+  ["6372","Inviting Ivory","F2D5B0",""],
+  ["6373","Harvester","EDC38E",""],
+  ["6374","Torchlight","E5AE6B",""],
+  ["6375","Honeycomb","D59858",""],
+  ["6376","Gold Coast","C78538",""],
+  ["6377","Butterscotch","B67D3C",""],
+  ["6378","Crisp Linen","F3E6D4",""],
+  ["6379","Jersey Cream","F5DEBB",""],
+  ["6380","Humble Gold","EDC796",""],
+  ["6381","Anjou Pear","DDAC6D",""],
+  ["6382","Ceremonial Gold","D69E59",""],
+  ["6383","Golden Rule","CC9249",""],
+  ["6384","Cut the Mustard","BA7F38",""],
+  ["6385","Dover White","F0EADC",""],
+  ["6386","Napery","EFDDC1",""],
+  ["6387","Compatible Cream","E8C89E",""],
+  ["6388","Golden Fleece","D6AD78",""],
+  ["6389","Butternut","CC9B5C",""],
+  ["6390","Bosc Pear","C09056",""],
+  ["6391","Gallant Gold","A4763C",""],
+  ["6392","Vital Yellow","EDE0C5",""],
+  ["6393","Convivial Yellow","E9D6B0",""],
+  ["6394","Sequin","E1C28D",""],
+  ["6395","Alchemy","C99E53",""],
+  ["6396","Different Gold","BC934D",""],
+  ["6397","Nankeen","AA803A",""],
+  ["6398","Sconce Gold","996F32",""],
+  ["6399","Chamomile","E9E0C5",""],
+  ["6400","Lucent Yellow","E4D0A5",""],
+  ["6401","Independent Gold","D2BA83",""],
+  ["6402","Antiquity","C2A462",""],
+  ["6403","Escapade Gold","B89B59",""],
+  ["6404","Grandiose","9C7F41",""],
+  ["6405","Fervent Brass","95793D",""],
+  ["6406","Ionic Ivory","E7DFC5",""],
+  ["6407","Ancestral Gold","DDCDA6",""],
+  ["6408","Wheat Grass","CBB584",""],
+  ["6409","Edgy Gold","B1975F",""],
+  ["6410","Brassy","9D8344",""],
+  ["6411","Bengal Grass","8E773F",""],
+  ["6412","Eminent Bronze","7A6841",""],
+  ["6413","Restoration Ivory","E9E1CA",""],
+  ["6414","Rice Paddy","DFD4B0",""],
+  ["6415","Hearts of Palm","CFC291",""],
+  ["6416","Sassy Green","BBA86A",""],
+  ["6417","Tupelo Tree","9C9152",""],
+  ["6418","Rural Green","8D844D",""],
+  ["6419","Saguaro","655F2D",""],
+  ["6420","Queen Anne's Lace","ECEAD5",""],
+  ["6421","Celery","E0DDBD",""],
+  ["6422","Shagreen","CBC99D",""],
+  ["6423","Ryegrass","AEAC7A",""],
+  ["6424","Tansy Green","95945C",""],
+  ["6425","Relentless Olive","71713E",""],
+  ["6426","Basque Green","5F6033",""],
+  ["6427","Sprout","E4E4CE",""],
+  ["6428","Honeydew","DBDDBD",""],
+  ["6429","Baize Green","C7CDA8",""],
+  ["6430","Great Green","ABB486",""],
+  ["6431","Leapfrog","88915D",""],
+  ["6432","Garden Spot","6D7645",""],
+  ["6433","Inverness","576238",""],
+  ["6434","Spinach White","E4E8DA",""],
+  ["6435","Gratifying Green","DAE2CD",""],
+  ["6436","Bonsai Tint","C5D1B2",""],
+  ["6437","Haven","A3B48C",""],
+  ["6438","Dill","788D60",""],
+  ["6439","Greenfield","60724F",""],
+  ["6440","Courtyard","475842",""],
+  ["6441","White Mint","E0E7DA",""],
+  ["6442","Supreme Green","CFDDC7",""],
+  ["6443","Relish","B3CBAA",""],
+  ["6444","Lounge Green","8BA97F",""],
+  ["6445","Garden Grove","5E7F57",""],
+  ["6446","Arugula","42603C",""],
+  ["6447","Evergreens","405840",""],
+  ["6448","Greening","DEE6D7","~"],
+  ["6449","Topiary Tint","C8D8C4",""],
+  ["6450","Easy Green","ACC2A8",""],
+  ["6451","Nurture Green","98B092",""],
+  ["6452","Inland","6C8867",""],
+  ["6453","Cilantro","537150",""],
+  ["6454","Shamrock","205134",""],
+  ["6455","Fleeting Green","D8E2D8",""],
+  ["6456","Slow Green","C6D5C9",""],
+  ["6457","Kind Green","AAC2B3",""],
+  ["6458","Restful","91AF9D",""],
+  ["6459","Jadite","61826C",""],
+  ["6460","Kale Green","4F6A56",""],
+  ["6461","Isle of Pines","3D5541",""],
+  ["6462","Green Trance","D7E4DB",""],
+  ["6463","Breaktime","C4D9CE",""],
+  ["6464","Aloe","ACCABC",""],
+  ["6465","Spearmint","94B5A6",""],
+  ["6466","Grandview","6B927F",""],
+  ["6467","Kendal Green","547867",""],
+  ["6468","Hunt Club","2A4F43",""],
+  ["6469","Dewy","D7E2DA","~"],
+  ["6470","Waterscape","BFD2C9",""],
+  ["6471","Hazel","A8C1B7",""],
+  ["6472","Composed","7EA298",""],
+  ["6473","Surf Green","5F887D",""],
+  ["6474","Raging Sea","476F65",""],
+  ["6475","Country Squire","124A42",""],
+  ["6476","Glimmer","E0E7E2",""],
+  ["6477","Tidewater","C3D7D3",""],
+  ["6478","Watery","B4CCC9",""],
+  ["6479","Drizzle","8CAEAB",""],
+  ["6480","Lagoon","518682",""],
+  ["6481","Green Bay","2E6864",""],
+  ["6482","Cape Verde","01554F",""],
+  ["6483","Buoyant Blue","D7EAE8","~"],
+  ["6484","Meander Blue","BEDBD8",""],
+  ["6485","Raindrop","9EC6C6",""],
+  ["6486","Reflecting Pool","7BB1B2",""],
+  ["6487","Cloudburst","5C9598",""],
+  ["6488","Grand Canal","3C797D",""],
+  ["6489","Really Teal","016367",""],
+  ["6490","Timid Blue","E1E9E6","~"],
+  ["6491","Open Air","C7DFE0",""],
+  ["6492","Jetstream","B0D2D6",""],
+  ["6493","Ebbtide","84B4BE",""],
+  ["6494","Lakeshore","5B96A2",""],
+  ["6495","Great Falls","217786",""],
+  ["6496","Oceanside","015A6B",""],
+  ["6497","Blue Horizon","D8E7E6",""],
+  ["6498","Byte Blue","C5DCE0",""],
+  ["6499","Stream","ADCCD3",""],
+  ["6500","Open Seas","83AFBC",""],
+  ["6501","Manitou Blue","5B92A2",""],
+  ["6502","Loch Blue","2F778B",""],
+  ["6503","Bosporus","015D75",""],
+  ["6504","Sky High","DCE7E8",""],
+  ["6505","Atmospheric","C2DAE0",""],
+  ["6506","Vast Sky","A9C9D7",""],
+  ["6507","Resolute Blue","85B0C4",""],
+  ["6508","Secure Blue","5389A1",""],
+  ["6509","Georgian Bay","22657F",""],
+  ["6510","Loyal Blue","01455E",""],
+  ["6511","Snowdrop","E0E8E7",""],
+  ["6512","Balmy","C5D8DE",""],
+  ["6513","Take Five","B3C9D3",""],
+  ["6514","Respite","97B4C3",""],
+  ["6515","Leisure Blue","6A8EA1",""],
+  ["6516","Down Pour","43718B",""],
+  ["6517","Regatta","215772",""],
+  ["6518","Ski Slope","E2E5E4","~"],
+  ["6519","Hinting Blue","CED9DD",""],
+  ["6520","Honest Blue","B2C7D3",""],
+  ["6521","Notable Hue","8BA7BB",""],
+  ["6522","Sporty Blue","6A8AA4",""],
+  ["6523","Denim","506B84",""],
+  ["6524","Commodore","25476A",""],
+  ["6525","Rarified Air","E1E6E6",""],
+  ["6526","Icelandic","CBD8E1",""],
+  ["6527","Blissful Blue","B2C8D8",""],
+  ["6528","Cosmos","8EA9C2",""],
+  ["6529","Scanda","6B8CA9",""],
+  ["6530","Revel Blue","4C6B8A",""],
+  ["6531","Indigo","284A70",""],
+  ["6532","Aura White","E0E2E4","~"],
+  ["6533","Mild Blue","CBD5DB",""],
+  ["6534","Icy","BBC7D2",""],
+  ["6535","Solitude","99A7B8",""],
+  ["6536","Searching Blue","6C7F9A",""],
+  ["6537","Luxe Blue","516582",""],
+  ["6538","Dignified","3B496D",""],
+  ["6539","Soothing White","E3E2E5","~"],
+  ["6540","Starry Night","D6D9DE",""],
+  ["6541","Daydream","BDC3CD",""],
+  ["6542","Vesper Violet","99A0B2",""],
+  ["6543","Soulful Blue","757C91",""],
+  ["6544","Mesmerize","5D657B",""],
+  ["6545","Majestic Purple","3B3C5A",""],
+  ["6546","Cloud Nine","E8E5E5","~"],
+  ["6547","Silver Peony","DAD6DB",""],
+  ["6548","Grape Mist","C5C0C9",""],
+  ["6549","Ash Violet","A29BAA",""],
+  ["6550","Mythical","7E778E",""],
+  ["6551","Purple Passage","645E77",""],
+  ["6552","Dewberry","3E385A",""],
+  ["6553","Heavenly White","EBE8E6","~"],
+  ["6554","Lite Lavender","E0DADF",""],
+  ["6555","Enchant","D1C6D2",""],
+  ["6556","Obi Lilac","B0A3B6",""],
+  ["6557","Wood Violet","7A6B85",""],
+  ["6558","Plummy","675A75",""],
+  ["6559","Concord Grape","443757",""],
+  ["6560","Venus Pink","F2E5E6","~"],
+  ["6561","Teaberry","EBD1DB",""],
+  ["6562","Irresistible","E3C0CF",""],
+  ["6563","Rosebay","CB9AAD",""],
+  ["6564","Red Clover","B87E93",""],
+  ["6565","Grandeur Plum","92576F",""],
+  ["6566","Framboise","7C3655",""],
+  ["6567","Anemone","F2E2E4","~"],
+  ["6568","Lighthearted Pink","EDD5DD",""],
+  ["6569","Childlike","E8C0CF",""],
+  ["6570","Haute Pink","D899B1",""],
+  ["6571","Cyclamen","C47B95",""],
+  ["6572","Ruby Shade","A2566F",""],
+  ["6573","Juneberry","854158",""],
+  ["6574","Rosily","F2E4E5","~"],
+  ["6575","Priscilla","F1D3DA",""],
+  ["6576","Azalea Flower","EFC0CB",""],
+  ["6577","Jaipur Pink","E392A1",""],
+  ["6578","Tuberose","D47C8C",""],
+  ["6579","Gala Pink","B04B63",""],
+  ["6580","Cerise","99324E",""],
+  ["6581","Verbena","F3E0E0","~"],
+  ["6582","Impatiens Petal","F1D2D7",""],
+  ["6583","In the Pink","F0BCC9",""],
+  ["6584","Cheery","EB92A3",""],
+  ["6585","Coming up Roses","DD7788",""],
+  ["6586","Heartfelt","BD4C5F",""],
+  ["6587","Valentine","A53A4E",""],
+  ["6588","Diminutive Pink","F2DFDE","~"],
+  ["6589","Alyssum","F2D5D7",""],
+  ["6590","Loveable","F0C1C6",""],
+  ["6591","Amaryllis","ED939D",""],
+  ["6592","Grenadine","D66972",""],
+  ["6593","Coral Bells","BB4B51",""],
+  ["6594","Poinsettia","9D373C",""],
+  ["6595","Amour Pink","F2DEDC","~"],
+  ["6596","Bella Pink","F1C6C4",""],
+  ["6597","Hopeful","F0B3B2",""],
+  ["6598","Dishy Coral","ED9190",""],
+  ["6599","Begonia","D76C6E",""],
+  ["6600","Enticing Red","B74E4F",""],
+  ["6601","Tanager","A43834",""],
+  ["6602","Angelic","F3DCD7","~"],
+  ["6603","Oleander","F2CCC5",""],
+  ["6604","Youthful Coral","F0AFA8",""],
+  ["6605","Charisma","EE9489",""],
+  ["6606","Coral Reef","D9766C",""],
+  ["6607","Red Tomato","B24743",""],
+  ["6608","Rave Red","A13B34",""],
+  ["6609","Touching White","F3E0D7","~"],
+  ["6610","Koral Kicks","F2D1C3",""],
+  ["6611","Jovial","F2B8A7",""],
+  ["6612","Ravishing Coral","E79580",""],
+  ["6613","Lei Flower","D87B6A",""],
+  ["6614","Quite Coral","C76356",""],
+  ["6615","Peppery","B85444",""],
+  ["6616","Feather White","F3E2D6","~"],
+  ["6617","Blushing","F0D1C3",""],
+  ["6618","Cosmetic Peach","F3C1AB",""],
+  ["6619","Sockeye","E49780",""],
+  ["6620","Rejuvenate","DD7861",""],
+  ["6621","Emotional","C65F47",""],
+  ["6622","Hearty Orange","B44B34",""],
+  ["6623","Teasing Peach","F3E3D7","~"],
+  ["6624","Peach Blossom","F3D0BD",""],
+  ["6625","Certain Peach","F2BDA2",""],
+  ["6626","Sunset","E2946F",""],
+  ["6627","Emberglow","D67C56",""],
+  ["6628","Robust Orange","C4633E",""],
+  ["6629","Jalapeño","B1533C",""],
+  ["6630","Posy","F3E2D2","~"],
+  ["6631","Naive Peach","F3D3BF",""],
+  ["6632","Neighborly Peach","F3C1A3",""],
+  ["6633","Inventive Orange","E89D6F",""],
+  ["6634","Copper Harbor","D57E52",""],
+  ["6635","Determined Orange","C56639",""],
+  ["6636","Husky Orange","BB613E",""],
+  ["6637","Organza","F3E0CD","~"],
+  ["6638","Flattering Peach","F4D3B3",""],
+  ["6639","Avid Apricot","F4C69F",""],
+  ["6640","Tangerine","F2AC78",""],
+  ["6641","Outgoing Orange","E6955F",""],
+  ["6642","Rhumba Orange","CB7841",""],
+  ["6643","Yam","C36F3E",""],
+  ["6644","Champagne","F2E3CE",""],
+  ["6645","Frangipane","F4D8B2","~"],
+  ["6646","Orange Blast","F5CD9B","~"],
+  ["6647","Exciting Orange","F1B67A","~"],
+  ["6648","Kumquat","E9A05E","~"],
+  ["6649","Tango","E08D4C","~"],
+  ["6650","Marquis Orange","D47A34","~"],
+  ["6651","Cherish Cream","F2E3CB","~"],
+  ["6652","Flan","F4D4AF",""],
+  ["6653","Delicious Melon","F5C894",""],
+  ["6654","Surprise Amber","EFB57A",""],
+  ["6655","Adventure Orange","E69F5F",""],
+  ["6656","Serape","D88B4D",""],
+  ["6657","Amber Wave","D28240",""],
+  ["6658","Welcome White","F3E3CA",""],
+  ["6659","Captivating Cream","F4D9B1",""],
+  ["6660","Honey Blush","F5CF9B",""],
+  ["6661","Papaya","EFB97B",""],
+  ["6662","Summer Day","EAAA62",""],
+  ["6663","Saffron Thread","DF984E",""],
+  ["6664","Marigold","D28233",""],
+  ["6665","Gardenia","F3E2C9",""],
+  ["6666","Enjoyable Yellow","F5D6A9",""],
+  ["6667","Afterglow","F6CD8E",""],
+  ["6668","Sunrise","F4BF77",""],
+  ["6669","Yarrow","EBAD5E",""],
+  ["6670","Gold Crest","DF9938",""],
+  ["6671","Curry","D88F32",""],
+  ["6672","Morning Sun","F3E6CE",""],
+  ["6673","Banana Cream","F5DEAF",""],
+  ["6674","Jonquil","F7D391",""],
+  ["6675","Afternoon","FBCB78",""],
+  ["6676","Butterfield","F7BE5B",""],
+  ["6677","Goldenrod","F2AF46",""],
+  ["6678","Sunflower","E39A33",""],
+  ["6679","Full Moon","F4E3BC",""],
+  ["6680","Friendly Yellow","F5E0B1",""],
+  ["6681","Butter Up","F6DDA3",""],
+  ["6682","June Day","F6C973",""],
+  ["6683","Bee","F1BA55",""],
+  ["6684","Brittlebush","EAAE47",""],
+  ["6685","Trinket","D69835",""],
+  ["6686","Lemon Chiffon","F5E5BC",""],
+  ["6687","Lantern Light","F4E1AE",""],
+  ["6688","Solaria","F5D68F",""],
+  ["6689","Overjoy","EEC25F",""],
+  ["6690","Gambol Gold","E1B047",""],
+  ["6691","Glitzy Gold","D6A02B",""],
+  ["6692","Auric","C48919",""],
+  ["6693","Lily","F3E8C2",""],
+  ["6694","Glad Yellow","F5E1AC",""],
+  ["6695","Midday","F7D78A",""],
+  ["6696","Quilt Gold","EAC365",""],
+  ["6697","Nugget","DBB04A",""],
+  ["6698","Kingdom Gold","D1A436",""],
+  ["6699","Crispy Gold","C49832",""],
+  ["6700","Daybreak","F3EAC6",""],
+  ["6701","Moonraker","EEE3B2",""],
+  ["6702","Lively Yellow","E6D88E",""],
+  ["6703","Frolic","D9C661",""],
+  ["6704","Hep Green","C4B146",""],
+  ["6705","High Strung","AC9825",""],
+  ["6706","Offbeat Green","9C8B1F",""],
+  ["6707","Narcissus","F1EFCB","~"],
+  ["6708","Springtime","E9E5B3",""],
+  ["6709","Gleeful","DAD790",""],
+  ["6710","Mélange Green","C4C476",""],
+  ["6711","Parakeet","B4B05A",""],
+  ["6712","Luau Green","989746",""],
+  ["6713","Verdant","847E35",""],
+  ["6714","Citrine","E8EFD2","~"],
+  ["6715","Lime Granita","DCE1B8",""],
+  ["6716","Dancing Green","C5CD8F",""],
+  ["6717","Lime Rickey","AFB96A",""],
+  ["6718","Overt Green","97A554",""],
+  ["6719","Gecko","7A8833",""],
+  ["6720","Paradise","6C7B30",""],
+  ["6721","Enlightened Lime","E2ECD7","~"],
+  ["6722","Cucumber","D3DFC3",""],
+  ["6723","Jardin","BDD0AB",""],
+  ["6724","Mesclun Green","9DB682",""],
+  ["6725","Pickle","85A16A",""],
+  ["6726","Talipot Palm","648149",""],
+  ["6727","Houseplant","58713F",""],
+  ["6728","White Willow","E6EDD5","~"],
+  ["6729","Lacewing","D7E3CA",""],
+  ["6730","Romaine","C0D2AD",""],
+  ["6731","Picnic","99C285",""],
+  ["6732","Organic Green","7FAC6E",""],
+  ["6733","Grasshopper","4F854A",""],
+  ["6734","Espalier","2F5F3A",""],
+  ["6735","Minted","E0ECD9","~"],
+  ["6736","Jocular Green","CCE2CA",""],
+  ["6737","Kiwi","AED2B0",""],
+  ["6738","Vegan","8EC298",""],
+  ["6739","Eco Green","68A678",""],
+  ["6740","Kilkenny","498555",""],
+  ["6741","Derbyshire","245E36",""],
+  ["6742","Lighter Mint","DFECDE","~"],
+  ["6743","Mint Condition","D1E3D2",""],
+  ["6744","Reclining Green","B7D7BF",""],
+  ["6745","Lark Green","8AC1A1",""],
+  ["6746","Julep","57AA80",""],
+  ["6747","Argyle","348A5D",""],
+  ["6748","Greens","016844",""],
+  ["6749","Embellished Blue","D7EBE2",""],
+  ["6750","Waterfall","C0E3DA",""],
+  ["6751","Refresh","A1D4C8",""],
+  ["6752","Larchmere","70BAA7",""],
+  ["6753","Jargon Jade","53A38F",""],
+  ["6754","Ionian","368976",""],
+  ["6755","Starboard","016C4F",""],
+  ["6756","Crystal Clear","DCEDE9","~"],
+  ["6757","Tame Teal","C1E6DF",""],
+  ["6758","Aqueduct","A1D5CB",""],
+  ["6759","Cooled Blue","75B9AE",""],
+  ["6760","Rivulet","61A89D",""],
+  ["6761","Thermal Spring","3B8C80",""],
+  ["6762","Poseidon","016D60",""],
+  ["6763","Retiring Blue","D7EAE9","~"],
+  ["6764","Swimming","C2E5E5",""],
+  ["6765","Spa","A7DCDC",""],
+  ["6766","Mariner","6EC2C4",""],
+  ["6767","Aquarium","3AA9AE",""],
+  ["6768","Gulfstream","01858B",""],
+  ["6769","Maxi Teal","017478",""],
+  ["6770","Bubble","D2E9EB","~"],
+  ["6771","Bathe Blue","C2E0E3",""],
+  ["6772","Cay","A6D0D6",""],
+  ["6773","Rapture Blue","7DC1CB",""],
+  ["6774","Freshwater","4DA6B2",""],
+  ["6775","Briny","08808E",""],
+  ["6776","Blue Nile","01717E",""],
+  ["6777","Carefree","DEE9EA","~"],
+  ["6778","Aviary Blue","C6E3E8",""],
+  ["6779","Liquid Blue","A6D4DE",""],
+  ["6780","Nautilus","71B8C7",""],
+  ["6781","Jamaica Bay","34A3B6",""],
+  ["6782","Cruising","018498",""],
+  ["6783","Amalfi","016E85",""],
+  ["6784","Bravo Blue","D3E7E9",""],
+  ["6785","Quench Blue","B4E0E7",""],
+  ["6786","Cloudless","8FD0DD",""],
+  ["6787","Fountain","56B5CA",""],
+  ["6788","Capri","01A0B8",""],
+  ["6789","Blue Mosque","01819E",""],
+  ["6790","Adriatic Sea","016081",""],
+  ["6791","Lauren's Surprise","D7E5E8","~"],
+  ["6792","Minor Blue","B7DFE8",""],
+  ["6793","Bluebell","A2D5E7",""],
+  ["6794","Flyway","5DB3D4",""],
+  ["6795","Major Blue","289EC4",""],
+  ["6796","Blue Plate","017CA7",""],
+  ["6797","Jay Blue","015D87",""],
+  ["6798","Iceberg","D6E4E7",""],
+  ["6799","Soar","C3DFE8",""],
+  ["6800","Something Blue","B0D6E6",""],
+  ["6801","Regale Blue","7DB5D3",""],
+  ["6802","Jacaranda","5A9EC0",""],
+  ["6803","Danube","2377A2",""],
+  ["6804","Dignity Blue","094C73",""],
+  ["6805","Glass Bead","E1E5E7","~"],
+  ["6806","Rhythmic Blue","CCDBE5",""],
+  ["6807","Wondrous Blue","B8CDDD",""],
+  ["6808","Celestial","97B3D0",""],
+  ["6809","Lobelia","7498BE",""],
+  ["6810","Lupine","4E739F",""],
+  ["6811","Honorable Blue","164576",""],
+  ["6812","White Iris","E1E2E8","~"],
+  ["6813","Wishful Blue","D8DDE6",""],
+  ["6814","Breathtaking","C7D1E2",""],
+  ["6815","Awesome Violet","A7B2D4",""],
+  ["6816","Dahlia","8B98C4",""],
+  ["6817","Gentian","6572A5",""],
+  ["6818","Valiant Violet","3E4371",""],
+  ["6819","Minuet White","EBE6E9","~"],
+  ["6820","Inspired Lilac","DFD9E4",""],
+  ["6821","Potentially Purple","D1CBDF",""],
+  ["6822","Wisteria","BDB4D4",""],
+  ["6823","Brave Purple","968DB8",""],
+  ["6824","Forget-Me-Not","716998",""],
+  ["6825","Izmir Purple","4D426E",""],
+  ["6826","Whimsical White","ECE5E8","~"],
+  ["6827","Elation","DFDCE5",""],
+  ["6828","Rhapsody Lilac","D2C8DD",""],
+  ["6829","Magical","C0AFD0",""],
+  ["6830","Kismet","A18AB7",""],
+  ["6831","Clematis","7E6596",""],
+  ["6832","Impulsive Purple","624977",""],
+  ["6833","White Lilac","F0E7E8","~"],
+  ["6834","Spangle","E5DBE5",""],
+  ["6835","Euphoric Lilac","DAC7DA",""],
+  ["6836","Novel Lilac","C2A4C2",""],
+  ["6837","Baroness","A785A7",""],
+  ["6838","Vigorous Violet","7C5A7E",""],
+  ["6839","Kimono Violet","5D395F",""],
+  ["6840","Exuberant Pink","B54D7F",""],
+  ["6841","Dynamo","953D68",""],
+  ["6842","Forward Fuchsia","92345B",""],
+  ["6843","Hot","AC4362",""],
+  ["6844","Merry Pink","EDC6DA","~"],
+  ["6845","Child's Play","EBB9D4","~"],
+  ["6846","Prominent Pink","E19AC5","~"],
+  ["6847","Ice Plant","D779AD","~"],
+  ["6848","Panache Pink","F1C8D6","~"],
+  ["6849","Partytime","E8A6C4","~"],
+  ["6850","Vivacious Pink","E286A7","~"],
+  ["6851","Hibiscus","D56890","~"],
+  ["6852","Desire Pink","F1C4D1","~"],
+  ["6853","Fussy Pink","EBA2B9","~"],
+  ["6854","Impatient Pink","E17997","~"],
+  ["6855","Dragon Fruit","CC617F",""],
+  ["6856","Reverie Pink","F3CAD2","~"],
+  ["6857","Pink Moment","F19AAB","~"],
+  ["6858","Zany Pink","E97384","~"],
+  ["6859","Feverish Pink","D3384E","~"],
+  ["6860","Eros Pink","C84F68",""],
+  ["6861","Radish","A42E41",""],
+  ["6862","Cherries Jubilee","AB3C51",""],
+  ["6863","Lusty Red","B7343A","~"],
+  ["6864","Cherry Tomato","B52F2B","~"],
+  ["6865","Gypsy Red","BB2F36","~"],
+  ["6866","Heartthrob","A82E33",""],
+  ["6867","Fireworks","D73930","~"],
+  ["6868","Real Red","BF2D32",""],
+  ["6869","Stop","C33A36",""],
+  ["6870","Ablaze","C4443D","~"],
+  ["6871","Positive Red","AD2C34",""],
+  ["6872","Gaiety","F3BFB8","~"],
+  ["6873","Coral Bead","F29B92","~"],
+  ["6874","Ardent Coral","E97569","~"],
+  ["6875","Gladiola","DD4E40","~"],
+  ["6876","Comical Coral","F3D1C8",""],
+  ["6877","Inner Child","F4BEB2","~"],
+  ["6878","Animated Coral","F19180","~"],
+  ["6879","Daring","E4644B","~"],
+  ["6880","Energetic Orange","DD5633","~"],
+  ["6881","Cayenne","C04D35",""],
+  ["6882","Daredevil","D64920","~"],
+  ["6883","Raucous Orange","C35530",""],
+  ["6884","Obstinate Orange","D7552A",""],
+  ["6885","Knockout Orange","E16F3E",""],
+  ["6886","Invigorate","E47237",""],
+  ["6887","Navel","EC8430",""],
+  ["6888","Pizazz Peach","F4CA93","~"],
+  ["6889","Stirring Orange","F5B561","~"],
+  ["6890","Osage Orange","F4A045",""],
+  ["6891","Mandarin","F1921F","~"],
+  ["6892","Carnival","EB882C",""],
+  ["6893","Kid's Stuff","F08A27","~"],
+  ["6894","Forceful Orange","F29900","~"],
+  ["6895","Laughing Orange","F3A000","~"],
+  ["6896","Solé","F7DDA1",""],
+  ["6897","Sundance","F7CE69","~"],
+  ["6898","Social Butterfly","F8C048","~"],
+  ["6899","Nasturtium","F8B222","~"],
+  ["6900","Optimistic Yellow","F5E1A6",""],
+  ["6901","Daffodil","FAD97A",""],
+  ["6902","Decisive Yellow","FDCC4E",""],
+  ["6903","Cheerful","FFC723",""],
+  ["6904","Gusto Gold","F8AC1D",""],
+  ["6905","Goldfinch","FDB702",""],
+  ["6906","Citrus","FCCD00","~"],
+  ["6907","Forsythia","FFC801",""],
+  ["6908","Fun Yellow","F7E594",""],
+  ["6909","Lemon Twist","FED95D",""],
+  ["6910","Daisy","FED340",""],
+  ["6911","Confident Yellow","FECB01",""],
+  ["6912","Glisten Yellow","F2EBAB","~"],
+  ["6913","Funky Yellow","EDD26F",""],
+  ["6914","Eye Catching","DDB835",""],
+  ["6915","Citronella","CBA901",""],
+  ["6916","Impetuous","DFDD8B","~"],
+  ["6917","Nervy Hue","D1CE57","~"],
+  ["6918","Humorous Green","C6B836",""],
+  ["6919","Fusion","A9B611","~"],
+  ["6920","Center Stage","B2C216",""],
+  ["6921","Electric Lime","9ABA25",""],
+  ["6922","Outrageous Green","7EBE2B","~"],
+  ["6923","Festival Green","62A938","~"],
+  ["6924","Direct Green","3F8A24",""],
+  ["6925","Envy","358C3F",""],
+  ["6926","Lucky Green","238652",""],
+  ["6927","Greenbelt","017244",""],
+  ["6928","Green Vibes","D4E7C3",""],
+  ["6929","Witty Green","ACDD9C","~"],
+  ["6930","Laudable Lime","83C46E","~"],
+  ["6931","Jolly Green","53AB3B","~"],
+  ["6932","Spirited Green","C8E8CD","~"],
+  ["6933","Clean Green","9FDCAD","~"],
+  ["6934","Rally Green","78C485","~"],
+  ["6935","Straightforward Green","45A950","~"],
+  ["6936","Aquatint","B9E6E0","~"],
+  ["6937","Tantalizing Teal","87DCCE",""],
+  ["6938","Synergy","51C0B6","~"],
+  ["6939","Turquish","199D99","~"],
+  ["6940","Biscay","1F9AA5","~"],
+  ["6941","Nifty Turquoise","019187",""],
+  ["6942","Splashy","019196",""],
+  ["6943","Intense Teal","017680",""],
+  ["6944","Pool Blue","B8E3E5","~"],
+  ["6945","Belize","84D0D7","~"],
+  ["6946","Surfer","16A1AB","~"],
+  ["6947","Tempo Teal","00859A","~"],
+  ["6948","Blue Bauble","AFDCE6","~"],
+  ["6949","Slick Blue","7AC8DB","~"],
+  ["6950","Calypso","01B0BB",""],
+  ["6951","Cote D'Azur","00758B","~"],
+  ["6952","Blue Click","ACD6EA","~"],
+  ["6953","Candid Blue","78BFE4","~"],
+  ["6954","Resonant Blue","2F9BCB","~"],
+  ["6955","Impromptu","008ABE","~"],
+  ["6956","Blue Refrain","B5D7E9","~"],
+  ["6957","Undercool","7FC3E1",""],
+  ["6958","Dynamic Blue","0192C6",""],
+  ["6959","Blue Chip","016EA7",""],
+  ["6960","Bewitching Blue","BFCFE5","~"],
+  ["6961","Blue Beyond","98B4DB","~"],
+  ["6962","Dazzle","5E82BB","~"],
+  ["6963","Sapphire","5974AF","~"],
+  ["6964","Pulsating Blue","005D92","~"],
+  ["6965","Hyper Blue","015F97",""],
+  ["6966","Blueblood","015086",""],
+  ["6967","Frank Blue","225288",""],
+  ["6968","Hyacinth Tint","C2CBE0",""],
+  ["6969","Indulgent","A4A7D1","~"],
+  ["6970","Venture Violet","7A7EB4","~"],
+  ["6971","Morning Glory","3C4C80",""],
+  ["6972","Joyful Lilac","E6D3E2","~"],
+  ["6973","Free Spirit","CAB2D2",""],
+  ["6974","Plum Blossom","AC83B4","~"],
+  ["6975","Lavish Lavender","9F71A6","~"],
+  ["6976","Vanity Pink","EACBDE","~"],
+  ["6977","Queenly","D9A9CF","~"],
+  ["6978","Drama Violet","BE80B0","~"],
+  ["6979","Verve Violet","994A7F","~"],
+  ["6980","Gutsy Grape","754E83","~"],
+  ["6981","Passionate Purple","795484",""],
+  ["6982","African Violet","665385",""],
+  ["6983","Fully Purple","514C7E",""],
+  ["6987","Jitterbug Jade","019D6E",""],
+  ["6988","Bohemian Black","3B373C",""],
+  ["6989","Domino","353337",""],
+  ["6990","Caviar","313031",""],
+  ["6991","Black Magic","323132",""],
+  ["6992","Inkwell","31363A",""],
+  ["6993","Black of Night","323639",""],
+  ["6994","Greenblack","373A3A",""],
+  ["6995","Superwhite","E8EAEA","~"],
+  ["7000","Ibis White","F2ECE6",""],
+  ["7001","Marshmallow","EEE9E0",""],
+  ["7002","Downy","EFE8DD",""],
+  ["7003","Toque White","E7E2DA",""],
+  ["7004","Snowbound","EDEAE5",""],
+  ["7005","Pure White","EDECE6",""],
+  ["7006","Extra White","EEEFEA",""],
+  ["7007","Ceiling Bright White","E9EBE7",""],
+  ["7008","Alabaster","EDEAE0",""],
+  ["7009","Pearly White","E8E3D9",""],
+  ["7010","White Duck","E5DFD2",""],
+  ["7011","Natural Choice","E3DED0",""],
+  ["7012","Creamy","EFE8DB",""],
+  ["7013","Ivory Lace","ECE5D8",""],
+  ["7014","Eider White","E2DED8",""],
+  ["7015","Repose Gray","CCC9C0",""],
+  ["7016","Mindful Gray","BCB7AD",""],
+  ["7017","Dorian Gray","ACA79E",""],
+  ["7018","Dovetail","908A83",""],
+  ["7019","Gauntlet Gray","78736E",""],
+  ["7020","Black Fox","4F4842",""],
+  ["7021","Simple White","DFD9D2",""],
+  ["7022","Alpaca","CCC5BD",""],
+  ["7023","Requisite Gray","B9B2A9",""],
+  ["7024","Functional Gray","ABA39A",""],
+  ["7025","Backdrop","867A6F",""],
+  ["7026","Griffin","6F6459",""],
+  ["7027","Hickory Smoke","564537",""],
+  ["7028","Incredible White","E3DED7",""],
+  ["7029","Agreeable Gray","D1CBC1",""],
+  ["7030","Anew Gray","BFB6AA",""],
+  ["7031","Mega Greige","ADA295",""],
+  ["7032","Warm Stone","887B6C",""],
+  ["7033","Brainstorm Bronze","74685A",""],
+  ["7034","Status Bronze","5C4D3C",""],
+  ["7035","Aesthetic White","E3DDD3",""],
+  ["7036","Accessible Beige","D1C7B8",""],
+  ["7037","Balanced Beige","C0B2A2",""],
+  ["7038","Tony Taupe","B1A290",""],
+  ["7039","Virtual Taupe","8A7A6A",""],
+  ["7040","Smokehouse","716354",""],
+  ["7041","Van Dyke Brown","564536",""],
+  ["7042","Shoji White","E6DFD3",""],
+  ["7043","Worldly Gray","CEC6BB",""],
+  ["7044","Amazing Gray","BEB5A9",""],
+  ["7045","Intellectual Gray","A8A093",""],
+  ["7046","Anonymous","817A6E",""],
+  ["7047","Porpoise","6B645B",""],
+  ["7048","Urbane Bronze","54504A",""],
+  ["7049","Nuance","E2E0D6",""],
+  ["7050","Useful Gray","CFCABD",""],
+  ["7051","Analytical Gray","BFB6A7",""],
+  ["7052","Gray Area","AFA696",""],
+  ["7053","Adaptive Shade","867E70",""],
+  ["7054","Oak Leaf Brown","645A4B",""],
+  ["7055","Enduring Bronze","554C3E",""],
+  ["7056","Reserved White","E0E0D9",""],
+  ["7057","Silver Strand","C8CBC4",""],
+  ["7058","Magnetic Gray","B2B5AF",""],
+  ["7059","Unusual Gray","A3A7A0",""],
+  ["7060","Attitude Gray","7C7D75",""],
+  ["7061","Night Owl","63655F",""],
+  ["7062","Rock Bottom","484C49",""],
+  ["7063","Nebulous White","DEDFDC",""],
+  ["7064","Passive","CBCCC9",""],
+  ["7065","Argos","BDBDB7",""],
+  ["7066","Gray Matters","A7A8A2",""],
+  ["7067","Cityscape","7F817E",""],
+  ["7068","Grizzle Gray","636562",""],
+  ["7069","Iron Ore","434341",""],
+  ["7070","Site White","DCDEDC",""],
+  ["7071","Gray Screen","C6CACA",""],
+  ["7072","Online","B0B5B5",""],
+  ["7073","Network Gray","A0A5A7",""],
+  ["7074","Software","7F8486",""],
+  ["7075","Web Gray","616669",""],
+  ["7076","Cyberspace","44484D",""],
+  ["7077","Original White","E2DEDB",""],
+  ["7078","Minute Mauve","CFC9C8",""],
+  ["7079","Ponder","BCB6B6",""],
+  ["7080","Quest Gray","ADA5A5",""],
+  ["7081","Sensuous Gray","837D7F",""],
+  ["7082","Stunning Shade","676064",""],
+  ["7083","Darkroom","443E40",""],
+  ["7100","Arcade White","F3EEE7",""],
+  ["7101","Futon","EDE6DB",""],
+  ["7102","White Flour","F4EFE5",""],
+  ["7103","Whitetail","F4EFE4",""],
+  ["7104","Cotton White","F7EFE3",""],
+  ["7105","Paperwhite","F7EFDE",""],
+  ["7106","Honied White","F8EEDB",""],
+  ["7107","Fancy Pink","F7E9E8","~"],
+  ["7108","Pink Vibernum","F7E6E5","~"],
+  ["7109","Young At Heart","F8E3E2","~"],
+  ["7110","Cosmetic Blush","F8E9E3","~"],
+  ["7111","Laurel Pink","F9E2DC","~"],
+  ["7112","Pinkish","F7ECE3","~"],
+  ["7113","Roseate","F9E6DC","~"],
+  ["7114","Palish Peach","F7EDE1","~"],
+  ["7115","Conch Shell","F9E7D7","~"],
+  ["7116","A La Mode","F7EDDD","~"],
+  ["7117","Melon Tint","F8E9D5","~"],
+  ["7118","French Vanilla","F8EBD2","~"],
+  ["7119","Venetian Lace","F7EFDB","~"],
+  ["7120","Dollop Of Cream","F8EDD5","~"],
+  ["7121","Corona","F7EFD1","~"],
+  ["7122","Lemon Drop","F7F2D9","~"],
+  ["7123","Yellow Beam","F8F1CF","~"],
+  ["7124","Crescent Moon","F7F2D8","~"],
+  ["7125","Glittery Yellow","F7F1CE","~"],
+  ["7126","Pearl Onion","EFF1E2","~"],
+  ["7127","Apple Slice","EBEEDB","~"],
+  ["7128","Green Glaze","EBF2E5","~"],
+  ["7129","Opera Glass","E6F2EE","~"],
+  ["7130","Aquacade","E2F1ED","~"],
+  ["7131","Brooklet","E7F0EE","~"],
+  ["7132","Water Squirt","DAEBEC","~"],
+  ["7133","Faraway Blue","E6EEF0","~"],
+  ["7134","Tibetan Sky","DDEAEF","~"],
+  ["7135","Twinkle","E6E9EF","~"],
+  ["7136","Chapeau Violet","E1E5EE","~"],
+  ["7137","Violet Vignette","DBE0EC","~"],
+  ["7138","Lavender Wisp","EBEBEF","~"],
+  ["7139","Lady's Slipper","E4E2EB","~"],
+  ["7140","Snowberry","F1ECEE","~"],
+  ["7141","Feathery Lilac","EEE6EE","~"],
+  ["7501","Threshold Taupe","AC9A8A",""],
+  ["7502","Dry Dock","A18D7D",""],
+  ["7503","Sticks & Stones","A49689",""],
+  ["7504","Keystone Gray","9E9284",""],
+  ["7505","Manor House","665D57",""],
+  ["7506","Loggia","C4B7A5",""],
+  ["7507","Stone Lion","B3A491",""],
+  ["7508","Tavern Taupe","9C8A79",""],
+  ["7509","Tiki Hut","826F5E",""],
+  ["7510","Chateau Brown","5B4B44",""],
+  ["7511","Bungalow Beige","CDBFB0",""],
+  ["7512","Pavilion Beige","C5B6A4",""],
+  ["7513","Sanderling","A79582",""],
+  ["7514","Foothills","827466",""],
+  ["7515","Homestead Brown","6E5F53",""],
+  ["7516","Kestrel White","E0D6C8",""],
+  ["7517","Rivers Edge","DBCEBD",""],
+  ["7518","Beach House","C9B29C",""],
+  ["7519","Mexican Sand","AF9781",""],
+  ["7520","Plantation Shutters","6A5143",""],
+  ["7521","Dormer Brown","AD947C",""],
+  ["7522","Meadowlark","9F8267",""],
+  ["7523","Burnished Brandy","7C5C43",""],
+  ["7524","Dhurrie Beige","CABAA8",""],
+  ["7525","Tree Branch","8A7362",""],
+  ["7526","Maison Blanche","DFD2BF",""],
+  ["7527","Nantucket Dune","D0BFAA",""],
+  ["7528","Windsor Greige","C4B49C",""],
+  ["7529","Sand Beach","D4C5AD",""],
+  ["7530","Barcelona Beige","C4B39C",""],
+  ["7531","Canvas Tan","DCD1BF",""],
+  ["7532","Urban Putty","CFC0AB",""],
+  ["7533","Khaki Shade","C0AF97",""],
+  ["7534","Outerbanks","B7A48B",""],
+  ["7535","Sandy Ridge","A18E77",""],
+  ["7536","Bittersweet Stem","CBB49A",""],
+  ["7537","Irish Cream","E3D2B8",""],
+  ["7538","Tamarind","C0A588",""],
+  ["7539","Cork Wedge","C1A98A",""],
+  ["7540","Artisan Tan","B09879",""],
+  ["7541","Grecian Ivory","D8CFBE",""],
+  ["7542","Naturel","CBC0AD",""],
+  ["7543","Avenue Tan","BCB099",""],
+  ["7544","Fenland","AC9D83",""],
+  ["7545","Pier","63523D",""],
+  ["7546","Prairie Grass","B1A38E",""],
+  ["7547","Sandbar","CBBFAD",""],
+  ["7548","Portico","BBAB95",""],
+  ["7549","Studio Taupe","AD9C85",""],
+  ["7550","Resort Tan","907D66",""],
+  ["7551","Greek Villa","F0ECE2",""],
+  ["7552","Bauhaus Buff","E7DBCC",""],
+  ["7553","Fragile Beauty","E7D7C6",""],
+  ["7554","Steamed Milk","ECE1D1",""],
+  ["7555","Patience","E2D3BF",""],
+  ["7556","Crème","F4E8D2",""],
+  ["7557","Summer White","F4E9D6",""],
+  ["7558","Medici Ivory","F3E9D7",""],
+  ["7559","Décor White","F2E5CF",""],
+  ["7560","Impressive Ivory","F4DEC3",""],
+  ["7561","Lemon Meringue","F5EACC",""],
+  ["7562","Roman Column","F6F0E2",""],
+  ["7563","Restful White","EEE8D7",""],
+  ["7564","Polar Bear","E8DFCA",""],
+  ["7565","Oyster Bar","DBD0BB",""],
+  ["7566","Westhighland White","F3EEE3",""],
+  ["7567","Natural Tan","DCD2C3",""],
+  ["7568","Neutral Ground","E2DACA",""],
+  ["7569","Stucco","DCCFBA",""],
+  ["7570","Egret White","DFD9CF",""],
+  ["7571","Casa Blanca","EDE1CE",""],
+  ["7572","Lotus Pod","E7D7C2",""],
+  ["7573","Eaglet Beige","E9D9C0",""],
+  ["7574","Echelon Ecru","E7D8BE",""],
+  ["7575","Chopsticks","E0D1B8",""],
+  ["7576","Damsel","C69FAF","~"],
+  ["7577","Blackberry","533640",""],
+  ["7578","Borscht","72353D",""],
+  ["7579","Alaea","81585B",""],
+  ["7580","Carnelian","573E3E",""],
+  ["7581","Rosettee","D7A595","~"],
+  ["7582","Salute","803532",""],
+  ["7583","Wild Currant","7C3239",""],
+  ["7584","Red Theatre","6E3637",""],
+  ["7585","Sun Dried Tomato","692B2B",""],
+  ["7586","Stolen Kiss","813235",""],
+  ["7587","Antique Red","9F4442",""],
+  ["7588","Show Stopper","A42E37",""],
+  ["7589","Habanero Chile","B8473D",""],
+  ["7590","Red Obsession","B8403B","~"],
+  ["7591","Red Barn","7C453D",""],
+  ["7592","Crabby Apple","753531",""],
+  ["7593","Rustic Red","703229",""],
+  ["7594","Carriage Door","6E423E",""],
+  ["7595","Sommelier","5D3736",""],
+  ["7596","Only Natural","E2D3C4",""],
+  ["7597","Trek Tan","D1AE9B","~"],
+  ["7598","Sierra Redwood","924E3C",""],
+  ["7599","Brick Paver","93402F",""],
+  ["7600","Bolero","903934",""],
+  ["7601","Dockside Blue","A0B3BC",""],
+  ["7602","Indigo Batik","3E5063",""],
+  ["7603","Poolhouse","8095A0",""],
+  ["7604","Smoky Blue","596E79",""],
+  ["7605","Gale Force","35454E",""],
+  ["7606","Blue Cruise","6591A8",""],
+  ["7607","Santorini Blue","416D83",""],
+  ["7608","Adrift","87AAB9",""],
+  ["7609","Georgian Revival Blue","5B8D9F",""],
+  ["7610","Turkish Tile","3E758A",""],
+  ["7611","Tranquil Aqua","7C9AA0",""],
+  ["7612","Mountain Stream","679199",""],
+  ["7613","Aqua-Sphere","9CB0B3",""],
+  ["7614","St. Bart's","577C88",""],
+  ["7615","Sea Serpent","3E4B54",""],
+  ["7616","Breezy","A0AEAF",""],
+  ["7617","Mediterranean","657C81","~"],
+  ["7618","Deep Sea Dive","476B71","~"],
+  ["7619","Labradorite","697E87","~"],
+  ["7620","Seaworthy","425963","~"],
+  ["7621","Silvermist","B1B9B3","~"],
+  ["7622","Homburg Gray","676E6B","~"],
+  ["7623","Cascades","3C4D4E","~"],
+  ["7624","Slate Tile","65737A","~"],
+  ["7625","Mount Etna","4B5559","~"],
+  ["7626","Zurich White","E6E2DB","~"],
+  ["7627","White Heron","E5E0D7","~"],
+  ["7628","Windfresh White","DED8D0","~"],
+  ["7629","Grapy","797072","~"],
+  ["7630","Raisin","493E40","~"],
+  ["7631","City Loft","E0DAD2","~"],
+  ["7632","Modern Gray","D7CFC6","~"],
+  ["7633","Taupe Tone","ADA192","~"],
+  ["7634","Pediment","D4CDC6","~"],
+  ["7635","Palisade","AA9F97","~"],
+  ["7636","Origami White","E6E2DB","~"],
+  ["7637","Oyster White","E4DFD3","~"],
+  ["7638","Jogging Path","C2BBAC","~"],
+  ["7639","Ethereal Mood","AFA696","~"],
+  ["7640","Fawn Brindle","A8A196","~"],
+  ["7641","Collonade Gray","C5BFB6","~"],
+  ["7642","Pavestone","A29C93","~"],
+  ["7643","Pussywillow","B3AEA8","~"],
+  ["7644","Gateway Gray","B3AD9F","~"],
+  ["7645","Thunder Gray","58554E","~"],
+  ["7646","First Star","DAD9D5","~"],
+  ["7647","Crushed Ice","D7D4CD","~"],
+  ["7648","Big Chill","D0CFCA","~"],
+  ["7649","Silverplate","C2C1BC","~"],
+  ["7650","Ellie Gray","AAAAA4","~"],
+  ["7651","Front Porch","CBCCC5","~"],
+  ["7652","Mineral Deposit","ACB0AF","~"],
+  ["7653","Silverpointe","D1D2CD","~"],
+  ["7654","Lattice","CECEC7","~"],
+  ["7655","Stamped Concrete","A2A29B","~"],
+  ["7656","Rhinestone","DEE0DF","~"],
+  ["7657","Tinsmith","C6C8C6","~"],
+  ["7658","Gray Clouds","B8B8B5","~"],
+  ["7659","Gris","A6AAA9","~"],
+  ["7660","Earl Grey","989C9A","~"],
+  ["7661","Reflection","D2D5D3","~"],
+  ["7662","Evening Shadow","C9CDCF","~"],
+  ["7663","Monorail Silver","B4B9BA","~"],
+  ["7664","Steely Gray","91989D","~"],
+  ["7665","Wall Street","6A7279","~"],
+  ["7666","Fleur De Sel","DDDDD9","~"],
+  ["7667","Zircon","CAC9C7","~"],
+  ["7668","March Wind","BAB9B7","~"],
+  ["7669","Summit Gray","959592","~"],
+  ["7670","Gray Shingle","959494","~"],
+  ["7671","On The Rocks","D1CEC9","~"],
+  ["7672","Knitting Needles","C4C1BD","~"],
+  ["7673","Pewter Cast","9D9A96","~"],
+  ["7674","Peppercorn","636364","~"],
+  ["7675","Sealskin","494540","~"],
+  ["7676","Paper Lantern","F1E0C6","~"],
+  ["7677","Gold Vessel","EABA8C","~"],
+  ["7678","Cottage Cream","EDDBBE","~"],
+  ["7679","Golden Gate","DAB085","~"],
+  ["7680","Lanyard","BF9974","~"],
+  ["7681","Tea Light","F7E3C3","~"],
+  ["7682","Bee's Wax","EAC089","~"],
+  ["7683","Buff","F3E1C5","~"],
+  ["7684","Concord Buff","EFD8B6","~"],
+  ["7685","White Raisin","E4C08D","~"],
+  ["7686","Hinoki","F7DCB8","~"],
+  ["7687","August Moon","E7C7A2","~"],
+  ["7688","Sundew","E1CEB1","~"],
+  ["7689","Row House Tan","D3BB9F","~"],
+  ["7690","Townhall Tan","C3AB8E","~"],
+  ["7691","Biltmore Buff","E2C9A2","~"],
+  ["7692","Cupola Yellow","DCBC91","~"],
+  ["7693","Stonebriar","CCAB82","~"],
+  ["7694","Dromedary Camel","CBAF89","~"],
+  ["7695","Mesa Tan","C0A07E","~"],
+  ["7696","Toasted Pine Nut","DBC7A8","~"],
+  ["7697","Safari","CCB38F","~"],
+  ["7698","Straw Harvest","D9C7A2","~"],
+  ["7699","Rustic City","BEA073","~"],
+  ["7700","Olde World Gold","93744E","~"],
+  ["7701","Cavern Clay","AE6F5A","~"],
+  ["7702","Spiced Cider","B27C63","~"],
+  ["7703","Earthen Jug","AC6A4C","~"],
+  ["7704","Tower Tan","D4B59B","~"],
+  ["7705","Wheat Penny","9A705A","~"],
+  ["7706","Creole Cottage","E6B99D","~"],
+  ["7707","Copper Wire","C77E5B","~"],
+  ["7708","Rustic Adobe","D49C77","~"],
+  ["7709","Copper Pot","B5744B","~"],
+  ["7710","Brandywine","A66D4C","~"],
+  ["7711","Pueblo","E5D0BE","~"],
+  ["7712","Townhouse Tan","DEC8B5","~"],
+  ["7713","Tawny Tan","CBB29B","~"],
+  ["7714","Oak Barrel","C1A48B","~"],
+  ["7715","Pottery Urn","AB8770","~"],
+  ["7716","Croissant","DBC6A9","~"],
+  ["7717","Ligonier Tan","D3B291","~"],
+  ["7718","Oak Creek","BB8F6D","~"],
+  ["7719","Fresco Cream","D9C5B0","~"],
+  ["7720","Deer Valley","C7A487","~"],
+  ["7721","Crescent Cream","ECD1B3","~"],
+  ["7722","Travertine","ECD3B5","~"],
+  ["7723","Colony Buff","DDC6AC","~"],
+  ["7724","Canoe","B7997C","~"],
+  ["7725","Yearling","AC896C","~"],
+  ["7726","Lemon Verbena","9F9B75","~"],
+  ["7727","Koi Pond","BAB495","~"],
+  ["7728","Green Sprout","A4A184","~"],
+  ["7729","Edamame","848060","~"],
+  ["7730","Forestwood","5B6055","~"],
+  ["7731","San Antonio Sage","A79778","~"],
+  ["7732","Lemongrass","C8BE9A","~"],
+  ["7733","Bamboo Shoot","B2A57C","~"],
+  ["7734","Olive Grove","847C5F","~"],
+  ["7735","Palm Leaf","6D6548","~"],
+  ["7736","Garden Sage","B2A787","~"],
+  ["7737","Meadow Trail","90856E","~"],
+  ["7738","Cargo Pants","CDC4AE","~"],
+  ["7739","Herbal Wash","A69D86","~"],
+  ["7740","Messenger Bag","827A65","~"],
+  ["7741","Willow Tree","A9AD9D","~"],
+  ["7742","Agate Green","90A68A","~"],
+  ["7743","Mountain Road","87867A","~"],
+  ["7744","Zeus","99917F","~"],
+  ["7745","Muddled Basil","655E52","~"],
+  ["7746","Rushing River","A49F93","~"],
+  ["7747","Recycled Glass","BEC1A4","~"],
+  ["7748","Green Earth","9C9B87","~"],
+  ["7749","Laurel Woods","51554C","~"],
+  ["7750","Olympic Range","434D46","~"],
+    ];
+
+    // Row schema: [number, name, hex, accuracyFlag]
+    //   accuracyFlag === ""   -> hex verified against the SW website (1,203 colors)
+    //   accuracyFlag === "~"  -> hex from older PDF, may be off 1-3 RGB units (341 colors)
+    function isApprox(row) { return row.length > 3 && row[3] === "~"; }
+
+    // ===== Helpers =====
+    function hexToRGB(hex) {
+        hex = String(hex).replace(/^#/, "");
+        return {
+            r: parseInt(hex.substr(0, 2), 16),
+            g: parseInt(hex.substr(2, 2), 16),
+            b: parseInt(hex.substr(4, 2), 16)
+        };
+    }
+
+    // ScriptUI listboxes get sluggish past a few thousand rows, so we cap and
+    // tell the user to refine the search when too many match.
+    var MAX_RESULTS = 300;
+
+    function filterColors(query) {
+        var q = query.toLowerCase().replace(/\s+/g, " ").replace(/^ | $/g, "");
+        if (!q) return SW_COLORS.slice(0, MAX_RESULTS);
+        var tokens = q.split(" ");
+        var results = [];
+        for (var i = 0; i < SW_COLORS.length; i++) {
+            var row = SW_COLORS[i];
+            var haystack = (row[0] + " " + row[1] + " " + row[2]).toLowerCase();
+            var ok = true;
+            for (var t = 0; t < tokens.length; t++) {
+                if (haystack.indexOf(tokens[t]) === -1) { ok = false; break; }
+            }
+            if (ok) {
+                results.push(row);
+                if (results.length >= MAX_RESULTS) break;
+            }
+        }
+        return results;
+    }
+
+    // Most reliable clipboard method in Illustrator: create a hidden text frame
+    // with the content, copy it via Illustrator's own Edit > Copy menu command,
+    // then delete the frame. Requires an open document. Falls back to shell.
+    function setClipboardViaTextFrame(text) {
+        // On the Home/Start screen, doc references can be stale - ANY property
+        // access (.length, .activeDocument, .selection) can throw "there is no
+        // document". Wrap the entire function in a single outer try/catch so
+        // we always fall through cleanly to the shell method.
+        var doc, tf = null, prevSelection = null;
+        try {
+            if (app.documents.length === 0) return false;
+            doc = app.activeDocument;
+            prevSelection = doc.selection;
+            tf = doc.textFrames.add();
+            tf.contents = text;
+            // Move it off-canvas so it doesn't flash visibly
+            tf.position = [-99999, -99999];
+            doc.selection = null;
+            tf.selected = true;
+            app.executeMenuCommand("copy");
+            tf.remove();
+            // Restore prior selection (best-effort)
+            try { doc.selection = prevSelection; } catch (eR) {}
+            return true;
+        } catch (e) {
+            try { if (tf) tf.remove(); } catch (eRem) {}
+            try { if (doc) doc.selection = prevSelection; } catch (eR2) {}
+            return false;
+        }
+    }
+
+    function setClipboardViaShell(text) {
+        try {
+            var os = String($.os).toLowerCase();
+            var cmd;
+            if (os.indexOf("win") !== -1) {
+                // echo|set /p=X outputs X with NO trailing newline, then pipes to clip.
+                cmd = 'cmd.exe /c "echo|set /p=' + text + '|clip"';
+            } else {
+                cmd = "bash -c \"printf %s '" + text + "' | pbcopy\"";
+            }
+            // Try every known host hook for shelling out.
+            if (typeof system !== "undefined" && system.callSystem) {
+                system.callSystem(cmd);
+                return true;
+            }
+            if (typeof app !== "undefined" && typeof app.system === "function") {
+                app.system(cmd);
+                return true;
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    function setClipboard(text) {
+        // Prefer the text-frame method when a doc is open - it actually puts
+        // text on the OS clipboard via Illustrator's own copy command, which
+        // is the same one Ctrl+C uses, so it works in every Illustrator build.
+        if (setClipboardViaTextFrame(text)) return true;
+        return setClipboardViaShell(text);
+    }
+
+    function addSpotToDocument(name, hex) {
+        var doc = ensureActiveDocument();
+        if (!doc) {
+            alert("No usable document found.\n\n" +
+                  "Open a document in Illustrator (the Home/Start screen doesn't count), then try again.");
+            return false;
+        }
+        var rgb = hexToRGB(hex);
+
+        // Reuse existing spot of the same name if present, otherwise create one.
+        var spot = null;
+        try {
+            spot = doc.spots.getByName(name);
+        } catch (e) {
+            spot = null;
+        }
+
+        var colorObj;
+        if (doc.documentColorSpace == DocumentColorSpace.CMYK) {
+            // Convert the SW RGB to CMYK in the doc's working space so the
+            // alternate color matches what the doc renders.
+            try {
+                var cmykArr = doc.convertSampleColor(
+                    ImageColorSpace.RGB,
+                    [rgb.r, rgb.g, rgb.b],
+                    ImageColorSpace.CMYK,
+                    ColorConvertPurpose.defaultpurpose
+                );
+                var cmyk = new CMYKColor();
+                cmyk.cyan = cmykArr[0];
+                cmyk.magenta = cmykArr[1];
+                cmyk.yellow = cmykArr[2];
+                cmyk.black = cmykArr[3];
+                colorObj = cmyk;
+            } catch (eConv) {
+                // Fallback: simple RGB->CMYK approximation
+                var rN = rgb.r / 255, gN = rgb.g / 255, bN = rgb.b / 255;
+                var k = 1 - Math.max(rN, gN, bN);
+                var cN = k < 1 ? (1 - rN - k) / (1 - k) : 0;
+                var mN = k < 1 ? (1 - gN - k) / (1 - k) : 0;
+                var yN = k < 1 ? (1 - bN - k) / (1 - k) : 0;
+                var cmyk2 = new CMYKColor();
+                cmyk2.cyan = cN * 100;
+                cmyk2.magenta = mN * 100;
+                cmyk2.yellow = yN * 100;
+                cmyk2.black = k * 100;
+                colorObj = cmyk2;
+            }
+        } else {
+            var rgbColor = new RGBColor();
+            rgbColor.red = rgb.r;
+            rgbColor.green = rgb.g;
+            rgbColor.blue = rgb.b;
+            colorObj = rgbColor;
+        }
+
+        try {
+            if (spot) {
+                // Update existing spot
+                spot.colorType = ColorModel.SPOT;
+                spot.color = colorObj;
+                return spot;
+            } else {
+                spot = doc.spots.add();
+                spot.name = name;
+                spot.colorType = ColorModel.SPOT;
+                spot.color = colorObj;
+                return spot;
+            }
+        } catch (eAdd) {
+            alert("Could not add spot color: " + eAdd.message);
+            return false;
+        }
+    }
+
+    function formatRow(row) {
+        // "SW 7029   Agreeable Gray   #D2CDC2"      for verified
+        // "SW 7750   Olympic Range   ~#434D46"      for approx (~ prefix on hex)
+        var hexDisplay = (isApprox(row) ? "~#" : "#") + row[2];
+        return "SW " + row[0] + "    " + row[1] + "    " + hexDisplay;
+    }
+
+    // Build the SW website slug from a color name. Mirrors SW's URL convention:
+    //   "Agreeable Gray"     -> "agreeable-gray"
+    //   "Queen Anne's Lace"  -> "queen-annes-lace"
+    //   "St. Bart's"         -> "st-barts"
+    //   "Sticks & Stones"    -> "sticks-stones"
+    //   "Rose" / accented    -> mapped to ASCII
+    function slugifyName(name) {
+        var s = String(name).toLowerCase();
+        // Accent -> ASCII (covers SW names like Rose, Jalapeno, Cote d'Azur, Decor, Creme, Melange, Sole, Protege)
+        s = s.replace(/[à-å]/g, "a")
+             .replace(/[è-ë]/g, "e")
+             .replace(/[ì-ï]/g, "i")
+             .replace(/[ò-öø]/g, "o")
+             .replace(/[ù-ü]/g, "u")
+             .replace(/ñ/g, "n")
+             .replace(/ç/g, "c");
+        // Strip apostrophes (straight and curly) so "queen anne's" -> "queen annes"
+        s = s.replace(/['‘’]/g, "");
+        // Replace any run of non-alphanumeric with a single hyphen
+        s = s.replace(/[^a-z0-9]+/g, "-");
+        // Trim leading/trailing hyphens
+        s = s.replace(/^-+/, "").replace(/-+$/, "");
+        return s;
+    }
+
+    function colorPageURL(row) {
+        return "https://www.sherwin-williams.com/sherwinwilliams/SW" + row[0] + "-" + slugifyName(row[1]);
+    }
+
+    // Returns a usable Document, force-setting it as active if needed.
+    // Workaround for Illustrator's well-known palette/focus quirk where
+    // app.activeDocument throws "there is no document" even with N docs open.
+    // Pattern borrowed from WrapProcessor's app.activeDocument = doc trick.
+    function ensureActiveDocument() {
+        var count = 0;
+        try { count = app.documents.length; } catch (e) { return null; }
+        if (count === 0) return null;
+        // Try the host's current active doc first; if accessible, keep it.
+        try {
+            var ad = app.activeDocument;
+            var _ = ad.name;
+            return ad;
+        } catch (eActive) {}
+        // Otherwise iterate by index, force-set the first usable one active.
+        for (var i = 0; i < count; i++) {
+            try {
+                var d = app.documents[i];
+                var n = d.name;          // probe accessibility
+                app.activeDocument = d;  // force-set as active
+                return d;
+            } catch (eIter) {}
+        }
+        return null;
+    }
+
+    // Open a URL in the user's default browser. Tries the shell first, then
+    // falls back to writing a temp shortcut file and executing it - that
+    // method works even when system.callSystem / app.system aren't available.
+    function openInBrowser(url) {
+        var os = String($.os).toLowerCase();
+        var isWin = os.indexOf("win") !== -1;
+
+        // Method 1: Shell command (most direct, works when shell APIs are exposed)
+        try {
+            var cmd = isWin
+                ? 'cmd.exe /c start "" "' + url + '"'
+                : 'open "' + url + '"';
+            if (typeof system !== "undefined" && system.callSystem) {
+                system.callSystem(cmd);
+                return true;
+            }
+            if (typeof app !== "undefined" && typeof app.system === "function") {
+                app.system(cmd);
+                return true;
+            }
+        } catch (eShell) {}
+
+        // Method 2: Temp shortcut + File.execute() - ExtendScript's File API
+        // is always available, so this is the most portable fallback.
+        try {
+            var tmpFile;
+            if (isWin) {
+                // Windows .url Internet Shortcut
+                tmpFile = new File(Folder.temp + "/__sw_color_picker_open.url");
+                tmpFile.open("w");
+                tmpFile.writeln("[InternetShortcut]");
+                tmpFile.writeln("URL=" + url);
+                tmpFile.close();
+            } else {
+                // Mac .webloc bookmark
+                tmpFile = new File(Folder.temp + "/__sw_color_picker_open.webloc");
+                tmpFile.open("w");
+                tmpFile.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+                tmpFile.writeln('<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">');
+                tmpFile.writeln('<plist version="1.0"><dict><key>URL</key><string>' + url + '</string></dict></plist>');
+                tmpFile.close();
+            }
+            if (tmpFile.execute()) return true;
+        } catch (eFile) {}
+
+        return false;
+    }
+
+    // ===== UI =====
+    var swColorPalette = new Window("palette", "Sherwin-Williams Color Picker");
+    swColorPalette.orientation = "column";
+    swColorPalette.alignChildren = "fill";
+    swColorPalette.spacing = 8;
+    swColorPalette.margins = 12;
+    swColorPalette.preferredSize.width = 460;
+
+    // --- Title
+    var title = swColorPalette.add("statictext", undefined, "Sherwin-Williams Color Picker");
+    title.graphics.font = ScriptUI.newFont("Arial", "BOLD", 12);
+
+    // --- Search row
+    var searchGroup = swColorPalette.add("group");
+    searchGroup.orientation = "row";
+    searchGroup.alignChildren = "center";
+    searchGroup.add("statictext", undefined, "Search:");
+    var searchField = searchGroup.add("edittext", undefined, "");
+    searchField.preferredSize.width = 340;
+    searchField.preferredSize.height = 22;
+    searchField.helpTip = "Search by color name or SW number (e.g. 'agreeable', 'rookwood', '7029', or 'gray 7029'). Multi-word searches require every word to appear.";
+
+    // --- Status label
+    var statusLabel = swColorPalette.add("statictext", undefined, "");
+    statusLabel.preferredSize.height = 16;
+
+    // --- Results listbox
+    var resultsList = swColorPalette.add("listbox", undefined, [], {multiselect: false});
+    resultsList.preferredSize.width = 396;
+    resultsList.preferredSize.height = 260;
+
+    // --- Selected color preview row
+    var previewGroup = swColorPalette.add("group");
+    previewGroup.orientation = "row";
+    previewGroup.alignChildren = ["left", "center"];
+    previewGroup.spacing = 8;
+    var swatchPanel = previewGroup.add("panel");
+    swatchPanel.preferredSize.width = 36;
+    swatchPanel.preferredSize.height = 24;
+    var selectedLabel = previewGroup.add("statictext", undefined, "(no color selected)");
+    selectedLabel.preferredSize.width = 340;
+
+    // --- Button row
+    var buttonGroup = swColorPalette.add("group");
+    buttonGroup.orientation = "row";
+    buttonGroup.alignChildren = "center";
+    buttonGroup.spacing = 8;
+    var copyBtn = buttonGroup.add("button", undefined, "Copy Hex");
+    copyBtn.preferredSize.width = 100;
+    copyBtn.enabled = false;
+    var addBtn = buttonGroup.add("button", undefined, "Add to Swatches");
+    addBtn.preferredSize.width = 150;
+    addBtn.enabled = false;
+    var openBtn = buttonGroup.add("button", undefined, "Open Webpage");
+    openBtn.preferredSize.width = 140;
+    openBtn.enabled = false;
+    openBtn.helpTip = "Open this color's page on sherwin-williams.com in your default browser.";
+
+    // --- Footer / hint
+    var hint = swColorPalette.add("statictext", undefined,
+        "A '~' before #hex means the value couldn't be verified against the SW website and may be off 1-3 RGB units. All other values match SW.com exactly.");
+    hint.graphics.font = ScriptUI.newFont("Arial", "ITALIC", 10);
+
+    // ===== Wire-up =====
+    var currentResults = [];
+
+    function setSwatchColor(hex) {
+        try {
+            var rgb = hexToRGB(hex);
+            swatchPanel.graphics.backgroundColor =
+                swatchPanel.graphics.newBrush(swatchPanel.graphics.BrushType.SOLID_COLOR,
+                    [rgb.r / 255, rgb.g / 255, rgb.b / 255, 1]);
+        } catch (e) {}
+    }
+
+    function clearSwatchColor() {
+        try {
+            swatchPanel.graphics.backgroundColor =
+                swatchPanel.graphics.newBrush(swatchPanel.graphics.BrushType.SOLID_COLOR,
+                    [0.9, 0.9, 0.9, 1]);
+        } catch (e) {}
+    }
+
+    function refreshList() {
+        currentResults = filterColors(searchField.text);
+        resultsList.removeAll();
+        for (var i = 0; i < currentResults.length; i++) {
+            resultsList.add("item", formatRow(currentResults[i]));
+        }
+        if (currentResults.length === 0) {
+            statusLabel.text = "No matches.";
+        } else if (currentResults.length >= MAX_RESULTS) {
+            statusLabel.text = "Showing first " + MAX_RESULTS + " matches - refine your search to narrow it down.";
+        } else {
+            statusLabel.text = currentResults.length + " match" + (currentResults.length === 1 ? "" : "es") + ".";
+        }
+        copyBtn.enabled = false;
+        addBtn.enabled = false;
+        openBtn.enabled = false;
+        selectedLabel.text = "(no color selected)";
+        clearSwatchColor();
+    }
+
+    searchField.onChanging = function() { refreshList(); };
+
+    // Persist the selected index across modal dialogs (alerts/prompts can
+    // clear resultsList.selection on some Illustrator versions).
+    var lastSelectedIdx = -1;
+
+    resultsList.onChange = function() {
+        var idx = resultsList.selection ? resultsList.selection.index : -1;
+        if (idx < 0 || idx >= currentResults.length) {
+            lastSelectedIdx = -1;
+            copyBtn.enabled = false;
+            addBtn.enabled = false;
+            openBtn.enabled = false;
+            selectedLabel.text = "(no color selected)";
+            clearSwatchColor();
+            return;
+        }
+        lastSelectedIdx = idx;
+        var row = currentResults[idx];
+        var hexShow = (isApprox(row) ? "~#" : "#") + row[2];
+        var approxNote = isApprox(row) ? "   (approx)" : "";
+        selectedLabel.text = "SW " + row[0] + "  -  " + row[1] + "  -  " + hexShow + approxNote;
+        setSwatchColor(row[2]);
+        copyBtn.enabled = true;
+        addBtn.enabled = true;
+        openBtn.enabled = true;
+    };
+
+    // Double-click in list = add to swatches (convenience)
+    resultsList.onDoubleClick = function() {
+        if (addBtn.enabled) addBtn.notify("onClick");
+    };
+
+    function currentRow() {
+        // Prefer the live selection; fall back to last remembered index.
+        var idx = resultsList.selection ? resultsList.selection.index : -1;
+        if (idx < 0 || idx >= currentResults.length) idx = lastSelectedIdx;
+        if (idx < 0 || idx >= currentResults.length) return null;
+        return currentResults[idx];
+    }
+
+    // Copy Hex via BridgeTalk - palette callbacks can't reach app.activeDocument
+    // directly, so we dispatch the actual copy operation into Illustrator's
+    // main engine. Same pattern as Measurement Converter's convertButton.
+    copyBtn.onClick = function() {
+        try {
+            var row = currentRow();
+            if (!row) { statusLabel.text = "Pick a color first."; return; }
+            var hex = row[2];   // raw hex, no leading "#"
+            var note = isApprox(row) ? " (approx)" : "";
+
+            var script = "var __r = 'no-doc';" +
+                "try {" +
+                "  if (app.documents.length > 0) {" +
+                "    var d = app.activeDocument;" +
+                "    var prevSel = d.selection;" +
+                "    var tf = d.textFrames.add();" +
+                "    tf.contents = '" + hex + "';" +
+                "    tf.position = [-99999, -99999];" +
+                "    d.selection = null;" +
+                "    tf.selected = true;" +
+                "    app.executeMenuCommand('copy');" +
+                "    tf.remove();" +
+                "    try { d.selection = prevSel; } catch(eR) {}" +
+                "    __r = 'OK';" +
+                "  }" +
+                "} catch(e) { __r = 'ERR:' + e.message; }" +
+                "__r;";
+
+            var bt = new BridgeTalk();
+            bt.target = "illustrator";
+            bt.body = script;
+            bt.onResult = function(r) {
+                if (r.body === "OK") {
+                    statusLabel.text = "Copied " + hex + " to clipboard." + note;
+                } else if (r.body === "no-doc") {
+                    if (setClipboardViaShell(hex)) {
+                        statusLabel.text = "Copied " + hex + " (no doc - used shell)." + note;
+                    } else {
+                        prompt("No document open for text-frame copy.\nCopy this manually:", hex);
+                        statusLabel.text = "Manual copy required." + note;
+                    }
+                } else {
+                    statusLabel.text = "Copy failed: " + r.body;
+                }
+                // Release the button's visual focus state.
+                releaseButtonFocus();
+            };
+            bt.onError = function(e) {
+                statusLabel.text = "BridgeTalk error: " + ((e && e.body) || "unknown");
+                releaseButtonFocus();
+            };
+            bt.send();
+        } catch (e) {
+            alert("Copy Hex error: " + e.message + (e.line ? "  (line " + e.line + ")" : ""));
+        }
+    };
+
+    // Add to Swatches via BridgeTalk - run the spot-color creation in
+    // Illustrator's main engine where activeDocument actually works.
+    addBtn.onClick = function() {
+        try {
+            var row = currentRow();
+            if (!row) { statusLabel.text = "Pick a color first."; return; }
+            // Swatch name uses the full SW format e.g. "SW 7012 Creamy"
+            var swatchName = "SW " + row[0] + " " + row[1];
+            var hex = row[2];
+            var rgb = hexToRGB(hex);
+            var note = isApprox(row) ? "  (approx hex)" : "";
+
+            // Escape single quotes/backslashes in the name for the inlined script
+            var safeName = swatchName.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+            // Always use RGBColor as the spot's alternate, regardless of doc
+            // color mode. CMYK conversion was rounding the hex values (e.g.
+            // EFE8DB displayed as efe6da). Using RGBColor preserves the exact
+            // hex Illustrator shows in the color picker.
+            var script = "var __r = 'no-doc';" +
+                "try {" +
+                "  if (app.documents.length > 0) {" +
+                "    var d = app.activeDocument;" +
+                "    var nm = '" + safeName + "';" +
+                "    var alt = new RGBColor();" +
+                "    alt.red = " + rgb.r + ";" +
+                "    alt.green = " + rgb.g + ";" +
+                "    alt.blue = " + rgb.b + ";" +
+                "    var spot=null;" +
+                "    try { spot = d.spots.getByName(nm); } catch(e1) { spot = null; }" +
+                "    if (spot) {" +
+                "      spot.colorType = ColorModel.SPOT;" +
+                "      spot.color = alt;" +
+                "    } else {" +
+                "      spot = d.spots.add();" +
+                "      spot.name = nm;" +
+                "      spot.colorType = ColorModel.SPOT;" +
+                "      spot.color = alt;" +
+                "    }" +
+                "    __r = 'OK';" +
+                "  }" +
+                "} catch(e) { __r = 'ERR:' + e.message; }" +
+                "__r;";
+
+            var bt = new BridgeTalk();
+            bt.target = "illustrator";
+            bt.body = script;
+            bt.onResult = function(r) {
+                if (r.body === "OK") {
+                    statusLabel.text = "Added swatch: " + swatchName + note;
+                } else if (r.body === "no-doc") {
+                    alert("Open a document first - the Home/Start screen doesn't count as an open doc.");
+                    statusLabel.text = "No document open.";
+                } else {
+                    alert("Add to Swatches failed: " + r.body);
+                    statusLabel.text = "Add failed.";
+                }
+                releaseButtonFocus();
+            };
+            bt.onError = function(e) {
+                alert("BridgeTalk error: " + ((e && e.body) || "unknown"));
+                releaseButtonFocus();
+            };
+            bt.send();
+        } catch (e) {
+            alert("Add to Swatches error: " + e.message + (e.line ? "  (line " + e.line + ")" : ""));
+        }
+    };
+
+    openBtn.onClick = function() {
+        try {
+            var row = currentRow();
+            if (!row) { statusLabel.text = "Pick a color first."; return; }
+            var url = colorPageURL(row);
+            if (openInBrowser(url)) {
+                statusLabel.text = "Opened sherwin-williams.com page for " + row[1] + ".";
+            } else {
+                prompt("Couldn't auto-open. Copy this URL:", url);
+                statusLabel.text = "URL ready to copy.";
+            }
+            releaseButtonFocus();
+        } catch (e) {
+            alert("Open Webpage error: " + e.message + (e.line ? "  (line " + e.line + ")" : ""));
+        }
+    };
+
+    // Clears the visual "pressed/focused" state that buttons keep after click.
+    // ScriptUI on Windows doesn't repaint buttons automatically when focus
+    // moves via .active, so we combine focus shift, a disabled-then-enabled
+    // toggle to force ScriptUI to repaint, and a window.update() redraw.
+    function releaseButtonFocus() {
+        try { searchField.active = true; } catch (eF) {}
+        try {
+            // Re-enable cycle on each action button forces a repaint
+            var btns = [copyBtn, addBtn, openBtn];
+            for (var i = 0; i < btns.length; i++) {
+                var wasEnabled = btns[i].enabled;
+                btns[i].enabled = false;
+                btns[i].enabled = wasEnabled;
+            }
+        } catch (eR) {}
+        try { swColorPalette.update(); } catch (eU) {}
+    }
+
+    // ===== Init =====
+    clearSwatchColor();
+    refreshList();
+    // Count verified vs approx for the welcome message
+    var __verified = 0, __approx = 0;
+    for (var __i = 0; __i < SW_COLORS.length; __i++) {
+        if (isApprox(SW_COLORS[__i])) __approx++; else __verified++;
+    }
+    statusLabel.text = "Loaded " + SW_COLORS.length + " SW colors (" + __verified + " verified, " + __approx + " approx ~). Start typing to search.";
+
+    swColorPalette.center();
+    swColorPalette.show();
+})();
