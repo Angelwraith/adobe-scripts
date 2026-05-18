@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "4.1",
+  "version": "4.2",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -414,20 +414,57 @@ function main() {
     
     var customScaleNumerator = scaleRow.add("edittext", undefined, initialNumerator);
     customScaleNumerator.characters = 3;
-    customScaleNumerator.enabled = (scaleDropdown.selection && scaleDropdown.selection.text === "Custom");
-    
+    customScaleNumerator.enabled = true; // Always enabled — typing auto-switches to Custom
+
     scaleRow.add("statictext", undefined, ":");
-    
+
     var customScaleDenominator = scaleRow.add("edittext", undefined, initialDenominator);
     customScaleDenominator.characters = 3;
-    customScaleDenominator.enabled = (scaleDropdown.selection && scaleDropdown.selection.text === "Custom");
-    
-    // Enable/disable custom scale inputs based on dropdown selection
+    customScaleDenominator.enabled = true; // Always enabled — typing auto-switches to Custom
+
+    // Flag to suppress field-change → Custom switching when fields are updated programmatically
+    var suppressCustomSwitch = false;
+
+    // If the initial dropdown selection is a preset, sync the fields to it so they
+    // always reflect the current scale (gives users a starting point if they want to edit)
+    (function syncFieldsToDropdown() {
+        if (!scaleDropdown.selection) return;
+        var selText = scaleDropdown.selection.text;
+        if (selText === "Custom") return;
+        var parts = selText.split(":");
+        if (parts.length !== 2) return;
+        suppressCustomSwitch = true;
+        customScaleNumerator.text = parts[0];
+        customScaleDenominator.text = parts[1];
+        suppressCustomSwitch = false;
+    })();
+
+    // When the dropdown changes to a preset, update the custom fields to match
     scaleDropdown.onChange = function() {
-        var isCustom = scaleDropdown.selection.text === "Custom";
-        customScaleNumerator.enabled = isCustom;
-        customScaleDenominator.enabled = isCustom;
+        if (!scaleDropdown.selection) return;
+        var selText = scaleDropdown.selection.text;
+        if (selText === "Custom") return;
+        var parts = selText.split(":");
+        if (parts.length !== 2) return;
+        suppressCustomSwitch = true;
+        customScaleNumerator.text = parts[0];
+        customScaleDenominator.text = parts[1];
+        suppressCustomSwitch = false;
     };
+
+    // When user types in either custom field, auto-switch the dropdown to "Custom"
+    function switchToCustomScale() {
+        if (suppressCustomSwitch) return;
+        if (scaleDropdown.selection && scaleDropdown.selection.text === "Custom") return;
+        for (var i = 0; i < scaleDropdown.items.length; i++) {
+            if (scaleDropdown.items[i].text === "Custom") {
+                scaleDropdown.selection = i;
+                break;
+            }
+        }
+    }
+    customScaleNumerator.onChanging = switchToCustomScale;
+    customScaleDenominator.onChanging = switchToCustomScale;
     
     // Dimensions to add with position checkboxes
     var dimPanel = dialog.add("panel", undefined, "Dimension Placement");
