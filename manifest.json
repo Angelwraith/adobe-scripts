@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-14T16:43:00.456568",
+  "last_updated": "2026-05-18T12:19:24.174427",
   "deployer_version": "3.0",
   "total_scripts": 28,
   "launcher_version": "4.0",
@@ -493,7 +493,7 @@
       "hash": "3117ae2bf98621ac42f801aaaac4bc0b",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Sherwin-Williams Color Picker.js",
       "file_size": 83968,
-      "last_modified": "2026-05-14T16:41:58.046328",
+      "last_modified": "2026-05-18T12:16:30.617559",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js"
     },
@@ -501,7 +501,7 @@
       "filename": "SmartDimensionTool.js",
       "metadata": {
         "name": "Smart Dimension Tool",
-        "version": "4.0",
+        "version": "4.1",
         "description": "Add dimensions to an array of signs without the fuss",
         "author": "Unknown",
         "target": "illustrator",
@@ -511,10 +511,10 @@
           "Utility"
         ]
       },
-      "hash": "0606d892457e6ab9bef9b56e54cc1e42",
+      "hash": "a9410584874d40ccd026a41ffde93c38",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\SmartDimensionTool.js",
-      "file_size": 42857,
-      "last_modified": "2026-02-18T13:43:31.738958",
+      "file_size": 43877,
+      "last_modified": "2026-05-18T12:16:21.204870",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js"
     },
