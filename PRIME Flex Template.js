@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "3.9",
+  "version": "4.0",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -14,14 +14,14 @@ var globalPackingData = null;
 // Read packing data from proof document XMP metadata
 function readPackingDataFromProof(doc) {
     try {
-        $.writeln('🔍 Attempting to read packing data from proof...');
+        $.writeln('[SEARCH] Attempting to read packing data from proof...');
         
         if (ExternalObject.AdobeXMPScript == undefined) {
             ExternalObject.AdobeXMPScript = new ExternalObject('lib:AdobeXMPScript');
         }
         
         if (!doc.XMPString || doc.XMPString.length === 0) {
-            $.writeln('⚠️ Document has no XMP metadata');
+            $.writeln('[WARN] Document has no XMP metadata');
             return null;
         }
         
@@ -38,23 +38,23 @@ function readPackingDataFromProof(doc) {
         if (xmp.doesPropertyExist('http://extremecolor.net/packing/', 'data')) {
             var packingJSON = xmp.getProperty('http://extremecolor.net/packing/', 'data').value;
             
-            $.writeln('📦 Found packing data in XMP (length: ' + packingJSON.length + ')');
+            $.writeln('[PKG] Found packing data in XMP (length: ' + packingJSON.length + ')');
             
             // Parse JSON
             var packingData = eval('(' + packingJSON + ')');
             
-            $.writeln('✅ Packing data parsed successfully!');
+            $.writeln('[OK] Packing data parsed successfully!');
             $.writeln('   Materials: ' + packingData.materials.length);
             $.writeln('   Total sheets: ' + getTotalSheetCount(packingData));
             
             return packingData;
         }
         
-        $.writeln('⚠️ No packing data found in this proof document.');
+        $.writeln('[WARN] No packing data found in this proof document.');
         return null;
         
     } catch (e) {
-        $.writeln('❌ Error reading packing data: ' + e.message);
+        $.writeln('[ERR] Error reading packing data: ' + e.message);
         $.writeln('   Line: ' + e.line);
         return null;
     }
@@ -420,23 +420,49 @@ function showSetupDialog(docChoice) {
     dialog.margins = 20;
     dialog.preferredSize.width = 750;
     
-    var canvasDropdown = null;
+    // Canvas Type - row of selectable buttons (radio buttons) for one-click selection
+    var canvasRadios = null;
     if (docChoice.mode === "new") {
         var canvasGroup = dialog.add("group");
         canvasGroup.orientation = "row";
         canvasGroup.add("statictext", undefined, "Canvas Type:");
-        canvasDropdown = canvasGroup.add("dropdownlist", undefined, ["Large Canvas", "Standard Canvas"]);
-        canvasDropdown.selection = 0;
-        canvasDropdown.preferredSize.width = 150;
+        var canvasLabels = ["Large Canvas", "Standard Canvas"];
+        canvasRadios = [];
+        for (var ci = 0; ci < canvasLabels.length; ci++) {
+            var cRb = canvasGroup.add("radiobutton", undefined, canvasLabels[ci]);
+            canvasRadios.push(cRb);
+        }
+        canvasRadios[0].value = true; // Default: Large Canvas
     }
-    
+
+    // Reg Dots - row of selectable buttons (radio buttons) for one-click selection
     var regGroup = dialog.add("group");
     regGroup.orientation = "row";
     regGroup.add("statictext", undefined, "Reg Dots:");
-    var regDropdown = regGroup.add("dropdownlist", undefined, ["Auto/Metadata", "Top/Bottom", "Left/Right", "None"]);
+    var regLabels = ["Auto/Metadata", "Top/Bottom", "Left/Right", "None"];
+    var regValues = ["Auto", "TopBottom", "LeftRight", "None"];
+    var regRadios = [];
+    for (var rri = 0; rri < regLabels.length; rri++) {
+        var rRb = regGroup.add("radiobutton", undefined, regLabels[rri]);
+        regRadios.push(rRb);
+    }
     // Default to Auto/Metadata if we have packing data, otherwise Left/Right
-    regDropdown.selection = (docChoice.hasPackingData ? 0 : 2);
-    regDropdown.preferredSize.width = 150;
+    regRadios[docChoice.hasPackingData ? 0 : 2].value = true;
+
+    // Helpers to read which button is selected
+    function getCanvasIndex() {
+        if (!canvasRadios) return -1;
+        for (var i = 0; i < canvasRadios.length; i++) {
+            if (canvasRadios[i].value) return i;
+        }
+        return 0;
+    }
+    function getRegIndex() {
+        for (var i = 0; i < regRadios.length; i++) {
+            if (regRadios[i].value) return i;
+        }
+        return 0;
+    }
     
     // Add placeholder artwork checkbox
      var placeholderGroup = dialog.add("group");
@@ -767,8 +793,8 @@ function showSetupDialog(docChoice) {
         
         result = {
             docChoice: docChoice,
-            canvasType: canvasDropdown ? (canvasDropdown.selection.index === 0 ? "Large" : "Standard") : null,
-            regDots: regDropdown.selection.index === 0 ? "Auto" : (regDropdown.selection.index === 1 ? "TopBottom" : (regDropdown.selection.index === 2 ? "LeftRight" : "None")),
+            canvasType: canvasRadios ? (getCanvasIndex() === 0 ? "Large" : "Standard") : null,
+            regDots: regValues[getRegIndex()],
             createPlaceholders: placeholderCheckbox.value,
             packingData: globalPackingData,
             specs: specs
@@ -1539,7 +1565,7 @@ function createPlaceholderArtwork(doc, artboard, sheetData, scale, materialName)
             
             // DON'T swap dimensions - the packing engine already swaps them
             // When rotated=true, width/height are already in rotated state
-            // (e.g. a 60×24 sign rotated becomes 24×60 in the data)
+            // (e.g. a 60x24 sign rotated becomes 24x60 in the data)
             
             // Create rectangle with dimensions exactly as provided
             var rect = placeholderLayer.pathItems.rectangle(
