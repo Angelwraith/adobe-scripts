@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "4.0",
+  "version": "4.1",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -478,20 +478,47 @@ function main() {
         }
     };
     
+    // Rounding - row of selectable buttons (radio buttons) for one-click selection
     var roundingGroup = dimPanel.add("group");
     roundingGroup.add("statictext", undefined, "Rounding:");
-    var roundingDropdown = roundingGroup.add("dropdownlist", undefined, ["None", "1/16\" (0.0625)", "1/8\" (0.125)", "1/4\" (0.25)", "1/2\" (0.5)", "Integer"]);
-    roundingDropdown.selection = 1; // Default to 1/16"
-    
+    var roundingValues = ["None", "1/16\" (0.0625)", "1/8\" (0.125)", "1/4\" (0.25)", "1/2\" (0.5)", "Integer"];
+    var roundingLabels = ["None", "1/16\"", "1/8\"", "1/4\"", "1/2\"", "Integer"];
+    var roundingRadios = [];
+    for (var ri = 0; ri < roundingLabels.length; ri++) {
+        var rRb = roundingGroup.add("radiobutton", undefined, roundingLabels[ri]);
+        roundingRadios.push(rRb);
+    }
+    roundingRadios[1].value = true; // Default to 1/16"
+
+    // Include Scale - row of selectable buttons (radio buttons) for one-click selection
     var scaleTextGroup = dimPanel.add("group");
     scaleTextGroup.add("statictext", undefined, "Include Scale:");
-    var scaleTextDropdown = scaleTextGroup.add("dropdownlist", undefined, ["None", "On Proof", "Outside Proof", "Below Centered"]);
-    
+    var scaleTextValues = ["None", "On Proof", "Outside Proof", "Below Centered"];
+    var scaleTextRadios = [];
+    for (var si = 0; si < scaleTextValues.length; si++) {
+        var sRb = scaleTextGroup.add("radiobutton", undefined, scaleTextValues[si]);
+        scaleTextRadios.push(sRb);
+    }
+
     // If existing scale detected, default to "None"; otherwise default to "On Proof"
     if (existingScale) {
-        scaleTextDropdown.selection = 0; // "None"
+        scaleTextRadios[0].value = true; // "None"
     } else {
-        scaleTextDropdown.selection = 1; // "On Proof"
+        scaleTextRadios[1].value = true; // "On Proof"
+    }
+
+    // Helpers to read which button is selected
+    function getRoundingValue() {
+        for (var i = 0; i < roundingRadios.length; i++) {
+            if (roundingRadios[i].value) return roundingValues[i];
+        }
+        return roundingValues[1];
+    }
+    function getScaleTextValue() {
+        for (var i = 0; i < scaleTextRadios.length; i++) {
+            if (scaleTextRadios[i].value) return scaleTextValues[i];
+        }
+        return scaleTextValues[1];
     }
     
     // Style settings (combined graphic style and text)
@@ -558,7 +585,7 @@ function main() {
     
     // Get rounding increment
     var roundingIncrement;
-    var roundingText = roundingDropdown.selection.text;
+    var roundingText = getRoundingValue();
     if (roundingText === "None") {
         roundingIncrement = 0;
     } else if (roundingText.indexOf("0.0625") > -1) {
@@ -583,7 +610,7 @@ function main() {
         scaleRatio: scaleRatio,
         precision: precisionDropdown.selection.index,
         roundingIncrement: roundingIncrement,
-        scaleTextPosition: scaleTextDropdown.selection.text,
+        scaleTextPosition: getScaleTextValue(),
         lineColor: colorDropdown.selection.text,
         lineWeight: 1,
         extensionLength: 0.083 * 72,
