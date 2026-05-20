@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "4.2",
+  "version": "4.3",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -83,13 +83,189 @@ function detectExistingScale(selection) {
     return null;
 }
 
+// Walk up the parent chain to find the containing Layer for a page item.
+// Items inside groups have parent = group, so item.layer is the reliable way,
+// but we fall back to walking parents in case .layer is unavailable.
+function getItemLayer(item) {
+    try {
+        if (item.layer) return item.layer;
+    } catch (e) {}
+    var p = item.parent;
+    while (p && p.typename !== "Layer") {
+        p = p.parent;
+        if (!p) return null;
+    }
+    return p;
+}
+
+// Add below-art texts: a per-sign "Qty: XX" label below each selected item
+// (on the ART layer) and/or one "Below Centered" Scale label per artboard
+// group (on the Dimensions layer).
+//
+// Spacing matches the dimension marker spacing -- settings.offset (0.1") gap
+// between the art (or bottom-dim text) and the Qty label, and the same gap
+// between the lowest Qty (or art/dim) and the Scale label.
+function addBelowArtTexts(selection, settings, dimLayer) {
+    var doc = app.activeDocument;
+
+    // Group selected items by the artboard that contains their center, so
+    // Scale "Below Centered" gets one label per artboard centered on its art.
+    // Items not on any artboard share a single "no artboard" bucket.
+    var artboardGroups = {};
+    var artboardOrder = [];
+    var noArtboardItems = [];
+
+    for (var i = 0; i < selection.length; i++) {
+        var itemBounds = selection[i].geometricBounds;
+        var itemCenterX = (itemBounds[0] + itemBounds[2]) / 2;
+        var itemCenterY = (itemBounds[1] + itemBounds[3]) / 2;
+
+        var assigned = false;
+        for (var j = 0; j < doc.artboards.length; j++) {
+            var artboardRect = doc.artboards[j].artboardRect;
+            if (itemCenterX >= artboardRect[0] && itemCenterX <= artboardRect[2] &&
+                itemCenterY <= artboardRect[1] && itemCenterY >= artboardRect[3]) {
+                if (!artboardGroups[j]) {
+                    artboardGroups[j] = [];
+                    artboardOrder.push(j);
+                }
+                artboardGroups[j].push(selection[i]);
+                assigned = true;
+                break;
+            }
+        }
+
+        if (!assigned) {
+            noArtboardItems.push(selection[i]);
+        }
+    }
+
+    for (var k = 0; k < artboardOrder.length; k++) {
+        processBelowArtGroup(artboardGroups[artboardOrder[k]], settings, dimLayer);
+    }
+
+    if (noArtboardItems.length > 0) {
+        processBelowArtGroup(noArtboardItems, settings, dimLayer);
+    }
+}
+
+// For one group of items (a single artboard's worth, or unassigned items):
+//   1. Add a Qty label under EACH item individually (like dimensions do)
+//   2. Add ONE Scale label centered under the whole group, positioned below
+//      whatever the lowest Qty/dim/art point ended up being
+function processBelowArtGroup(items, settings, dimLayer) {
+    var doc = app.activeDocument;
+    var QTY_FONT_SIZE = 10;
+
+    // Track the group's horizontal extent and the lowest Y reached after
+    // all per-sign content has been placed. The Scale label uses both.
+    var groupMinX = Number.MAX_VALUE;
+    var groupMaxX = -Number.MAX_VALUE;
+    var groupLowestY = Number.MAX_VALUE;
+
+    // Per-sign pass: Qty label below each item
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var b = item.geometricBounds;
+        var itemMinX = b[0];
+        var itemMaxX = b[2];
+        var itemMinY = b[3];
+        var itemCenterX = (itemMinX + itemMaxX) / 2;
+
+        if (itemMinX < groupMinX) groupMinX = itemMinX;
+        if (itemMaxX > groupMaxX) groupMaxX = itemMaxX;
+
+        // Where does the "stuff below this sign" start? If a bottom dim is
+        // being added, start below that dim's text. Otherwise, start at the
+        // art's bottom edge.
+        var itemBottomY = itemMinY;
+        if (settings.addWidth && settings.widthPos === "Below") {
+            // Bottom dim text bottom = minY - offset - textOffset - fontSize (approx)
+            itemBottomY = itemMinY - settings.offset - settings.textOffset - settings.fontSize;
+        }
+
+        if (settings.addQty) {
+            // ART layer for this specific item (each sign may live on its own)
+            var artLayer = getItemLayer(item);
+            if (!artLayer) artLayer = doc.activeLayer;
+
+            // Fall back to active layer if the art's layer can't be drawn on
+            try {
+                if (artLayer.locked || !artLayer.visible) {
+                    artLayer = doc.activeLayer;
+                }
+            } catch (e) {}
+
+            // Same offset the dim line uses to clear the art -- keeps spacing
+            // visually consistent with the dimension markers.
+            var qtyTop = itemBottomY - settings.offset;
+
+            var textFrame = artLayer.textFrames.add();
+            textFrame.contents = "Qty: XX";
+
+            var characterStyle = getCharacterStyle("DimStyle");
+            if (characterStyle) {
+                textFrame.textRange.characterAttributes.characterStyle = characterStyle;
+            }
+
+            try {
+                textFrame.textRange.characterAttributes.textFont = app.textFonts.getByName(settings.fontName);
+            } catch (e) {}
+
+            textFrame.textRange.characterAttributes.size = QTY_FONT_SIZE;
+            textFrame.textRange.paragraphAttributes.justification = Justification.CENTER;
+
+            textFrame.top = qtyTop;
+            textFrame.left = itemCenterX - (textFrame.width / 2);
+
+            var qtyBottom = qtyTop - textFrame.height;
+            if (qtyBottom < groupLowestY) groupLowestY = qtyBottom;
+        } else {
+            // No Qty -- track the bottom of the art (or dim) for the Scale
+            if (itemBottomY < groupLowestY) groupLowestY = itemBottomY;
+        }
+    }
+
+    // One Scale label centered under the whole group, if requested
+    if (settings.scaleTextPosition === "Below Centered") {
+        var scaleCenterX = (groupMinX + groupMaxX) / 2;
+        var scaleTop = groupLowestY - settings.offset;
+
+        // Fall back to active layer if dim layer is locked/hidden
+        var scaleLayer = dimLayer;
+        try {
+            if (scaleLayer.locked || !scaleLayer.visible) {
+                scaleLayer = doc.activeLayer;
+            }
+        } catch (e) {}
+
+        var scaleFrame = scaleLayer.textFrames.add();
+        scaleFrame.contents = "Scale " + settings.scale;
+
+        var characterStyle = getCharacterStyle("DimStyle");
+        if (characterStyle) {
+            scaleFrame.textRange.characterAttributes.characterStyle = characterStyle;
+        }
+
+        scaleFrame.textRange.characterAttributes.size = 7;
+        scaleFrame.textRange.paragraphAttributes.justification = Justification.CENTER;
+
+        scaleFrame.top = scaleTop;
+        scaleFrame.left = scaleCenterX - (scaleFrame.width / 2);
+    }
+}
+
 // Add scale text to all artboards that contain selected objects
+// NOTE: "Below Centered" is now handled by addBelowArtTexts() so it can stack
+// with the Qty label and reserve space for bottom dimensions. This function
+// only handles "On Proof" and "Outside Proof".
 function addScaleTextToArtboards(selection, settings, layer) {
     if (settings.scaleTextPosition === "None") return;
-    
+    if (settings.scaleTextPosition === "Below Centered") return;
+
     var doc = app.activeDocument;
     var artboardIndices = [];
-    
+
     // For "Below Centered" option, check if art is on artboards
     if (settings.scaleTextPosition === "Below Centered") {
         var hasArtOnArtboard = false;
@@ -414,15 +590,15 @@ function main() {
     
     var customScaleNumerator = scaleRow.add("edittext", undefined, initialNumerator);
     customScaleNumerator.characters = 3;
-    customScaleNumerator.enabled = true; // Always enabled — typing auto-switches to Custom
+    customScaleNumerator.enabled = true; // Always enabled - typing auto-switches to Custom
 
     scaleRow.add("statictext", undefined, ":");
 
     var customScaleDenominator = scaleRow.add("edittext", undefined, initialDenominator);
     customScaleDenominator.characters = 3;
-    customScaleDenominator.enabled = true; // Always enabled — typing auto-switches to Custom
+    customScaleDenominator.enabled = true; // Always enabled - typing auto-switches to Custom
 
-    // Flag to suppress field-change → Custom switching when fields are updated programmatically
+    // Flag to suppress field-change -> Custom switching when fields are updated programmatically
     var suppressCustomSwitch = false;
 
     // If the initial dropdown selection is a preset, sync the fields to it so they
@@ -558,6 +734,14 @@ function main() {
         return scaleTextValues[1];
     }
     
+    // Quantity Label (goes on the ART layer)
+    // Always outputs literal "Qty: XX" so the user can double-click "XX" in
+    // Illustrator and type the real quantity -- no need to ask up front.
+    var qtyPanel = dialog.add("panel", undefined, "Quantity Label");
+    qtyPanel.alignChildren = "left";
+    var checkQty = qtyPanel.add("checkbox", undefined, "Add \"Qty: XX\" label below each sign (on ART layer)");
+    checkQty.value = false;
+
     // Style settings (combined graphic style and text)
     var stylePanel = dialog.add("panel", undefined, "Style");
     stylePanel.alignChildren = "left";
@@ -658,7 +842,8 @@ function main() {
         checkCollision: checkCollision.value,
         useNewLayer: checkNewLayer.value,
         layerName: layerNameInput.text || "Dimensions",
-        useArrowheads: true // Default to true, will be set to false if styles missing
+        useArrowheads: true, // Default to true, will be set to false if styles missing
+        addQty: checkQty.value
     };
     
     // Map user-friendly color names to graphic style names
@@ -752,8 +937,16 @@ function main() {
         message += "\n" + skippedCount + " dimension(s) skipped due to overlaps.";
     }
     
-    // Add scale text if requested
-    if (settings.scaleTextPosition !== "None") {
+    // Add below-art texts (Qty label and/or "Below Centered" Scale).
+    // These get stacked together so they don't overlap each other or the
+    // bottom dimension.
+    if (settings.addQty || settings.scaleTextPosition === "Below Centered") {
+        addBelowArtTexts(sel, settings, dimLayer);
+    }
+
+    // Add scale text for the artboard-anchored positions ("On Proof" /
+    // "Outside Proof"). "Below Centered" is handled above.
+    if (settings.scaleTextPosition === "On Proof" || settings.scaleTextPosition === "Outside Proof") {
         addScaleTextToArtboards(sel, settings, dimLayer);
     }
     
