@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-20T09:25:54.936342",
+  "last_updated": "2026-05-20T09:34:09.576666",
   "deployer_version": "3.0",
   "total_scripts": 28,
   "launcher_version": "4.0",
@@ -501,7 +501,7 @@
       "filename": "SmartDimensionTool.js",
       "metadata": {
         "name": "Smart Dimension Tool",
-        "version": "4.3",
+        "version": "4.4",
         "description": "Add dimensions to an array of signs without the fuss",
         "author": "Unknown",
         "target": "illustrator",
@@ -511,10 +511,10 @@
           "Utility"
         ]
       },
-      "hash": "4c7f775e9ef371e459c39030bcce1bc1",
+      "hash": "0d2adaab6976f922757ad82a601e1a59",
       "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\SmartDimensionTool.js",
-      "file_size": 53380,
-      "last_modified": "2026-05-20T09:23:17.330123",
+      "file_size": 52525,
+      "last_modified": "2026-05-20T09:29:52.283714",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js"
     },
