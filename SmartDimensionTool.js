@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "4.3",
+  "version": "4.4",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -83,24 +83,9 @@ function detectExistingScale(selection) {
     return null;
 }
 
-// Walk up the parent chain to find the containing Layer for a page item.
-// Items inside groups have parent = group, so item.layer is the reliable way,
-// but we fall back to walking parents in case .layer is unavailable.
-function getItemLayer(item) {
-    try {
-        if (item.layer) return item.layer;
-    } catch (e) {}
-    var p = item.parent;
-    while (p && p.typename !== "Layer") {
-        p = p.parent;
-        if (!p) return null;
-    }
-    return p;
-}
-
 // Add below-art texts: a per-sign "Qty: XX" label below each selected item
-// (on the ART layer) and/or one "Below Centered" Scale label per artboard
-// group (on the Dimensions layer).
+// and/or one "Below Centered" Scale label per artboard group. Both go on
+// the Dimensions layer (dimLayer), alongside the dimension markers.
 //
 // Spacing matches the dimension marker spacing -- settings.offset (0.1") gap
 // between the art (or bottom-dim text) and the Qty label, and the same gap
@@ -185,22 +170,11 @@ function processBelowArtGroup(items, settings, dimLayer) {
         }
 
         if (settings.addQty) {
-            // ART layer for this specific item (each sign may live on its own)
-            var artLayer = getItemLayer(item);
-            if (!artLayer) artLayer = doc.activeLayer;
-
-            // Fall back to active layer if the art's layer can't be drawn on
-            try {
-                if (artLayer.locked || !artLayer.visible) {
-                    artLayer = doc.activeLayer;
-                }
-            } catch (e) {}
-
             // Same offset the dim line uses to clear the art -- keeps spacing
             // visually consistent with the dimension markers.
             var qtyTop = itemBottomY - settings.offset;
 
-            var textFrame = artLayer.textFrames.add();
+            var textFrame = dimLayer.textFrames.add();
             textFrame.contents = "Qty: XX";
 
             var characterStyle = getCharacterStyle("DimStyle");
@@ -734,13 +708,13 @@ function main() {
         return scaleTextValues[1];
     }
     
-    // Quantity Label (goes on the ART layer)
+    // Quantity Label (goes on the Dimensions layer, with the dimensions)
     // Always outputs literal "Qty: XX" so the user can double-click "XX" in
     // Illustrator and type the real quantity -- no need to ask up front.
     var qtyPanel = dialog.add("panel", undefined, "Quantity Label");
     qtyPanel.alignChildren = "left";
-    var checkQty = qtyPanel.add("checkbox", undefined, "Add \"Qty: XX\" label below each sign (on ART layer)");
-    checkQty.value = false;
+    var checkQty = qtyPanel.add("checkbox", undefined, "Add \"Qty: XX\" label below each sign");
+    checkQty.value = true;
 
     // Style settings (combined graphic style and text)
     var stylePanel = dialog.add("panel", undefined, "Style");
