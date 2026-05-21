@@ -3,7 +3,7 @@
 {
   "name": "Link Namer",
   "description": "Name Linked Files for ProdProof Layout",
-  "version": "1.2",
+  "version": "1.3",
   "target": "illustrator",
   "tags": ["ProdProof", "linked", "namer"]
 }
@@ -339,8 +339,14 @@
 
             try {
                 var targetPosition = [printItem.position[0], printItem.position[1]];
-                var targetLayer = printItem.layer;
-                cutItem.move(targetLayer, ElementPlacement.PLACEATBEGINNING);
+
+                // Move the cut into the same parent as the print (its group,
+                // created earlier in processLinkedFile), placed just above
+                // the print in z-order. This pulls the cut into the print's
+                // group automatically so the user doesn't have to group them
+                // by hand afterward. PLACEBEFORE = earlier in the parent's
+                // children = higher in the visual stack.
+                cutItem.move(printItem, ElementPlacement.PLACEBEFORE);
                 cutItem.position = targetPosition;
             } catch (e) {
                 continue;
