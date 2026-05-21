@@ -220,27 +220,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js"
     },
-    "Move CUTS to PRINTS.js": {
-      "filename": "Move CUTS to PRINTS.js",
-      "metadata": {
-        "name": "CUT Mover",
-        "version": "1.1",
-        "description": "For after naming files, this script aligns CUT files to PRINT File position and layer orders",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "CUT",
-          "mover",
-          "utility"
-        ]
-      },
-      "hash": "19b5ddd9cbbc8266c7f8e0bb4918e065",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Move CUTS to PRINTS.js",
-      "file_size": 5609,
-      "last_modified": "2025-10-09T07:33:02.948229",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move%20CUTS%20to%20PRINTS.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move%20CUTS%20to%20PRINTS.js"
-    },
     "OpenProdFilesForReview.js": {
       "filename": "OpenProdFilesForReview.js",
       "metadata": {
