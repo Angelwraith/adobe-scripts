@@ -502,27 +502,6 @@
       "last_modified": "2026-05-08T12:48:21.936673",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx"
-    },
-    "Sort_Text_Numerically.jsx": {
-      "filename": "Sort_Text_Numerically.jsx",
-      "metadata": {
-        "name": "Sort Text Numerically",
-        "version": "1.0",
-        "description": "Sorts selected text frames numerically from left to right based on numbers found in the text content",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "text",
-          "sort",
-          "organize"
-        ]
-      },
-      "hash": "1f6104dfc73337b88bedf9c6733fcdf4",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Sort_Text_Numerically.jsx",
-      "file_size": 2768,
-      "last_modified": "2025-10-28T13:47:31.396798",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort_Text_Numerically.jsx",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort_Text_Numerically.jsx"
     }
   }
 }
