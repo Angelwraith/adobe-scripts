@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "4.4",
+  "version": "4.6",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -175,7 +175,7 @@ function processBelowArtGroup(items, settings, dimLayer) {
             var qtyTop = itemBottomY - settings.offset;
 
             var textFrame = dimLayer.textFrames.add();
-            textFrame.contents = "Qty: XX";
+            textFrame.contents = "Qty: " + settings.qtyValue;
 
             var characterStyle = getCharacterStyle("DimStyle");
             if (characterStyle) {
@@ -709,12 +709,18 @@ function main() {
     }
     
     // Quantity Label (goes on the Dimensions layer, with the dimensions)
-    // Always outputs literal "Qty: XX" so the user can double-click "XX" in
-    // Illustrator and type the real quantity -- no need to ask up front.
+    // Default value "XX" acts as a placeholder the user can double-click in
+    // Illustrator to replace per-sign. If quantities are all the same, the
+    // user can pre-fill the real number here and skip that step entirely.
     var qtyPanel = dialog.add("panel", undefined, "Quantity Label");
     qtyPanel.alignChildren = "left";
-    var checkQty = qtyPanel.add("checkbox", undefined, "Add \"Qty: XX\" label below each sign");
+    var qtyRow = qtyPanel.add("group");
+    var checkQty = qtyRow.add("checkbox", undefined, "Add \"Qty:\" label below each sign");
     checkQty.value = true;
+    var qtyValueLabel = qtyRow.add("statictext", undefined, "   Qty:");
+    qtyValueLabel.preferredSize.width = 40;
+    var qtyValueInput = qtyRow.add("edittext", undefined, "XX");
+    qtyValueInput.characters = 5;
 
     // Style settings (combined graphic style and text)
     var stylePanel = dialog.add("panel", undefined, "Style");
@@ -817,7 +823,8 @@ function main() {
         useNewLayer: checkNewLayer.value,
         layerName: layerNameInput.text || "Dimensions",
         useArrowheads: true, // Default to true, will be set to false if styles missing
-        addQty: checkQty.value
+        addQty: checkQty.value,
+        qtyValue: (qtyValueInput.text && qtyValueInput.text.replace(/^\s+|\s+$/g, "").length > 0) ? qtyValueInput.text.replace(/^\s+|\s+$/g, "") : "XX"
     };
     
     // Map user-friendly color names to graphic style names
