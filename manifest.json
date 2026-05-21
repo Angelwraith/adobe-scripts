@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-20T09:34:09.576666",
+  "last_updated": "2026-05-21T10:10:16.116946",
   "deployer_version": "3.0",
   "total_scripts": 28,
   "launcher_version": "4.0",
@@ -20,9 +20,9 @@
         ]
       },
       "hash": "529d94950b748e52f9d4cbb4140411bc",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Color Key.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Color Key.js",
       "file_size": 23822,
-      "last_modified": "2026-05-13T12:35:36.046672",
+      "last_modified": "2026-05-21T10:01:39.070267",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js"
     },
@@ -42,7 +42,7 @@
         ]
       },
       "hash": "25f28d7dc1e8247cc4caa824eb62afa0",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Cut Path Counter.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Cut Path Counter.js",
       "file_size": 8940,
       "last_modified": "2025-09-10T13:13:21.608380",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Counter.js",
@@ -64,7 +64,7 @@
         ]
       },
       "hash": "e9e3d063005ffa1c100d9831fbba85f6",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Cut Path Separator.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Cut Path Separator.js",
       "file_size": 34511,
       "last_modified": "2026-03-11T14:17:47.243898",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js",
@@ -86,7 +86,7 @@
         ]
       },
       "hash": "32458d0cc94c2b0f460a7f77e615803b",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Detect Inside and Outside Paths for Copy.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Detect Inside and Outside Paths for Copy.js",
       "file_size": 5088,
       "last_modified": "2025-10-09T07:47:36.957864",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Detect%20Inside%20and%20Outside%20Paths%20for%20Copy.js",
@@ -108,7 +108,7 @@
         ]
       },
       "hash": "b565e03013c4c4d150b656c8533e1884",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\File Check.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\File Check.js",
       "file_size": 57339,
       "last_modified": "2026-04-01T14:32:17.211247",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js",
@@ -129,7 +129,7 @@
         ]
       },
       "hash": "4c3c96c100ea9c2cf8698e096f177b91",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\File Name Sorter.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\File Name Sorter.js",
       "file_size": 10094,
       "last_modified": "2025-10-09T07:42:19.798750",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Name%20Sorter.js",
@@ -150,7 +150,7 @@
         ]
       },
       "hash": "600ac983bdebcac5026548cbfe506a12",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Group Overlapping Objects.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Group Overlapping Objects.js",
       "file_size": 8411,
       "last_modified": "2025-12-31T08:24:43.347159",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Group%20Overlapping%20Objects.js",
@@ -172,7 +172,7 @@
         ]
       },
       "hash": "5202eb82102dee2a6d95706e757111e4",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\image_quality_analyzer.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\image_quality_analyzer.js",
       "file_size": 12177,
       "last_modified": "2025-11-12T10:41:55.209850",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js",
@@ -193,7 +193,7 @@
         ]
       },
       "hash": "786b4215e56e542ca29b211d60b32ab2",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Label Images in Group.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Label Images in Group.js",
       "file_size": 4818,
       "last_modified": "2025-08-30T12:57:03.636279",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Images%20in%20Group.js",
@@ -214,7 +214,7 @@
         ]
       },
       "hash": "1615ec67faa8095a3bb885024e80947a",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Link Namer.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Link Namer.js",
       "file_size": 11924,
       "last_modified": "2026-01-14T11:31:33.105147",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link%20Namer.js",
@@ -234,7 +234,7 @@
         ]
       },
       "hash": "a01993c3c925df7cf76045afb2c10843",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Make Size Consistent.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Make Size Consistent.js",
       "file_size": 2710,
       "last_modified": "2025-10-09T07:41:36.319036",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make%20Size%20Consistent.js",
@@ -256,7 +256,7 @@
         ]
       },
       "hash": "9149cb3da4b6f0fb586c3b3fef2f5955",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Measurement Converter.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Measurement Converter.js",
       "file_size": 9952,
       "last_modified": "2025-08-29T21:17:10.747014",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement%20Converter.js",
@@ -278,7 +278,7 @@
         ]
       },
       "hash": "ee68a8f036fb67d6c213e9da88851e84",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Merge Text.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Merge Text.js",
       "file_size": 4896,
       "last_modified": "2026-04-27T09:03:47.352273",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js",
@@ -299,7 +299,7 @@
         ]
       },
       "hash": "19b5ddd9cbbc8266c7f8e0bb4918e065",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Move CUTS to PRINTS.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Move CUTS to PRINTS.js",
       "file_size": 5609,
       "last_modified": "2025-10-09T07:33:02.948229",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Move%20CUTS%20to%20PRINTS.js",
@@ -320,9 +320,9 @@
         ]
       },
       "hash": "c1ef22df3b3273d1f2bedd5ef7f35fbc",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\OpenProdFilesForReview.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\OpenProdFilesForReview.js",
       "file_size": 15257,
-      "last_modified": "2026-04-01T14:01:56.146611",
+      "last_modified": "2026-04-01T12:55:54.412271",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
     },
@@ -342,7 +342,7 @@
         ]
       },
       "hash": "9d835871daea840b9641bf70ce05108e",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Optimal PRIME transformer.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Optimal PRIME transformer.js",
       "file_size": 50632,
       "last_modified": "2026-03-11T14:16:40.051121",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
@@ -363,7 +363,7 @@
         ]
       },
       "hash": "ba95be42aef8cc22c7ce2b3a0f92f097",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\pnc_bleeder.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\pnc_bleeder.js",
       "file_size": 10390,
       "last_modified": "2025-10-10T10:37:48.537159",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/pnc_bleeder.js",
@@ -384,9 +384,9 @@
         ]
       },
       "hash": "a36bee7d097d707bf127e3edada523ff",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\PRIME Flex Template.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\PRIME Flex Template.js",
       "file_size": 66742,
-      "last_modified": "2026-05-18T14:06:12.615035",
+      "last_modified": "2026-05-21T10:06:27.302387",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js"
     },
@@ -405,7 +405,7 @@
         ]
       },
       "hash": "7a566742c0abbe9aa7b654727b70c3ac",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Qty Sum.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Qty Sum.js",
       "file_size": 2974,
       "last_modified": "2026-05-01T12:57:32.526671",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty%20Sum.js",
@@ -426,7 +426,7 @@
         ]
       },
       "hash": "8434955df91676e739032c5ea47b7393",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Rearrange_Registration_Dots.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Rearrange_Registration_Dots.js",
       "file_size": 6118,
       "last_modified": "2025-10-29T09:48:16.326015",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rearrange_Registration_Dots.js",
@@ -447,7 +447,7 @@
         ]
       },
       "hash": "aee024f5eb14b326c2230d735fd505d7",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\scale_repeat_script.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\scale_repeat_script.js",
       "file_size": 11506,
       "last_modified": "2025-12-23T15:15:59.829884",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_repeat_script.js",
@@ -468,7 +468,7 @@
         ]
       },
       "hash": "a585df63acb005f383a4e7f8701d311b",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\scale_to_target_size.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\scale_to_target_size.js",
       "file_size": 7645,
       "last_modified": "2025-10-09T07:24:33.675066",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js",
@@ -491,9 +491,9 @@
         ]
       },
       "hash": "3117ae2bf98621ac42f801aaaac4bc0b",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Sherwin-Williams Color Picker.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Sherwin-Williams Color Picker.js",
       "file_size": 83968,
-      "last_modified": "2026-05-18T12:16:30.617559",
+      "last_modified": "2026-05-21T10:08:18.213699",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js"
     },
@@ -501,7 +501,7 @@
       "filename": "SmartDimensionTool.js",
       "metadata": {
         "name": "Smart Dimension Tool",
-        "version": "4.4",
+        "version": "4.6",
         "description": "Add dimensions to an array of signs without the fuss",
         "author": "Unknown",
         "target": "illustrator",
@@ -511,10 +511,10 @@
           "Utility"
         ]
       },
-      "hash": "0d2adaab6976f922757ad82a601e1a59",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\SmartDimensionTool.js",
-      "file_size": 52525,
-      "last_modified": "2026-05-20T09:29:52.283714",
+      "hash": "25c03b97bd8d0eac9cf90890a44473a7",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\SmartDimensionTool.js",
+      "file_size": 53023,
+      "last_modified": "2026-05-21T09:40:23.574415",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js"
     },
@@ -533,7 +533,7 @@
         ]
       },
       "hash": "e56a229bddc50d85210505f448eb253d",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Unrotate Groups.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Unrotate Groups.js",
       "file_size": 3499,
       "last_modified": "2025-08-30T12:47:17.132678",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Unrotate%20Groups.js",
@@ -559,7 +559,7 @@
         ]
       },
       "hash": "2ae2de7fc667a04db38f7d07d9eab3fe",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\WrapProcessor.js",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\WrapProcessor.js",
       "file_size": 61580,
       "last_modified": "2026-05-13T12:15:57.144558",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js",
@@ -582,7 +582,7 @@
         ]
       },
       "hash": "cda444db2c35aeda916b62fef1aaef0e",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\List_Artboard_Sizes.jsx",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\List_Artboard_Sizes.jsx",
       "file_size": 41825,
       "last_modified": "2026-05-08T12:48:21.936673",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx",
@@ -603,7 +603,7 @@
         ]
       },
       "hash": "1f6104dfc73337b88bedf9c6733fcdf4",
-      "local_path": "F:\\Scripting\\Illustrator\\Illustrator Scripts\\Sort_Text_Numerically.jsx",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Sort_Text_Numerically.jsx",
       "file_size": 2768,
       "last_modified": "2025-10-28T13:47:31.396798",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort_Text_Numerically.jsx",
