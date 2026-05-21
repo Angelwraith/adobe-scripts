@@ -198,28 +198,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make%20Size%20Consistent.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Make%20Size%20Consistent.js"
     },
-    "Measurement Converter.js": {
-      "filename": "Measurement Converter.js",
-      "metadata": {
-        "name": "Measurement Converter",
-        "version": "1.0",
-        "description": "U.S. Customary to Decimal Converter",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "measurement",
-          "conversion",
-          "decimal",
-          "imperial"
-        ]
-      },
-      "hash": "9149cb3da4b6f0fb586c3b3fef2f5955",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Measurement Converter.js",
-      "file_size": 9952,
-      "last_modified": "2025-08-29T21:17:10.747014",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement%20Converter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Measurement%20Converter.js"
-    },
     "Merge Text.js": {
       "filename": "Merge Text.js",
       "metadata": {
