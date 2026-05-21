@@ -114,27 +114,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js"
     },
-    "File Name Sorter.js": {
-      "filename": "File Name Sorter.js",
-      "metadata": {
-        "name": "File Name Sorter",
-        "version": "1.0",
-        "description": "Organize Selected Objects by Sequential File Names",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "Sorter",
-          "processors",
-          "name"
-        ]
-      },
-      "hash": "4c3c96c100ea9c2cf8698e096f177b91",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\File Name Sorter.js",
-      "file_size": 10094,
-      "last_modified": "2025-10-09T07:42:19.798750",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Name%20Sorter.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Name%20Sorter.js"
-    },
     "Group Overlapping Objects.js": {
       "filename": "Group Overlapping Objects.js",
       "metadata": {
