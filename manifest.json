@@ -157,27 +157,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js"
     },
-    "Label Images in Group.js": {
-      "filename": "Label Images in Group.js",
-      "metadata": {
-        "name": "Wrap Image Namer",
-        "version": "1.0",
-        "description": "Adds Filenames Above Images for Wrap ProdProofs",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "ProdProof",
-          "namer",
-          "wrap"
-        ]
-      },
-      "hash": "786b4215e56e542ca29b211d60b32ab2",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Label Images in Group.js",
-      "file_size": 4818,
-      "last_modified": "2025-08-30T12:57:03.636279",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Images%20in%20Group.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Images%20in%20Group.js"
-    },
     "Link Namer.js": {
       "filename": "Link Namer.js",
       "metadata": {
