@@ -263,27 +263,6 @@
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
-    "pnc_bleeder.js": {
-      "filename": "pnc_bleeder.js",
-      "metadata": {
-        "name": "PnC Bleeder",
-        "version": "1.0",
-        "description": "Automatically generates intelligent color-matched bleed/trap paths for vinyl cutting on complex multi-color artwork",
-        "author": "Unknown",
-        "target": "illustrator",
-        "tags": [
-          "vinyl cutting",
-          "trapping",
-          "bleed generation"
-        ]
-      },
-      "hash": "ba95be42aef8cc22c7ce2b3a0f92f097",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\pnc_bleeder.js",
-      "file_size": 10390,
-      "last_modified": "2025-10-10T10:37:48.537159",
-      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/pnc_bleeder.js",
-      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/pnc_bleeder.js"
-    },
     "PRIME Flex Template.js": {
       "filename": "PRIME Flex Template.js",
       "metadata": {
