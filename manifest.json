@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-05-21T10:10:16.116946",
+  "last_updated": "2026-05-21T11:12:11.470594",
   "deployer_version": "3.0",
-  "total_scripts": 28,
+  "total_scripts": 22,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -161,7 +161,7 @@
       "filename": "Link Namer.js",
       "metadata": {
         "name": "Link Namer",
-        "version": "1.2",
+        "version": "1.3",
         "description": "Name Linked Files for ProdProof Layout",
         "author": "Unknown",
         "target": "illustrator",
@@ -171,10 +171,10 @@
           "namer"
         ]
       },
-      "hash": "1615ec67faa8095a3bb885024e80947a",
+      "hash": "460b1dfe81705f96bc358f2af94df385",
       "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Link Namer.js",
-      "file_size": 11924,
-      "last_modified": "2026-01-14T11:31:33.105147",
+      "file_size": 12311,
+      "last_modified": "2026-05-21T11:10:27.686191",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link%20Namer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link%20Namer.js"
     },
