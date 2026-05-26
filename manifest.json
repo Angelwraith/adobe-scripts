@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-05-26T09:20:44.158636",
+  "last_updated": "2026-05-26T13:24:48.527515",
   "deployer_version": "3.0",
   "total_scripts": 22,
   "launcher_version": "4.0",
@@ -351,8 +351,8 @@
       "filename": "scale_to_target_size.js",
       "metadata": {
         "name": "Scale Selection to Target Size",
-        "version": "1.0",
-        "description": "Select a key object, enter target dimensions, and scale everything proportionally",
+        "version": "1.1",
+        "description": "Select a key object, enter target dimensions, and scale everything proportionally. Also supports ratio conversion (e.g., 3/8\"=1'-0\" -> 1:10).",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -361,10 +361,10 @@
           "processors"
         ]
       },
-      "hash": "a585df63acb005f383a4e7f8701d311b",
+      "hash": "230f6c10de2c293b17a91ff6ca119734",
       "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\scale_to_target_size.js",
-      "file_size": 7645,
-      "last_modified": "2025-10-09T07:24:33.675066",
+      "file_size": 14842,
+      "last_modified": "2026-05-26T12:15:16.974017",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js"
     },
