@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.8",
+  "version": "1.9",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -221,20 +221,41 @@
         var headerText = dialog.add("statictext", undefined, "Choose which artboards to export:");
         headerText.graphics.font = ScriptUI.newFont("dialog", "bold", 12);
 
-        // Scrollable checkbox list inside a panel
-        var listPanel = dialog.add("panel");
-        listPanel.orientation = "column";
-        listPanel.alignChildren = "left";
-        listPanel.spacing = 4;
-        listPanel.margins = 10;
-        listPanel.preferredSize.height = Math.min(artboardCount * 26 + 20, 320);
+        // Multi-select listbox - auto-scrolls when there are many artboards
+        // Height grows with the number of artboards up to a cap; beyond that, it scrolls.
+        var listHeight = Math.min(artboardCount * 20 + 10, 500);
+        var list = dialog.add("listbox", undefined, [], {multiselect: true});
+        list.preferredSize.width = 360;
+        list.preferredSize.height = listHeight;
 
-        var checkboxes = [];
         for (var i = 0; i < artboardCount; i++) {
-            var cb = listPanel.add("checkbox", undefined, (i + 1) + ":  " + doc.artboards[i].name);
-            cb.value = true; // default: all selected
-            checkboxes.push(cb);
+            list.add("item", (i + 1) + ":  " + doc.artboards[i].name);
         }
+
+        // Default: all selected
+        var initialSelection = [];
+        for (var i = 0; i < artboardCount; i++) initialSelection.push(i);
+        list.selection = initialSelection;
+
+        // Help text - clarifies the multi-select interaction
+        var helpText = dialog.add("statictext", undefined,
+            "Click to select. Ctrl/Cmd+Click toggles individual items. Shift+Click selects a range.");
+        helpText.graphics.font = ScriptUI.newFont("dialog", "italic", 10);
+
+        // Selection count display
+        var countText = dialog.add("statictext", undefined, "");
+        countText.graphics.font = ScriptUI.newFont("dialog", "bold", 10);
+
+        function updateCount() {
+            var n = 0;
+            if (list.selection) {
+                // selection can be a single item or an array, depending on multiselect state
+                n = list.selection.length !== undefined ? list.selection.length : 1;
+            }
+            countText.text = n + " of " + artboardCount + " artboards selected";
+        }
+        updateCount();
+        list.onChange = updateCount;
 
         // Select All / Deselect All row
         var toggleGroup = dialog.add("group");
@@ -247,10 +268,14 @@
         deselectAllBtn.preferredSize.width = 100;
 
         selectAllBtn.onClick = function() {
-            for (var i = 0; i < checkboxes.length; i++) checkboxes[i].value = true;
+            var all = [];
+            for (var i = 0; i < artboardCount; i++) all.push(i);
+            list.selection = all;
+            updateCount();
         };
         deselectAllBtn.onClick = function() {
-            for (var i = 0; i < checkboxes.length; i++) checkboxes[i].value = false;
+            list.selection = null;
+            updateCount();
         };
 
         // OK / Cancel row
@@ -267,13 +292,23 @@
 
         okBtn.onClick = function() {
             var selected = [];
-            for (var i = 0; i < checkboxes.length; i++) {
-                if (checkboxes[i].value) selected.push(i);
+            if (list.selection) {
+                if (list.selection.length !== undefined) {
+                    // Array of items
+                    for (var i = 0; i < list.selection.length; i++) {
+                        selected.push(list.selection[i].index);
+                    }
+                } else {
+                    // Single item
+                    selected.push(list.selection.index);
+                }
             }
             if (selected.length === 0) {
                 alert("Please select at least one artboard to export.");
                 return;
             }
+            // Sort indices ascending to preserve artboard order
+            selected.sort(function(a, b) { return a - b; });
             result = selected;
             dialog.close();
         };
