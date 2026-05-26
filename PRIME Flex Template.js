@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "4.0",
+  "version": "4.1",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -119,6 +119,48 @@ function convertPackingDataToSpecs(packingData) {
     return specs;
 }
 
+// Detect artboards "selected" via selected objects sitting on them.
+// ExtendScript can't query artboard-tool selection directly, so we use the
+// items the user has selected as a proxy: any artboard containing a selected
+// item's center is treated as a selected artboard.
+function getSelectedArtboardIndices(doc) {
+    var selectedSet = {};
+
+    if (!doc.selection || doc.selection.length === 0) {
+        return [];
+    }
+
+    for (var i = 0; i < doc.selection.length; i++) {
+        var item = doc.selection[i];
+        var bounds;
+        try {
+            bounds = item.visibleBounds; // [left, top, right, bottom]
+        } catch (e) {
+            continue;
+        }
+        var itemCenterX = (bounds[0] + bounds[2]) / 2;
+        var itemCenterY = (bounds[1] + bounds[3]) / 2;
+
+        for (var j = 0; j < doc.artboards.length; j++) {
+            var ab = doc.artboards[j].artboardRect; // [left, top, right, bottom]
+            if (itemCenterX >= ab[0] && itemCenterX <= ab[2] &&
+                itemCenterY <= ab[1] && itemCenterY >= ab[3]) {
+                selectedSet[j] = true;
+                break;
+            }
+        }
+    }
+
+    var result = [];
+    for (var key in selectedSet) {
+        if (selectedSet.hasOwnProperty(key)) {
+            result.push(parseInt(key, 10));
+        }
+    }
+    result.sort(function(a, b) { return a - b; });
+    return result;
+}
+
 // Main entry point
 try {
     var docChoice;
@@ -128,9 +170,13 @@ try {
     } else {
         docChoice = showDocumentChoiceDialog();
     }
-    
+
     if (docChoice) {
-        showSetupDialog(docChoice);
+        if (docChoice.mode === "rename") {
+            showRenameArtboardsDialog(docChoice.document, docChoice.selectedIndices);
+        } else {
+            showSetupDialog(docChoice);
+        }
     }
 } catch (e) {
     alert("Startup error: " + e.toString());
@@ -207,17 +253,48 @@ function showDocumentChoiceDialog() {
     // Find Proof documents
     var proofDocuments = findProofDocuments();
     
+    // Detect selected artboards in the active document (via selected objects)
+    var activeDocForRename = null;
+    var selectedArtboardIndices = [];
+    try {
+        activeDocForRename = app.activeDocument;
+        selectedArtboardIndices = getSelectedArtboardIndices(activeDocForRename);
+    } catch (e) {
+        // No active document or error - just skip rename option
+    }
+
     var dialog = new Window("dialog", "PRIME Flex Template - Document Setup");
     dialog.orientation = "column";
     dialog.alignChildren = "fill";
     dialog.spacing = 15;
     dialog.margins = 30;
-    
+
     var messageText = dialog.add("statictext", undefined, "Choose document option:", {multiline: false});
     messageText.graphics.font = ScriptUI.newFont("dialog", "Bold", 12);
-    
+
     dialog.add("panel");
-    
+
+    // OPTION 0: Rename selected artboards (only if artboards are "selected" via item selection)
+    var renameBtn = null;
+    if (selectedArtboardIndices.length > 0) {
+        var renameLabel = dialog.add("statictext", undefined,
+            "Rename selected artboards (" + selectedArtboardIndices.length + " detected via selected items):");
+        renameLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
+
+        var renameGroup = dialog.add("group");
+        renameGroup.orientation = "row";
+        renameGroup.spacing = 10;
+
+        var renamePreview = renameGroup.add("statictext", undefined,
+            "Artboards: " + buildRenameArtboardSummary(activeDocForRename, selectedArtboardIndices));
+        renamePreview.preferredSize.width = 400;
+
+        renameBtn = renameGroup.add("button", undefined, "Rename Artboards");
+        renameBtn.preferredSize.width = 140;
+
+        dialog.add("panel");
+    }
+
     // OPTION 1: Add to existing PRIME document
     var docList = null;
     var addDocBtn = null;
@@ -291,8 +368,19 @@ function showDocumentChoiceDialog() {
     cancelBtn.alignment = "center";
     
     var result = null;
-    
+
     // Button handlers
+    if (renameBtn) {
+        renameBtn.onClick = function() {
+            result = {
+                mode: "rename",
+                document: activeDocForRename,
+                selectedIndices: selectedArtboardIndices
+            };
+            dialog.close();
+        };
+    }
+
     if (primeDocuments.length > 0) {
         addDocBtn.onClick = function() {
             var selectedIndex = docList.selection.index;
@@ -1711,8 +1799,151 @@ function createPlaceholderArtwork(doc, artboard, sheetData, scale, materialName)
         }
         
         $.writeln("Created " + sheetData.signs.length + " placeholder rectangles with color coding");
-        
+
     } catch (e) {
         $.writeln("Error creating placeholder artwork: " + e.message);
+    }
+}
+
+// Build a short summary of artboard names for the dialog preview
+function buildRenameArtboardSummary(doc, indices) {
+    var names = [];
+    for (var i = 0; i < indices.length; i++) {
+        names.push(doc.artboards[indices[i]].name);
+    }
+    var joined = names.join(", ");
+    if (joined.length > 60) {
+        joined = joined.substring(0, 57) + "...";
+    }
+    return joined;
+}
+
+// Dialog for renaming the selected artboards using PRIME _Pt naming convention
+function showRenameArtboardsDialog(doc, selectedIndices) {
+    if (!doc || !selectedIndices || selectedIndices.length === 0) {
+        alert("No artboards detected. Select one or more objects on the artboards you want to rename, then run the script again.");
+        return;
+    }
+
+    var dialog = new Window("dialog", "Rename Artboards");
+    dialog.orientation = "column";
+    dialog.alignChildren = "fill";
+    dialog.spacing = 12;
+    dialog.margins = 20;
+    dialog.preferredSize.width = 500;
+
+    var headerText = dialog.add("statictext", undefined,
+        "Renaming " + selectedIndices.length + " artboard" +
+        (selectedIndices.length > 1 ? "s" : "") + ":");
+    headerText.graphics.font = ScriptUI.newFont("dialog", "Bold", 12);
+
+    var nameGroup = dialog.add("group");
+    nameGroup.orientation = "row";
+    nameGroup.alignChildren = "center";
+    nameGroup.add("statictext", undefined, "New Name:");
+    var nameField = nameGroup.add("edittext", undefined, "");
+    nameField.preferredSize.width = 320;
+    nameField.active = true;
+
+    var helpText = dialog.add("statictext", undefined,
+        selectedIndices.length === 1
+            ? "Single artboard - will be renamed exactly as entered."
+            : "Multiple artboards - will be named with _Pt1, _Pt2, _Pt3... suffixes.");
+    helpText.graphics.font = ScriptUI.newFont("dialog", "Italic", 10);
+
+    dialog.add("panel");
+
+    var previewLabel = dialog.add("statictext", undefined, "Preview:");
+    previewLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
+
+    var previewPanel = dialog.add("panel");
+    previewPanel.orientation = "column";
+    previewPanel.alignChildren = "left";
+    previewPanel.margins = 10;
+    previewPanel.spacing = 3;
+
+    var previewLines = [];
+    for (var i = 0; i < selectedIndices.length; i++) {
+        var currentName = doc.artboards[selectedIndices[i]].name;
+        var line = previewPanel.add("statictext", undefined, currentName + "  ->  (enter name)");
+        line.preferredSize.width = 440;
+        previewLines.push(line);
+    }
+
+    function updatePreview() {
+        var base = nameField.text.replace(/^\s+|\s+$/g, '');
+        var displayBase = base === '' ? "(enter name)" : base;
+
+        for (var i = 0; i < selectedIndices.length; i++) {
+            var currentName = doc.artboards[selectedIndices[i]].name;
+            var newName;
+            if (selectedIndices.length === 1) {
+                newName = displayBase;
+            } else {
+                newName = displayBase + "_Pt" + (i + 1);
+            }
+            previewLines[i].text = currentName + "  ->  " + newName;
+        }
+    }
+
+    nameField.onChanging = updatePreview;
+    nameField.onChange = updatePreview;
+
+    dialog.add("panel");
+
+    var buttonGroup = dialog.add("group");
+    buttonGroup.alignment = "center";
+    buttonGroup.spacing = 10;
+    var cancelBtn = buttonGroup.add("button", undefined, "Cancel");
+    var renameBtn = buttonGroup.add("button", undefined, "Rename");
+    renameBtn.preferredSize.width = 100;
+
+    var baseNameResult = null;
+
+    cancelBtn.onClick = function() {
+        baseNameResult = null;
+        dialog.close();
+    };
+
+    renameBtn.onClick = function() {
+        var base = nameField.text.replace(/^\s+|\s+$/g, '');
+        if (base === '') {
+            alert("Please enter a name.");
+            return;
+        }
+        baseNameResult = base;
+        dialog.close();
+    };
+
+    dialog.show();
+
+    if (baseNameResult !== null) {
+        renameSelectedArtboards(doc, selectedIndices, baseNameResult);
+    }
+}
+
+// Perform the actual rename using PRIME _Pt naming convention
+function renameSelectedArtboards(doc, indices, baseName) {
+    try {
+        // First pass: rename to temporary unique names to avoid collisions with
+        // any existing artboard names in the document.
+        var tempPrefix = "__PRIME_RENAME_TMP_" + (new Date().getTime()) + "_";
+        for (var i = 0; i < indices.length; i++) {
+            doc.artboards[indices[i]].name = tempPrefix + i;
+        }
+
+        // Second pass: apply final names
+        if (indices.length === 1) {
+            doc.artboards[indices[0]].name = baseName;
+        } else {
+            for (var j = 0; j < indices.length; j++) {
+                doc.artboards[indices[j]].name = baseName + "_Pt" + (j + 1);
+            }
+        }
+
+        $.writeln("Renamed " + indices.length + " artboard(s) using base name: " + baseName);
+    } catch (e) {
+        alert("Error renaming artboards: " + e.toString());
+        $.writeln("Rename error: " + e.toString());
     }
 }
