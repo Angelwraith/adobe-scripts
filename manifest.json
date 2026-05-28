@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-05-26T13:24:48.527515",
+  "last_updated": "2026-05-28T15:40:02.023425",
   "deployer_version": "3.0",
-  "total_scripts": 22,
+  "total_scripts": 23,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -481,6 +481,28 @@
       "last_modified": "2026-05-08T12:48:21.936673",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx"
+    },
+    "Label Artboards.js": {
+      "filename": "Label Artboards.js",
+      "metadata": {
+        "name": "Label Artboards",
+        "version": "1.0",
+        "description": "Adds a text label below each artboard using the artboard name. Skips artboards named 'proof'. Labels go on a dedicated 'Artboard Labels' layer.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "artboard",
+          "label",
+          "text",
+          "name"
+        ]
+      },
+      "hash": "5caf8bfc638796dfe2f61eaca0d79577",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Label Artboards.js",
+      "file_size": 8333,
+      "last_modified": "2026-05-28T15:34:10.363941",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Artboards.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Artboards.js"
     }
   }
 }
