@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-05-28T15:40:02.023425",
+  "last_updated": "2026-06-03T13:43:28.489035",
   "deployer_version": "3.0",
-  "total_scripts": 23,
+  "total_scripts": 24,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -503,6 +503,29 @@
       "last_modified": "2026-05-28T15:34:10.363941",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Artboards.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Label%20Artboards.js"
+    },
+    "Clip Into Each Mask.js": {
+      "filename": "Clip Into Each Mask.js",
+      "metadata": {
+        "name": "Clip Into Each Mask",
+        "version": "1.7",
+        "description": "Select two groups: the top (front-most) group holds mask shapes, the bottom (back) group holds the content. The content group is duplicated once per mask shape and each duplicate is clipped into one of the shapes from the top group.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "clip",
+          "mask",
+          "duplicate",
+          "group",
+          "processor"
+        ]
+      },
+      "hash": "7b5e8b23a5387dcfc23e165d47a75a8a",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Clip Into Each Mask.js",
+      "file_size": 6790,
+      "last_modified": "2026-06-03T13:41:15.089164",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Clip%20Into%20Each%20Mask.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Clip%20Into%20Each%20Mask.js"
     }
   }
 }
