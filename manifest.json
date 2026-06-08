@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-06-03T13:43:28.489035",
+  "last_updated": "2026-06-08T09:26:34.366364",
   "deployer_version": "3.0",
-  "total_scripts": 24,
+  "total_scripts": 25,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -245,7 +245,7 @@
       "filename": "Optimal PRIME transformer.js",
       "metadata": {
         "name": "Optimal PRIME Transformer",
-        "version": "1.9",
+        "version": "1.9.1",
         "description": "Generate Production Files From a PRIME",
         "author": "Unknown",
         "target": "illustrator",
@@ -256,10 +256,10 @@
           "scaleFactor"
         ]
       },
-      "hash": "2d2c597c2053ba5fa3fa9b1de11c3204",
+      "hash": "e57c74b0bed4c7463201e5be2a77f245",
       "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Optimal PRIME transformer.js",
-      "file_size": 52134,
-      "last_modified": "2026-05-26T09:16:20.263036",
+      "file_size": 53330,
+      "last_modified": "2026-05-26T09:30:45.463470",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
@@ -463,8 +463,8 @@
       "filename": "List_Artboard_Sizes.jsx",
       "metadata": {
         "name": "List Artboard Sizes",
-        "version": "1.2",
-        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Includes copy buttons for spreadsheet TSV and shape duplicates.",
+        "version": "1.3",
+        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Includes copy buttons for spreadsheet TSV and shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -475,10 +475,10 @@
           "multi-document"
         ]
       },
-      "hash": "cda444db2c35aeda916b62fef1aaef0e",
+      "hash": "7effad8253667dfe61c95a53eaca53db",
       "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\List_Artboard_Sizes.jsx",
-      "file_size": 41825,
-      "last_modified": "2026-05-08T12:48:21.936673",
+      "file_size": 43439,
+      "last_modified": "2026-05-22T10:46:29.447838",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx"
     },
@@ -526,6 +526,28 @@
       "last_modified": "2026-06-03T13:41:15.089164",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Clip%20Into%20Each%20Mask.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Clip%20Into%20Each%20Mask.js"
+    },
+    "Rename Artboards With Mappings.js": {
+      "filename": "Rename Artboards With Mappings.js",
+      "metadata": {
+        "name": "Rename Artboards With Mappings",
+        "version": "1.0",
+        "description": "Opens a dialog with a multi-select list of all artboards. Add one or more mapping rows below; each row captures a set of selected artboards, a name (free-text), and a starting _Pt number. On Rename, each mapping renames its captured artboards to 'Name_PtN' incrementing N from the chosen start.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "artboard",
+          "rename",
+          "mapping",
+          "ui"
+        ]
+      },
+      "hash": "666ac8c98211427c41f8f726a2589c0e",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Rename Artboards With Mappings.js",
+      "file_size": 12784,
+      "last_modified": "2026-06-04T09:16:07.271457",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rename%20Artboards%20With%20Mappings.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rename%20Artboards%20With%20Mappings.js"
     }
   }
 }
