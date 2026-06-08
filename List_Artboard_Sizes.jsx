@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "List Artboard Sizes",
-  "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Includes copy buttons for spreadsheet TSV and shape duplicates.",
-  "version": "1.2",
+  "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Includes copy buttons for spreadsheet TSV and shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
+  "version": "1.3",
   "target": "illustrator",
   "tags": ["artboard", "size", "measure", "list", "multi-document"]
 }@END_METADATA*/
@@ -978,6 +978,15 @@ function showResults(rows, multiDoc) {
         rollCheckboxes.push({ width: rw, checkbox: rcb });
     }
 
+    // Custom (unusual) roll size — enabled when checked and the field has a
+    // valid positive number. Gets merged into the sorted roll list so panels
+    // pick the smallest fitting roll as usual.
+    var customRollCheckbox = paramsRow2.add("checkbox", undefined, "Custom:");
+    customRollCheckbox.value = false;
+    var customRollField = paramsRow2.add("edittext", undefined, "");
+    customRollField.preferredSize.width = 50;
+    paramsRow2.add("statictext", undefined, '"');
+
     // ---- Artboard list ----
     var listLabel = dlg.add("statictext", undefined, "Artboard sizes (x10, rounded up to 0.5\"):");
     var edit = dlg.add("edittext", undefined, displayText, {multiline: true, scrolling: true, readonly: false});
@@ -1013,11 +1022,23 @@ function showResults(rows, multiDoc) {
         if (isNaN(w)) w = ESTIMATION_DEFAULTS.rlWaste;
         if (isNaN(m)) m = ESTIMATION_DEFAULTS.pinchMargin;
 
-        // Only include checked roll sizes — defaults preserve sort order
+        // Only include checked roll sizes
         var rolls = [];
         for (var r = 0; r < rollCheckboxes.length; r++) {
             if (rollCheckboxes[r].checkbox.value) rolls.push(rollCheckboxes[r].width);
         }
+
+        // Include the custom roll if the checkbox is on and the field is a
+        // valid positive number
+        if (customRollCheckbox.value) {
+            var customW = parseFloat(customRollField.text);
+            if (!isNaN(customW) && customW > 0) {
+                rolls.push(customW);
+            }
+        }
+
+        // Sort ascending so calculatePanelEstimate picks the smallest fitting roll
+        rolls.sort(function(a, b) { return a - b; });
 
         return {
             bleed: b,
@@ -1044,6 +1065,20 @@ function showResults(rows, multiDoc) {
         rollCheckboxes[rcbIdx].checkbox.onClick = refresh;
     }
 
+    // Auto-enable the custom checkbox when a valid number is typed, and
+    // refresh on every change so the estimate updates live.
+    customRollCheckbox.onClick = refresh;
+    customRollField.onChange = function() {
+        var v = parseFloat(customRollField.text);
+        if (!isNaN(v) && v > 0) customRollCheckbox.value = true;
+        refresh();
+    };
+    customRollField.onChanging = function() {
+        var v = parseFloat(customRollField.text);
+        if (!isNaN(v) && v > 0) customRollCheckbox.value = true;
+        refresh();
+    };
+
     resetBtn.onClick = function() {
         bleedField.text = ESTIMATION_DEFAULTS.bleed.toString();
         wasteField.text = ESTIMATION_DEFAULTS.rlWaste.toString();
@@ -1051,6 +1086,8 @@ function showResults(rows, multiDoc) {
         for (var i = 0; i < rollCheckboxes.length; i++) {
             rollCheckboxes[i].checkbox.value = true;
         }
+        customRollCheckbox.value = false;
+        customRollField.text = "";
         refresh();
     };
 
