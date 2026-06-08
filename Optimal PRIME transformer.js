@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.9",
+  "version": "1.9.1",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -625,56 +625,82 @@
 
         for (var ii = 0; ii < indicesToProcess.length; ii++) {
             var i = indicesToProcess[ii];
+            var currentStep = "starting";
+            var artboardName = "(unknown)";
             try {
                 // Set active artboard
+                currentStep = "setActiveArtboardIndex(" + i + ")";
                 doc.artboards.setActiveArtboardIndex(i);
-                var artboardName = doc.artboards[i].name;
-                
-                // Isolate current artboard  
+
+                currentStep = "reading artboard name at index " + i;
+                artboardName = doc.artboards[i].name;
+
+                // Isolate current artboard
+                currentStep = "isolateArtboard(" + i + ")";
                 var hasContent = isolateArtboard(i);
-                
+
                 // Skip if artboard is empty
                 if (!hasContent) {
                     continue;
                 }
-                
+
                 // Force completion of isolation
+                currentStep = "app.redraw()";
                 app.redraw();
-                
+
                 // Save isolated state to temp file for duplication
+                currentStep = "saving temp file";
                 var tempPath = Folder.temp + "/isolated_" + Date.now() + ".ai";
                 var tempFile = new File(tempPath);
                 var aiOptions = new IllustratorSaveOptions();
                 aiOptions.compatibility = Compatibility.ILLUSTRATOR24;
                 doc.saveAs(tempFile, aiOptions);
-                
+
                 // Check what type of file to create
                 // Check if CutContour or CutContour_PRF layers have content on this artboard
+                currentStep = "getCutContourInfo()";
                 var cutContourInfo = getCutContourInfo();
-                
+
                 if (cutContourInfo.hasCutContour) {
                     if (cutContourInfo.hasPrintData) {
+                        currentStep = "createPnCFileFromTemp";
                         createPnCFileFromTemp(tempFile, artboardName);
                     } else {
+                        currentStep = "createCutOnlyFileFromTemp";
                         createCutOnlyFileFromTemp(tempFile, artboardName);
                     }
                 } else {
+                    currentStep = "createPrintFileFromTemp";
                     createPrintFileFromTemp(tempFile, artboardName);
+                    currentStep = "createCutFileFromTemp";
                     createCutFileFromTemp(tempFile, artboardName);
                 }
-                
+
                 // Delete temp file
+                currentStep = "tempFile.remove()";
                 tempFile.remove();
-                
+
                 // Reopen original document
+                currentStep = "app.open(originalDocPath)";
                 doc = app.open(originalDocPath);
-                
+
                 // Restore scale factor reference after reopening
                 scaleFactor = doc.scaleFactor || 1;
-                
+
             } catch (e) {
-                alert("Error processing artboard " + (i + 1) + " (" + artboardName + "): " + 
-                      e.toString() + "\nStopping process.");
+                var docName = "(unknown)";
+                try { docName = app.activeDocument.name; } catch (eDoc) {}
+
+                var details = "Error processing artboard " + (i + 1) + " (" + artboardName + ")\n\n" +
+                              "Failed step: " + currentStep + "\n" +
+                              "Active document: " + docName + "\n" +
+                              "Error: " + e.toString() + "\n" +
+                              "Line: " + (e.line !== undefined ? e.line : "(unknown)") + "\n" +
+                              (e.fileName ? "File: " + e.fileName + "\n" : "") +
+                              "\nStopping process.";
+
+                $.writeln(details);
+                alert(details);
                 throw e;
             }
         }
