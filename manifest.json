@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-06-08T09:26:34.366364",
+  "last_updated": "2026-06-11T12:28:12.348637",
   "deployer_version": "3.0",
-  "total_scripts": 25,
+  "total_scripts": 26,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -548,6 +548,29 @@
       "last_modified": "2026-06-04T09:16:07.271457",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rename%20Artboards%20With%20Mappings.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Rename%20Artboards%20With%20Mappings.js"
+    },
+    "Sort Linked Files By Pt Number.js": {
+      "filename": "Sort Linked Files By Pt Number.js",
+      "metadata": {
+        "name": "Sort Linked Files By Pt Number",
+        "version": "1.0",
+        "description": "Sort selected linked files left-to-right by the Pt# in their filename (Pt1, Pt2, Pt3...) with 0.25\" spacing between them. Tops align to the topmost item in the current selection; the leftmost X of the selection is the starting position.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "sort",
+          "linked",
+          "files",
+          "layout",
+          "processor"
+        ]
+      },
+      "hash": "90bce2deb9ebff84e38c6715cafc6cfc",
+      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Sort Linked Files By Pt Number.js",
+      "file_size": 4205,
+      "last_modified": "2026-06-11T12:18:11.905002",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort%20Linked%20Files%20By%20Pt%20Number.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort%20Linked%20Files%20By%20Pt%20Number.js"
     }
   }
 }
