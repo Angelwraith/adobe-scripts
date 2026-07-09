@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-06-11T12:28:12.348637",
+  "last_updated": "2026-07-09T10:34:38.484391",
   "deployer_version": "3.0",
-  "total_scripts": 26,
+  "total_scripts": 27,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -571,6 +571,29 @@
       "last_modified": "2026-06-11T12:18:11.905002",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort%20Linked%20Files%20By%20Pt%20Number.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort%20Linked%20Files%20By%20Pt%20Number.js"
+    },
+    "Save Email Proof.js": {
+      "filename": "Save Email Proof.js",
+      "metadata": {
+        "name": "Save email proof",
+        "version": "2.3",
+        "description": "Save an EmProof PDF (downsampled); also save a full-res Proof if the doc has unsaved changes",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "proof",
+          "email",
+          "pdf",
+          "save",
+          "export"
+        ]
+      },
+      "hash": "43679b124477ab346edf8a9161623ac2",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Save Email Proof.js",
+      "file_size": 6272,
+      "last_modified": "2026-07-09T10:33:52.785350",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Save%20Email%20Proof.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Save%20Email%20Proof.js"
     }
   }
 }
