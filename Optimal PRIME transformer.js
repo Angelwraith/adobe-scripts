@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -28,7 +28,17 @@
             alert("Please open a document before running this script.");
             return;
         }
-        
+
+        // Run Cut Path Separator first (kept as its own file - single source of truth).
+        // $.evalFile sets $.fileName to this script's path, so CPS is found beside it
+        // in whatever folder the launcher downloaded to. Edits to CPS flow through automatically.
+        var cpsFile = new File(File($.fileName).parent + "/Cut Path Separator.js");
+        if (cpsFile.exists) {
+            $.evalFile(cpsFile);
+        } else {
+            alert("Cut Path Separator.js not found next to this script - skipping pre-step.");
+        }
+
         doc = app.activeDocument;
         
         // Get the scale factor for large canvas handling
@@ -115,6 +125,31 @@
         var selectedArtboards = showArtboardSelectionDialog();
         if (selectedArtboards === null) {
             return; // User cancelled
+        }
+
+        // Persist Cut Path Separator's layer changes to the original file BEFORE processing.
+        // The artboard loop reopens originalDocPath from disk between artboards, so the on-disk
+        // file must already contain CPS's separated layers or those changes are lost from the
+        // original. Use a format-aware saveAs (bare doc.save() throws on non-.ai working files).
+        try {
+            var origExt = (originalDocPath.name.match(/\.([^.]+)$/) || ["", ""])[1].toLowerCase();
+            if (origExt === "pdf") {
+                var pdfSaveOpts = new PDFSaveOptions();
+                pdfSaveOpts.preserveEditability = true;
+                doc.saveAs(originalDocPath, pdfSaveOpts);
+            } else if (origExt === "eps") {
+                doc.saveAs(originalDocPath, new EPSSaveOptions());
+            } else {
+                // .ai (and anything else) - mirror the options the loop already uses successfully
+                var aiSaveOpts = new IllustratorSaveOptions();
+                aiSaveOpts.compatibility = Compatibility.ILLUSTRATOR24;
+                aiSaveOpts.pdfCompatible = true;
+                doc.saveAs(originalDocPath, aiSaveOpts);
+            }
+        } catch (eSave) {
+            alert("Could not persist Cut Path Separator's layer changes to the original file.\n" +
+                  "The exported files are still correct, but the original PRIME will not retain the separation.\n\n" +
+                  "Error: " + eSave.message);
         }
 
         // Process only the selected artboards
@@ -205,7 +240,7 @@
     function showArtboardSelectionDialog() {
         var artboardCount = doc.artboards.length;
 
-        // Single artboard — no need to ask, just export it
+        // Single artboard - no need to ask, just export it
         if (artboardCount === 1) {
             return [0];
         }
@@ -614,7 +649,7 @@
         return true;
     }
     
-    // Process artboards — selectedIndices is an array of artboard index numbers to export
+    // Process artboards - selectedIndices is an array of artboard index numbers to export
     function processAllArtboards(selectedIndices) {
         var indicesToProcess = (selectedIndices && selectedIndices.length > 0) ? selectedIndices : [];
 
@@ -1296,58 +1331,4 @@ function isolateArtboard(artboardIndex) {
         return "Unknown";
     }
     
-    // Extract material name from artboard name for folder organization
-    function getMaterialNameFromArtboardName(artboardName) {
-        // Extract material name (everything before _Pt if present)
-        var ptIndex = artboardName.toLowerCase().indexOf('_pt');
-        if (ptIndex !== -1) {
-            return artboardName.substring(0, ptIndex);
-        } else {
-            return artboardName;
-        }
-    }
-    
-    // Create material folder and return path
-    function createMaterialFolder(materialName) {
-        try {
-            // Use the original case from materialData if available
-            var folderName = materialName;
-            if (materialData[materialName] && materialData[materialName].originalCase) {
-                folderName = materialData[materialName].originalCase;
-            }
-            
-            var materialFolder = new Folder(parentSavePath + "/" + folderName);
-            if (!materialFolder.exists) {
-                materialFolder.create();
-            }
-            return materialFolder.fsName;
-        } catch (e) {
-            return null; // Folder creation failed
-        }
-    }
-    
-    // Create subfolder (PRINT or CUT) and return path
-    function createSubFolder(parentFolderPath, subFolderName) {
-        try {
-            var subFolder = new Folder(parentFolderPath + "/" + subFolderName);
-            if (!subFolder.exists) {
-                subFolder.create();
-            }
-            return subFolder.fsName;
-        } catch (e) {
-            return null; // Subfolder creation failed
-        }
-    }
-    
-    // Generate filename with type prefix
-    function generateFileName(type, artboardName) {
-        // Use the stored original document path to get the name
-        var originalName = originalDocPath.name;
-        // Remove any file extension (.ai, .pdf, .eps, .svg)
-        var baseName = originalName.replace(/\.(ai|pdf|eps|svg)$/i, "");
-        baseName = baseName.replace("_PRIME", "");
-        
-        return baseName + "_" + type + "_" + artboardName + ".pdf";
-    }
-    
-})();
+    // Extract material name
