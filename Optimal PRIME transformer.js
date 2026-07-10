@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -1331,4 +1331,58 @@ function isolateArtboard(artboardIndex) {
         return "Unknown";
     }
     
-    // Extract material name
+    // Extract material name from artboard name for folder organization
+    function getMaterialNameFromArtboardName(artboardName) {
+        // Extract material name (everything before _Pt if present)
+        var ptIndex = artboardName.toLowerCase().indexOf('_pt');
+        if (ptIndex !== -1) {
+            return artboardName.substring(0, ptIndex);
+        } else {
+            return artboardName;
+        }
+    }
+    
+    // Create material folder and return path
+    function createMaterialFolder(materialName) {
+        try {
+            // Use the original case from materialData if available
+            var folderName = materialName;
+            if (materialData[materialName] && materialData[materialName].originalCase) {
+                folderName = materialData[materialName].originalCase;
+            }
+            
+            var materialFolder = new Folder(parentSavePath + "/" + folderName);
+            if (!materialFolder.exists) {
+                materialFolder.create();
+            }
+            return materialFolder.fsName;
+        } catch (e) {
+            return null; // Folder creation failed
+        }
+    }
+    
+    // Create subfolder (PRINT or CUT) and return path
+    function createSubFolder(parentFolderPath, subFolderName) {
+        try {
+            var subFolder = new Folder(parentFolderPath + "/" + subFolderName);
+            if (!subFolder.exists) {
+                subFolder.create();
+            }
+            return subFolder.fsName;
+        } catch (e) {
+            return null; // Subfolder creation failed
+        }
+    }
+    
+    // Generate filename with type prefix
+    function generateFileName(type, artboardName) {
+        // Use the stored original document path to get the name
+        var originalName = originalDocPath.name;
+        // Remove any file extension (.ai, .pdf, .eps, .svg)
+        var baseName = originalName.replace(/\.(ai|pdf|eps|svg)$/i, "");
+        baseName = baseName.replace("_PRIME", "");
+        
+        return baseName + "_" + type + "_" + artboardName + ".pdf";
+    }
+    
+})();
