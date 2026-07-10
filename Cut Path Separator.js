@@ -3,7 +3,7 @@
 {
   "name": "Cut Path Separator",
   "description": "Organize Cut/Print Data Into Respective Layers",
-  "version": "1.4",
+  "version": "1.5",
   "target": "illustrator",
   "tags": ["Cut", "Path", "Separator", "processors"]
 }
@@ -36,6 +36,8 @@
     var spotColorNames = ["CutThrough2-Outside", "CutThrough1-Inside", "PinMountHoles-Inside", "CutThrough-Knifecut", "CutContour", "Spot1"];
     var totalMovedPaths = 0;
     var targetStrokeWidth = 5 / doc.scaleFactor; // Adjust for Large Canvas documents
+    var REG_MARK_NAME = "RegMark"; // Name PRIME Flex gives each registration dot group
+    var REG_DOTS_PER_ARTBOARD = 5; // Exactly this many reg dots required on any artboard that uses them
     
     // Function to check if two paths are duplicates (same path, same location)
     function pathsAreDuplicates(path1, path2) {
@@ -656,6 +658,148 @@
         return true;
     }
     
+    // Validate the REG layer before doing anything else.
+    // Rules: (1) only PRIME Flex reg marks (groups named REG_MARK_NAME) may live on the REG
+    // layer; (2) any artboard that has reg marks must have exactly REG_DOTS_PER_ARTBOARD of
+    // them (artboards with zero are fine - not all materials are cut on the flatbed cutter).
+    // On any violation, show a warning listing the specifics and stop (no beep).
+    function getRegLayer() {
+        for (var i = 0; i < doc.layers.length; i++) {
+            if (doc.layers[i].name === "REG") {
+                return doc.layers[i];
+            }
+        }
+        return null;
+    }
+
+    function describeItem(item) {
+        var label = item.name && item.name !== "" ? '"' + item.name + '"' : "(unnamed)";
+        return item.typename + " " + label;
+    }
+
+    function itemCenter(item) {
+        // geometricBounds = [left, top, right, bottom]
+        var b = item.geometricBounds;
+        return { x: (b[0] + b[2]) / 2, y: (b[1] + b[3]) / 2 };
+    }
+
+    function centerInArtboard(center, rect) {
+        // artboardRect = [left, top, right, bottom]
+        return center.x >= rect[0] && center.x <= rect[2] &&
+               center.y <= rect[1] && center.y >= rect[3];
+    }
+
+    // Structural fingerprint of a PRIME Flex reg dot, used so legacy files whose dots
+    // predate the "RegMark" name still validate. A reg dot is a CLIPPED group holding
+    // exactly two concentric circles: a larger unfilled outer (the clip boundary) and a
+    // smaller filled inner, with an inner:outer diameter ratio of ~0.25 (0.125" / 0.5").
+    // Using the ratio (not absolute sizes) keeps this scale-independent for Large Canvas.
+    function isCircle(p) {
+        if (!p || p.typename !== "PathItem" || !p.closed) return false;
+        var b = p.geometricBounds; // [left, top, right, bottom]
+        var w = b[2] - b[0];
+        var h = b[1] - b[3];
+        if (w <= 0 || h <= 0) return false;
+        return Math.abs(w - h) / Math.max(w, h) < 0.05; // near-square bbox => round
+    }
+
+    function avgDiameter(p) {
+        var b = p.geometricBounds;
+        return ((b[2] - b[0]) + (b[1] - b[3])) / 2;
+    }
+
+    function isRegDotShape(item) {
+        if (!item || item.typename !== "GroupItem" || !item.clipped) return false;
+        if (item.pageItems.length !== 2 || item.pathItems.length !== 2) return false;
+        var p0 = item.pathItems[0];
+        var p1 = item.pathItems[1];
+        if (!isCircle(p0) || !isCircle(p1)) return false;
+        var d0 = avgDiameter(p0);
+        var d1 = avgDiameter(p1);
+        var outerD = Math.max(d0, d1);
+        var innerD = Math.min(d0, d1);
+        if (outerD <= 0) return false;
+        var inner = (d0 <= d1) ? p0 : p1;
+        var outer = (d0 <= d1) ? p1 : p0;
+        // Concentric ratio ~0.25 (0.125"/0.5"), with a little tolerance for rounding
+        if (Math.abs((innerD / outerD) - 0.25) > 0.08) return false;
+        // Outer is the unfilled clip boundary; inner is the filled dot
+        if (outer.filled) return false;
+        if (!inner.filled) return false;
+        return true;
+    }
+
+    // A valid reg mark is one PFT named "RegMark" OR one whose shape matches the dot
+    // fingerprint above (covers files made before the naming change).
+    function isValidRegMark(item) {
+        if (item.typename === "GroupItem" && item.name === REG_MARK_NAME) return true;
+        return isRegDotShape(item);
+    }
+
+    function validateRegLayer() {
+        var regLayer = getRegLayer();
+        if (!regLayer) {
+            return true; // No REG layer -> nothing to validate
+        }
+
+        var strays = [];
+        var regMarks = [];
+
+        // Look only at the layer's direct children (nested dot circles have the group as parent)
+        for (var i = 0; i < regLayer.pageItems.length; i++) {
+            var item = regLayer.pageItems[i];
+            if (item.parent !== regLayer) {
+                continue;
+            }
+            if (isValidRegMark(item)) {
+                regMarks.push(item);
+            } else {
+                strays.push(item);
+            }
+        }
+
+        // Count reg marks per artboard by center containment
+        var countViolations = [];
+        for (var a = 0; a < doc.artboards.length; a++) {
+            var rect = doc.artboards[a].artboardRect;
+            var count = 0;
+            for (var r = 0; r < regMarks.length; r++) {
+                if (centerInArtboard(itemCenter(regMarks[r]), rect)) {
+                    count++;
+                }
+            }
+            if (count > 0 && count !== REG_DOTS_PER_ARTBOARD) {
+                countViolations.push('   - "' + doc.artboards[a].name + '": ' + count +
+                    " (expected " + REG_DOTS_PER_ARTBOARD + ")");
+            }
+        }
+
+        if (strays.length === 0 && countViolations.length === 0) {
+            return true;
+        }
+
+        var msg = "REG layer validation failed. Cut Path Separator has stopped.\n";
+        if (strays.length > 0) {
+            var strayList = [];
+            for (var s = 0; s < strays.length; s++) {
+                strayList.push("   - " + describeItem(strays[s]));
+            }
+            msg += "\nOnly PRIME Flex registration marks belong on the REG layer, but found:\n" +
+                   strayList.join("\n") + "\n";
+        }
+        if (countViolations.length > 0) {
+            msg += "\nArtboards with the wrong number of registration marks:\n" +
+                   countViolations.join("\n") + "\n";
+        }
+        msg += "\nPlease correct the REG layer, then run again.";
+        alert(msg);
+        return false;
+    }
+
+    if (!validateRegLayer()) {
+        return; // Stop CPS entirely on any REG layer problem
+    }
+
     try {
         var processedLayers = []; // Keep track of layers we created/used
         
