@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "4.1",
+  "version": "4.2",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -523,31 +523,16 @@ function showSetupDialog(docChoice) {
         canvasRadios[0].value = true; // Default: Large Canvas
     }
 
-    // Reg Dots - row of selectable buttons (radio buttons) for one-click selection
-    var regGroup = dialog.add("group");
-    regGroup.orientation = "row";
-    regGroup.add("statictext", undefined, "Reg Dots:");
+    // Reg Dots are now chosen per material row (see the Reg column in the table below),
+    // so a mixed job can add marks only to the flatbed-cut materials that need them.
     var regLabels = ["Auto/Metadata", "Top/Bottom", "Left/Right", "None"];
     var regValues = ["Auto", "TopBottom", "LeftRight", "None"];
-    var regRadios = [];
-    for (var rri = 0; rri < regLabels.length; rri++) {
-        var rRb = regGroup.add("radiobutton", undefined, regLabels[rri]);
-        regRadios.push(rRb);
-    }
-    // Default to Auto/Metadata if we have packing data, otherwise Left/Right
-    regRadios[docChoice.hasPackingData ? 0 : 2].value = true;
 
-    // Helpers to read which button is selected
+    // Helper to read which canvas button is selected
     function getCanvasIndex() {
         if (!canvasRadios) return -1;
         for (var i = 0; i < canvasRadios.length; i++) {
             if (canvasRadios[i].value) return i;
-        }
-        return 0;
-    }
-    function getRegIndex() {
-        for (var i = 0; i < regRadios.length; i++) {
-            if (regRadios[i].value) return i;
         }
         return 0;
     }
@@ -588,7 +573,11 @@ function showSetupDialog(docChoice) {
     var qtyHeader = headerGroup.add("statictext", undefined, "Qty");
     qtyHeader.preferredSize.width = 80;
     qtyHeader.graphics.font = ScriptUI.newFont("dialog", "Bold", 10);
-    
+
+    var regHeader = headerGroup.add("statictext", undefined, "Reg Dots");
+    regHeader.preferredSize.width = 120;
+    regHeader.graphics.font = ScriptUI.newFont("dialog", "Bold", 10);
+
     tablePanel.add("panel");
     
     var scrollGroup = tablePanel.add("group");
@@ -666,20 +655,35 @@ function showSetupDialog(docChoice) {
             dialog.layout.layout(true);
         };
         
-        var qtyDropdown = rowGroup.add("dropdownlist", undefined, 
+        // Fixed-width column for Qty so the hidden custom field never shifts later columns
+        // (custom qty appears below the dropdown, mirroring the Size column's behavior).
+        var qtyContainer = rowGroup.add("group");
+        qtyContainer.orientation = "column";
+        qtyContainer.alignChildren = "fill";
+        qtyContainer.preferredSize.width = 80;
+        qtyContainer.spacing = 2;
+
+        var qtyDropdown = qtyContainer.add("dropdownlist", undefined,
             ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','Custom']);
         qtyDropdown.selection = material ? Math.min(material.maxPart, 20) - 1 : 0;
         qtyDropdown.preferredSize.width = 80;
-        
-        var customQtyField = rowGroup.add("edittext", undefined, "");
-        customQtyField.preferredSize.width = 60;
+
+        var customQtyField = qtyContainer.add("edittext", undefined, "");
+        customQtyField.preferredSize.width = 80;
         customQtyField.visible = false;
-        
+
         qtyDropdown.onChange = function() {
             customQtyField.visible = (qtyDropdown.selection && qtyDropdown.selection.index === 20);
             dialog.layout.layout(true);
         };
-        
+
+        // Per-row Reg Dots selector (flatbed materials use marks; vinyl-cut set to None)
+        var regDropdown = rowGroup.add("dropdownlist", undefined, regLabels);
+        regDropdown.preferredSize.width = 120;
+        // Default: Auto when this row has packing metadata, otherwise Left/Right (marks on)
+        var hasMeta = material && material.fromPackingData;
+        regDropdown.selection = hasMeta ? 0 : 2;
+
         var rowData = {
             group: rowGroup,
             rowNum: rowNum,
@@ -689,7 +693,8 @@ function showSetupDialog(docChoice) {
             customH: customH,
             customGroup: customGroup,
             qty: qtyDropdown,
-            customQty: customQtyField
+            customQty: customQtyField,
+            regDropdown: regDropdown
         };
         
         rows.push(rowData);
@@ -859,13 +864,16 @@ function showSetupDialog(docChoice) {
                 }
             }
             
+            var regIndex = row.regDropdown.selection ? row.regDropdown.selection.index : 3;
+
             specs.push({
                 material: mat,
                 width: width,
                 height: height,
                 quantity: qtyToCreate,
                 startingPartNumber: startingPartNumber,
-                packingSheets: packingSheets
+                packingSheets: packingSheets,
+                regDots: regValues[regIndex]
             });
         }
         
@@ -882,7 +890,6 @@ function showSetupDialog(docChoice) {
         result = {
             docChoice: docChoice,
             canvasType: canvasRadios ? (getCanvasIndex() === 0 ? "Large" : "Standard") : null,
-            regDots: regValues[getRegIndex()],
             createPlaceholders: placeholderCheckbox.value,
             packingData: globalPackingData,
             specs: specs
@@ -1148,12 +1155,8 @@ function createArtboards(config) {
         var spacing = (10 * 72) / scale;
         $.writeln("Spacing: " + spacing + " points");
         
+        // REG layer is created lazily below, only if at least one material needs reg dots.
         var regLayer = null;
-        if (config.regDots !== "None") {
-            $.writeln("Creating/getting REG layer...");
-            regLayer = getOrCreateLayer(doc, "REG");
-            $.writeln("REG layer ready");
-        }
         
         if (config.docChoice.mode === "new") {
             $.writeln("Looking for default layer to rename to PRINT...");
@@ -1322,9 +1325,9 @@ function createArtboards(config) {
                 $.writeln("Artboard created successfully!");
                 $.writeln("Actual bounds: " + ab.artboardRect);
                 
-                // Determine reg dot placement
-                var regPlacement = config.regDots;
-                if (config.regDots === "Auto" && spec.packingSheets && spec.packingSheets[q]) {
+                // Determine reg dot placement for THIS material line
+                var regPlacement = spec.regDots || "None";
+                if (regPlacement === "Auto" && spec.packingSheets && spec.packingSheets[q]) {
                     // Use metadata from packing data
                     var sheet = spec.packingSheets[q];
                     if (sheet.registration && sheet.registration.type) {
@@ -1333,14 +1336,23 @@ function createArtboards(config) {
                     } else {
                         regPlacement = "LeftRight"; // Fallback
                     }
+                } else if (regPlacement === "Auto") {
+                    // Auto selected but no packing metadata for this sheet - fall back
+                    regPlacement = "LeftRight";
                 }
-                
+
                 if (regPlacement !== "None") {
+                    // Create the REG layer the first time any material actually needs it
+                    if (!regLayer) {
+                        $.writeln("Creating/getting REG layer...");
+                        regLayer = getOrCreateLayer(doc, "REG");
+                        $.writeln("REG layer ready");
+                    }
                     $.writeln("Creating reg dots...");
                     createRegDots(doc, regLayer, ab, regPlacement, scale);
                     $.writeln("Reg dots created");
                 } else {
-                    $.writeln("Skipping reg dots (None selected)");
+                    $.writeln("Skipping reg dots (None selected for this material)");
                 }
                 
                 // Create placeholder artwork if requested
@@ -1571,6 +1583,10 @@ function createSingleRegDot(doc, layer, centerX, centerY, scale) {
     innerCircle.moveToBeginning(clipGroup);
     outerCircle.moveToBeginning(clipGroup);
     clipGroup.clipped = true;
+    // Tag each dot so Cut Path Separator can verify only PRIME Flex reg marks are on
+    // the REG layer. Each dot stays an independent group (not grouped together) so they
+    // can still be rearranged individually.
+    clipGroup.name = "RegMark";
 }
 
 function applyStrokeToGroup(group, strokeColor, strokeWidth) {
