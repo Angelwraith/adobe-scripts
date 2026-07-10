@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-09T10:34:38.484391",
+  "last_updated": "2026-07-10T11:04:08.914129",
   "deployer_version": "3.0",
   "total_scripts": 27,
   "launcher_version": "4.0",
@@ -245,7 +245,7 @@
       "filename": "Optimal PRIME transformer.js",
       "metadata": {
         "name": "Optimal PRIME Transformer",
-        "version": "1.9.1",
+        "version": "1.9.2",
         "description": "Generate Production Files From a PRIME",
         "author": "Unknown",
         "target": "illustrator",
@@ -256,10 +256,10 @@
           "scaleFactor"
         ]
       },
-      "hash": "e57c74b0bed4c7463201e5be2a77f245",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Optimal PRIME transformer.js",
-      "file_size": 53330,
-      "last_modified": "2026-05-26T09:30:45.463470",
+      "hash": "4dfc50ae67c4ddff4bf7751973701a32",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Optimal PRIME transformer.js",
+      "file_size": 53320,
+      "last_modified": "2026-07-10T11:03:00.417989",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
