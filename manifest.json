@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-10T11:04:08.914129",
+  "last_updated": "2026-07-10T13:06:24.356436",
   "deployer_version": "3.0",
   "total_scripts": 27,
   "launcher_version": "4.0",
@@ -52,7 +52,7 @@
       "filename": "Cut Path Separator.js",
       "metadata": {
         "name": "Cut Path Separator",
-        "version": "1.4",
+        "version": "1.5",
         "description": "Organize Cut/Print Data Into Respective Layers",
         "author": "Unknown",
         "target": "illustrator",
@@ -63,10 +63,10 @@
           "processors"
         ]
       },
-      "hash": "e9e3d063005ffa1c100d9831fbba85f6",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Cut Path Separator.js",
-      "file_size": 34511,
-      "last_modified": "2026-03-11T14:17:47.243898",
+      "hash": "49215aeb91b904cc01f3f0c330486a75",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Cut Path Separator.js",
+      "file_size": 40413,
+      "last_modified": "2026-07-10T12:24:50.209074",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js"
     },
@@ -245,7 +245,7 @@
       "filename": "Optimal PRIME transformer.js",
       "metadata": {
         "name": "Optimal PRIME Transformer",
-        "version": "1.9.2",
+        "version": "1.9.3",
         "description": "Generate Production Files From a PRIME",
         "author": "Unknown",
         "target": "illustrator",
@@ -256,10 +256,10 @@
           "scaleFactor"
         ]
       },
-      "hash": "4dfc50ae67c4ddff4bf7751973701a32",
+      "hash": "d5a463185b2a03e10a7c681a057f2d4a",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Optimal PRIME transformer.js",
-      "file_size": 53320,
-      "last_modified": "2026-07-10T11:03:00.417989",
+      "file_size": 55354,
+      "last_modified": "2026-07-10T13:05:40.410275",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
@@ -267,7 +267,7 @@
       "filename": "PRIME Flex Template.js",
       "metadata": {
         "name": "PRIME Flex Template",
-        "version": "4.1",
+        "version": "4.2",
         "description": "Create artboards with reg dots for flexible materials",
         "author": "Unknown",
         "target": "illustrator",
@@ -277,10 +277,10 @@
           "setup"
         ]
       },
-      "hash": "caafa5f70454ce2a4beb82233f4c6572",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\PRIME Flex Template.js",
-      "file_size": 74883,
-      "last_modified": "2026-05-26T09:10:31.988807",
+      "hash": "c24eee9fc5ede10736fddb97896dc35d",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\PRIME Flex Template.js",
+      "file_size": 76176,
+      "last_modified": "2026-07-10T12:32:31.126084",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js"
     },
