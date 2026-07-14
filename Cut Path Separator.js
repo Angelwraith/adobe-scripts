@@ -3,7 +3,7 @@
 {
   "name": "Cut Path Separator",
   "description": "Organize Cut/Print Data Into Respective Layers",
-  "version": "1.5",
+  "version": "1.6",
   "target": "illustrator",
   "tags": ["Cut", "Path", "Separator", "processors"]
 }
@@ -94,24 +94,30 @@
     function checkForDuplicatePaths(layer) {
         var allPaths = [];
         
-        // Collect all path items in the layer (including in groups)
+        // Collect all path items in the layer (including in groups).
+        // Skip clipping mask paths - a mask often shares its outline with the shape
+        // it clips, which would otherwise register as a false duplicate cut.
         function collectPaths(container) {
             for (var i = 0; i < container.pageItems.length; i++) {
                 var item = container.pageItems[i];
                 if (item.typename === "PathItem") {
-                    allPaths.push(item);
+                    if (!item.clipping) {
+                        allPaths.push(item);
+                    }
                 } else if (item.typename === "GroupItem") {
                     collectPaths(item);
                 } else if (item.typename === "CompoundPathItem") {
                     for (var j = 0; j < item.pathItems.length; j++) {
-                        allPaths.push(item.pathItems[j]);
+                        if (!item.pathItems[j].clipping) {
+                            allPaths.push(item.pathItems[j]);
+                        }
                     }
                 }
             }
         }
-        
+
         collectPaths(layer);
-        
+
         // Compare paths for duplicates (colors don't need to match)
         for (var i = 0; i < allPaths.length - 1; i++) {
             for (var j = i + 1; j < allPaths.length; j++) {
@@ -623,24 +629,30 @@
     function checkLayerAppearanceConsistency(layer) {
         var allPaths = [];
         
-        // Collect all path items in the layer (including in groups)
+        // Collect all path items in the layer (including in groups).
+        // Skip clipping mask paths - they are unfilled boundaries, not artwork,
+        // so their appearance intentionally differs from the shapes they clip.
         function collectPaths(container) {
             for (var i = 0; i < container.pageItems.length; i++) {
                 var item = container.pageItems[i];
                 if (item.typename === "PathItem") {
-                    allPaths.push(item);
+                    if (!item.clipping) {
+                        allPaths.push(item);
+                    }
                 } else if (item.typename === "GroupItem") {
                     collectPaths(item);
                 } else if (item.typename === "CompoundPathItem") {
                     for (var j = 0; j < item.pathItems.length; j++) {
-                        allPaths.push(item.pathItems[j]);
+                        if (!item.pathItems[j].clipping) {
+                            allPaths.push(item.pathItems[j]);
+                        }
                     }
                 }
             }
         }
-        
+
         collectPaths(layer);
-        
+
         if (allPaths.length <= 1) {
             return true; // Consistent if 0 or 1 paths
         }
@@ -855,6 +867,7 @@
             
             // Build a map of group relationships before moving
             var groupMap = {}; // Maps original group UUID to new group in target layer
+            var movedClipGroups = {}; // Tracks clipped groups already moved wholesale (by UUID)
             var itemGroupInfo = []; // Stores each item with its group ancestry
             
             // Analyze group structure for each item
@@ -883,35 +896,65 @@
                     var info = itemGroupInfo[i];
                     var item = info.item;
                     var groupChain = info.groupChain;
-                    
+
+                    // If this item lives inside a clipped group we've already moved
+                    // wholesale, it came along for the ride - nothing left to do.
+                    var alreadyRelocated = false;
+                    for (var c = 0; c < groupChain.length; c++) {
+                        if (groupChain[c].clipped && movedClipGroups[groupChain[c].uuid]) {
+                            alreadyRelocated = true;
+                            break;
+                        }
+                    }
+                    if (alreadyRelocated) {
+                        movedCount++;
+                        continue;
+                    }
+
                     if (groupChain.length === 0) {
                         // Item is not in any group, move directly to layer
                         item.move(targetLayer, ElementPlacement.PLACEATEND);
                     } else {
                         // Item is in one or more groups - recreate the group hierarchy
                         var currentContainer = targetLayer;
-                        
+                        var movedAsClipGroup = false;
+
                         // Process each group in the chain from outermost to innermost
                         for (var j = 0; j < groupChain.length; j++) {
                             var originalGroup = groupChain[j];
-                            
+
+                            // Clipping masks (<Clip Group>) must move as a single unit.
+                            // Recreating them as empty groups would drop the clip path and
+                            // pull the artwork out of the mask, so move the whole group.
+                            if (originalGroup.clipped) {
+                                if (!movedClipGroups[originalGroup.uuid]) {
+                                    originalGroup.move(currentContainer, ElementPlacement.PLACEATEND);
+                                    movedClipGroups[originalGroup.uuid] = true;
+                                }
+                                movedAsClipGroup = true;
+                                break; // item is inside this group and moved with it
+                            }
+
                             // Create a unique identifier for this group
                             var groupUUID = originalGroup.uuid;
-                            
+
                             // Check if we've already created a matching group
                             if (!groupMap[groupUUID]) {
                                 // Create new group in the current container
                                 groupMap[groupUUID] = currentContainer.groupItems.add();
                             }
-                            
+
                             // Move down to this group for the next iteration
                             currentContainer = groupMap[groupUUID];
                         }
-                        
-                        // Move the item to its final destination (innermost group)
-                        item.move(currentContainer, ElementPlacement.PLACEATEND);
+
+                        // Move the item to its final destination (innermost group),
+                        // unless it already moved as part of a clipped group.
+                        if (!movedAsClipGroup) {
+                            item.move(currentContainer, ElementPlacement.PLACEATEND);
+                        }
                     }
-                    
+
                     movedCount++;
                 } catch (e) {
                     // Continue with other items if one fails to move
