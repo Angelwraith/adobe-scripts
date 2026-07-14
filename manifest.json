@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-10T13:06:24.356436",
+  "last_updated": "2026-07-14T11:58:47.602441",
   "deployer_version": "3.0",
   "total_scripts": 27,
   "launcher_version": "4.0",
@@ -52,7 +52,7 @@
       "filename": "Cut Path Separator.js",
       "metadata": {
         "name": "Cut Path Separator",
-        "version": "1.5",
+        "version": "1.6",
         "description": "Organize Cut/Print Data Into Respective Layers",
         "author": "Unknown",
         "target": "illustrator",
@@ -63,10 +63,10 @@
           "processors"
         ]
       },
-      "hash": "49215aeb91b904cc01f3f0c330486a75",
+      "hash": "daea36703a97fc9432fe0c8fc6ce17c5",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Cut Path Separator.js",
-      "file_size": 40413,
-      "last_modified": "2026-07-10T12:24:50.209074",
+      "file_size": 42605,
+      "last_modified": "2026-07-14T11:58:18.590225",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Cut%20Path%20Separator.js"
     },
