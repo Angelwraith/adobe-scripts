@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-23T12:09:14.633082",
+  "last_updated": "2026-07-23T12:19:25.566508",
   "deployer_version": "3.0",
   "total_scripts": 28,
   "launcher_version": "4.0",
@@ -395,7 +395,7 @@
       "filename": "SmartDimensionTool.js",
       "metadata": {
         "name": "Smart Dimension Tool",
-        "version": "4.6",
+        "version": "4.7",
         "description": "Add dimensions to an array of signs without the fuss",
         "author": "Unknown",
         "target": "illustrator",
@@ -405,10 +405,10 @@
           "Utility"
         ]
       },
-      "hash": "25c03b97bd8d0eac9cf90890a44473a7",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\SmartDimensionTool.js",
-      "file_size": 53023,
-      "last_modified": "2026-05-21T09:40:23.574415",
+      "hash": "ca1aaa0de55022de2f2e51830a202f64",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\SmartDimensionTool.js",
+      "file_size": 53536,
+      "last_modified": "2026-07-23T12:18:10.348808",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js"
     },
@@ -599,7 +599,7 @@
       "filename": "Scale To Page.js",
       "metadata": {
         "name": "Scale To Page",
-        "version": "1.0",
+        "version": "1.1",
         "description": "Copies the selected 1/10 scale art onto the active artboard at a chosen percentage of its current size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. You can enter either a percentage (50%, 2x) or a target ratio (1:12) directly; the resulting scale and equivalent percentage update live as you type, so decimal scales are easy to spot and avoid. The label is written in the format the Smart Dimension Tool auto-detects, so dimensions come out accurate with no extra setup.",
         "author": "Unknown",
         "target": "illustrator",
@@ -610,10 +610,10 @@
           "processor"
         ]
       },
-      "hash": "60932b7435d2ee6465d57578b1f5fe97",
+      "hash": "2df219e1e7632693eafc6fb55bc1c8bd",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Scale To Page.js",
-      "file_size": 14204,
-      "last_modified": "2026-07-23T12:03:49.300116",
+      "file_size": 13828,
+      "last_modified": "2026-07-23T12:17:57.593779",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js"
     }
