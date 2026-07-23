@@ -3,7 +3,7 @@
 {
   "name": "Scale To Page",
   "description": "Copies the selected 1/10 scale art onto the active artboard at a chosen percentage of its current size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. You can enter either a percentage (50%, 2x) or a target ratio (1:12) directly; the resulting scale and equivalent percentage update live as you type, so decimal scales are easy to spot and avoid. The label is written in the format the Smart Dimension Tool auto-detects, so dimensions come out accurate with no extra setup.",
-  "version": "1.0",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["scale", "copy", "layout", "processor"]
 }
@@ -338,15 +338,5 @@
     } catch (eSel) { /* non-fatal */ }
 
     app.redraw();
-
-    alert(
-        "Scale To Page complete.\n" +
-        "------------------------------\n" +
-        "Copied: " + copies.length + " object(s)\n" +
-        "Resized to: " + fmtNum(pct) + "% of current size\n" +
-        "New scale: " + scaleString +
-        "\nCentered on the active artboard." +
-        (doLabel ? "\nLabel added: \"Scale " + scaleString + "\"" : "")
-    );
 
 })();
