@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "4.6",
+  "version": "4.7",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -467,7 +467,14 @@ function main() {
         alert("Please select one or more objects to dimension.");
         return;
     }
-    
+
+    // Remember the originally selected art so it can be reselected at the end,
+    // letting other scripts keep working with the same objects.
+    var originalSelection = [];
+    for (var si = 0; si < sel.length; si++) {
+        originalSelection.push(sel[si]);
+    }
+
     // Default font settings
     var currentFontName = "MyriadPro-Semibold";
     var currentFontSize = 12;
@@ -930,11 +937,17 @@ function main() {
     if (settings.scaleTextPosition === "On Proof" || settings.scaleTextPosition === "Outside Proof") {
         addScaleTextToArtboards(sel, settings, dimLayer);
     }
-    
-    // Only show alert if there were problems (skipped dimensions)
-    if (skippedCount > 0) {
-        alert(message);
-    }
+
+    // Reselect the original art so downstream scripts can continue with it.
+    try {
+        doc.selection = null;
+        for (var rs = 0; rs < originalSelection.length; rs++) {
+            try { originalSelection[rs].selected = true; } catch (eOne) {}
+        }
+        app.redraw();
+    } catch (eRestore) {}
+
+    // (Completion confirmation removed — runs silently.)
 }
 
 // NEW METHOD: Get bounds using temporary artboard and Fit to Selected Art
