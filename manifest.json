@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-07-14T11:58:47.602441",
+  "last_updated": "2026-07-23T12:09:14.633082",
   "deployer_version": "3.0",
-  "total_scripts": 27,
+  "total_scripts": 28,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -594,6 +594,28 @@
       "last_modified": "2026-07-09T10:33:52.785350",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Save%20Email%20Proof.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Save%20Email%20Proof.js"
+    },
+    "Scale To Page.js": {
+      "filename": "Scale To Page.js",
+      "metadata": {
+        "name": "Scale To Page",
+        "version": "1.0",
+        "description": "Copies the selected 1/10 scale art onto the active artboard at a chosen percentage of its current size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. You can enter either a percentage (50%, 2x) or a target ratio (1:12) directly; the resulting scale and equivalent percentage update live as you type, so decimal scales are easy to spot and avoid. The label is written in the format the Smart Dimension Tool auto-detects, so dimensions come out accurate with no extra setup.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "scale",
+          "copy",
+          "layout",
+          "processor"
+        ]
+      },
+      "hash": "60932b7435d2ee6465d57578b1f5fe97",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Scale To Page.js",
+      "file_size": 14204,
+      "last_modified": "2026-07-23T12:03:49.300116",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js"
     }
   }
 }
