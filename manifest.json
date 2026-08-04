@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-23T12:19:25.566508",
+  "last_updated": "2026-08-04T12:24:56.626226",
   "deployer_version": "3.0",
   "total_scripts": 28,
   "launcher_version": "4.0",
@@ -96,7 +96,7 @@
       "filename": "File Check.js",
       "metadata": {
         "name": "File Check",
-        "version": "3.1",
+        "version": "3.2",
         "description": "Production file readiness analysis with manifest comparison",
         "author": "Unknown",
         "target": "illustrator",
@@ -107,10 +107,10 @@
           "manifest"
         ]
       },
-      "hash": "b565e03013c4c4d150b656c8533e1884",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\File Check.js",
-      "file_size": 57339,
-      "last_modified": "2026-04-01T14:32:17.211247",
+      "hash": "c3d81ccff6aa02a33b92f81c2f18c885",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\File Check.js",
+      "file_size": 62704,
+      "last_modified": "2026-08-04T11:26:18.598892",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js"
     },
@@ -202,7 +202,7 @@
       "filename": "Merge Text.js",
       "metadata": {
         "name": "Merge Text",
-        "version": "1.0",
+        "version": "1.1",
         "description": "Merges selected text frames top-to-bottom into a single frame, preserving character formatting (kerning, tracking, color, fonts) and exact vertical pixel spacing via per-line leading",
         "author": "Unknown",
         "target": "illustrator",
@@ -213,10 +213,10 @@
           "labels"
         ]
       },
-      "hash": "ee68a8f036fb67d6c213e9da88851e84",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Merge Text.js",
-      "file_size": 4896,
-      "last_modified": "2026-04-27T09:03:47.352273",
+      "hash": "5cdc85b47d65589ee6a3dc0d8ff7548c",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Merge Text.js",
+      "file_size": 4891,
+      "last_modified": "2026-08-04T11:43:09.244333",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js"
     },
@@ -224,7 +224,7 @@
       "filename": "OpenProdFilesForReview.js",
       "metadata": {
         "name": "Open Production Files and organize for review",
-        "version": "1.9",
+        "version": "2.0",
         "description": "Open print and cut files, organize them together and tile the view to show them all",
         "author": "Unknown",
         "target": "illustrator",
@@ -234,10 +234,10 @@
           "file"
         ]
       },
-      "hash": "c1ef22df3b3273d1f2bedd5ef7f35fbc",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\OpenProdFilesForReview.js",
-      "file_size": 15257,
-      "last_modified": "2026-04-01T12:55:54.412271",
+      "hash": "597472fa92d9ad87b7821bb375b8d9b3",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\OpenProdFilesForReview.js",
+      "file_size": 15255,
+      "last_modified": "2026-08-04T11:43:09.239833",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
     },
@@ -267,7 +267,7 @@
       "filename": "PRIME Flex Template.js",
       "metadata": {
         "name": "PRIME Flex Template",
-        "version": "4.2",
+        "version": "4.3",
         "description": "Create artboards with reg dots for flexible materials",
         "author": "Unknown",
         "target": "illustrator",
@@ -277,10 +277,10 @@
           "setup"
         ]
       },
-      "hash": "c24eee9fc5ede10736fddb97896dc35d",
+      "hash": "d825d8ebbf9b953074214b528a6dfda8",
       "local_path": "C:\\Dev\\Illustrator Scripts\\PRIME Flex Template.js",
-      "file_size": 76176,
-      "last_modified": "2026-07-10T12:32:31.126084",
+      "file_size": 76443,
+      "last_modified": "2026-08-04T11:02:37.122073",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js"
     },
@@ -288,7 +288,7 @@
       "filename": "Qty Sum.js",
       "metadata": {
         "name": "Qty: Sum",
-        "version": "1.1",
+        "version": "1.2",
         "description": "Sum Quantities from Selected Text Objects",
         "author": "Unknown",
         "target": "illustrator",
@@ -298,10 +298,10 @@
           "utility"
         ]
       },
-      "hash": "7a566742c0abbe9aa7b654727b70c3ac",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Qty Sum.js",
-      "file_size": 2974,
-      "last_modified": "2026-05-01T12:57:32.526671",
+      "hash": "e13f2757aeea78ca0262dcddee6e79ef",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Qty Sum.js",
+      "file_size": 2983,
+      "last_modified": "2026-08-04T11:43:09.234332",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty%20Sum.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Qty%20Sum.js"
     },
@@ -351,7 +351,7 @@
       "filename": "scale_to_target_size.js",
       "metadata": {
         "name": "Scale Selection to Target Size",
-        "version": "1.1",
+        "version": "1.2",
         "description": "Select a key object, enter target dimensions, and scale everything proportionally. Also supports ratio conversion (e.g., 3/8\"=1'-0\" -> 1:10).",
         "author": "Unknown",
         "target": "illustrator",
@@ -361,10 +361,10 @@
           "processors"
         ]
       },
-      "hash": "230f6c10de2c293b17a91ff6ca119734",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\scale_to_target_size.js",
-      "file_size": 14842,
-      "last_modified": "2026-05-26T12:15:16.974017",
+      "hash": "12679874b424714c9dd96fdcc4ad7cf5",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\scale_to_target_size.js",
+      "file_size": 17372,
+      "last_modified": "2026-08-03T11:16:09.909080",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_to_target_size.js"
     },
@@ -372,7 +372,7 @@
       "filename": "Sherwin-Williams Color Picker.js",
       "metadata": {
         "name": "Sherwin-Williams Color Picker",
-        "version": "1.1",
+        "version": "1.2",
         "description": "Search the full SW color library and copy hex or add as a spot swatch",
         "author": "Unknown",
         "target": "illustrator",
@@ -384,10 +384,10 @@
           "paint"
         ]
       },
-      "hash": "3117ae2bf98621ac42f801aaaac4bc0b",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Sherwin-Williams Color Picker.js",
-      "file_size": 83968,
-      "last_modified": "2026-05-21T10:08:18.213699",
+      "hash": "b30fb82c9c85de3a24b7b4b4a3c9c28e",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Sherwin-Williams Color Picker.js",
+      "file_size": 84058,
+      "last_modified": "2026-08-04T11:43:09.230330",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sherwin-Williams%20Color%20Picker.js"
     },
@@ -395,7 +395,7 @@
       "filename": "SmartDimensionTool.js",
       "metadata": {
         "name": "Smart Dimension Tool",
-        "version": "4.7",
+        "version": "4.8",
         "description": "Add dimensions to an array of signs without the fuss",
         "author": "Unknown",
         "target": "illustrator",
@@ -405,10 +405,10 @@
           "Utility"
         ]
       },
-      "hash": "ca1aaa0de55022de2f2e51830a202f64",
+      "hash": "6357e18f9477c3a408d4c76fd50d2763",
       "local_path": "C:\\Dev\\Illustrator Scripts\\SmartDimensionTool.js",
-      "file_size": 53536,
-      "last_modified": "2026-07-23T12:18:10.348808",
+      "file_size": 53535,
+      "last_modified": "2026-08-04T11:43:09.215332",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/SmartDimensionTool.js"
     },
@@ -437,7 +437,7 @@
       "filename": "WrapProcessor.js",
       "metadata": {
         "name": "Wrap Processor",
-        "version": "2.0",
+        "version": "2.1",
         "description": "Export proofs/prints or convert wrap templates with proof-based path prefilling. Convert mode auto-converts RGB docs to CMYK via BridgeTalk-isolated calls.",
         "author": "Unknown",
         "target": "illustrator",
@@ -452,10 +452,10 @@
           "cmyk"
         ]
       },
-      "hash": "2ae2de7fc667a04db38f7d07d9eab3fe",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\WrapProcessor.js",
+      "hash": "cb43496fad8e4daac838176be57dd397",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\WrapProcessor.js",
       "file_size": 61580,
-      "last_modified": "2026-05-13T12:15:57.144558",
+      "last_modified": "2026-08-04T11:43:09.203831",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/WrapProcessor.js"
     },
@@ -463,8 +463,8 @@
       "filename": "List_Artboard_Sizes.jsx",
       "metadata": {
         "name": "List Artboard Sizes",
-        "version": "1.3",
-        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Includes copy buttons for spreadsheet TSV and shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
+        "version": "1.5",
+        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Includes copy buttons for spreadsheet TSV and shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -475,10 +475,10 @@
           "multi-document"
         ]
       },
-      "hash": "7effad8253667dfe61c95a53eaca53db",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\List_Artboard_Sizes.jsx",
-      "file_size": 43439,
-      "last_modified": "2026-05-22T10:46:29.447838",
+      "hash": "b048e956b10ef26a34907c4d1caea67f",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\List_Artboard_Sizes.jsx",
+      "file_size": 47729,
+      "last_modified": "2026-08-04T11:39:04.027964",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx"
     },
@@ -553,8 +553,8 @@
       "filename": "Sort Linked Files By Pt Number.js",
       "metadata": {
         "name": "Sort Linked Files By Pt Number",
-        "version": "1.0",
-        "description": "Sort selected linked files left-to-right by the Pt# in their filename (Pt1, Pt2, Pt3...) with 0.25\" spacing between them. Tops align to the topmost item in the current selection; the leftmost X of the selection is the starting position.",
+        "version": "1.2",
+        "description": "Sort selected linked files. If the files are wrap sides (driver/front/passenger/rear/top in the name, matching Wrap Processor's naming), they're grouped by side and stacked top-to-bottom in the order Driver, Front, Passenger, Rear, Top (missing sides omitted), each row sorted left-to-right by panel number. Otherwise falls back to the original Pt# left-to-right sort. 0.25\" spacing; the leftmost/topmost of the selection is the starting position.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -562,13 +562,14 @@
           "linked",
           "files",
           "layout",
+          "wrap",
           "processor"
         ]
       },
-      "hash": "90bce2deb9ebff84e38c6715cafc6cfc",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Sort Linked Files By Pt Number.js",
-      "file_size": 4205,
-      "last_modified": "2026-06-11T12:18:11.905002",
+      "hash": "159350f11a50b1fe17cb062d2bc2522d",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Sort Linked Files By Pt Number.js",
+      "file_size": 10485,
+      "last_modified": "2026-08-04T11:39:04.009470",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort%20Linked%20Files%20By%20Pt%20Number.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort%20Linked%20Files%20By%20Pt%20Number.js"
     },
@@ -576,8 +577,8 @@
       "filename": "Save Email Proof.js",
       "metadata": {
         "name": "Save email proof",
-        "version": "2.3",
-        "description": "Save an EmProof PDF (downsampled); also save a full-res Proof if the doc has unsaved changes",
+        "version": "2.4",
+        "description": "Save a downsampled Em proof then a full-res proof (proof saved last so the doc keeps the proof name)",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -588,10 +589,10 @@
           "export"
         ]
       },
-      "hash": "43679b124477ab346edf8a9161623ac2",
+      "hash": "363764aec9955d833678a8e949106a7e",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Save Email Proof.js",
-      "file_size": 6272,
-      "last_modified": "2026-07-09T10:33:52.785350",
+      "file_size": 6772,
+      "last_modified": "2026-08-03T09:31:50.948876",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Save%20Email%20Proof.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Save%20Email%20Proof.js"
     },
@@ -599,8 +600,8 @@
       "filename": "Scale To Page.js",
       "metadata": {
         "name": "Scale To Page",
-        "version": "1.1",
-        "description": "Copies the selected 1/10 scale art onto the active artboard at a chosen percentage of its current size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. You can enter either a percentage (50%, 2x) or a target ratio (1:12) directly; the resulting scale and equivalent percentage update live as you type, so decimal scales are easy to spot and avoid. The label is written in the format the Smart Dimension Tool auto-detects, so dimensions come out accurate with no extra setup.",
+        "version": "1.5",
+        "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -610,10 +611,10 @@
           "processor"
         ]
       },
-      "hash": "2df219e1e7632693eafc6fb55bc1c8bd",
+      "hash": "7a1f899b6a72f9b48b20679eabc03444",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Scale To Page.js",
-      "file_size": 13828,
-      "last_modified": "2026-07-23T12:17:57.593779",
+      "file_size": 16038,
+      "last_modified": "2026-08-03T15:44:28.408179",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js"
     }
