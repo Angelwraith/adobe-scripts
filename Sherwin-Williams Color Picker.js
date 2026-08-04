@@ -3,7 +3,7 @@
 {
   "name": "Sherwin-Williams Color Picker",
   "description": "Search the full SW color library and copy hex or add as a spot swatch",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["color", "swatches", "spot", "sherwin-williams", "paint"]
 }
@@ -351,7 +351,7 @@
   ["6150","Universal Khaki","B8A992",""],
   ["6151","Quiver Tan","8E7F6A",""],
   ["6152","Superior Bronze","786957",""],
-  ["6153","Protégé Bronze","66543E",""],
+  ["6153","Prot\u00e9g\u00e9 Bronze","66543E",""],
   ["6154","Nacre","E8E2D4",""],
   ["6155","Rice Grain","DBD0B9",""],
   ["6156","Ramie","CDBDA2",""],
@@ -488,7 +488,7 @@
   ["6287","White Beet","EBDFDD",""],
   ["6288","Rosebud","E0CDD1",""],
   ["6289","Delightful","D2B6BE",""],
-  ["6290","Rosé","B995A1",""],
+  ["6290","Ros\u00e9","B995A1",""],
   ["6291","Moss Rose","9E6D79",""],
   ["6292","Berry Bush","8D5869",""],
   ["6293","Fabulous Grape","6D344F",""],
@@ -827,7 +827,7 @@
   ["6626","Sunset","E2946F",""],
   ["6627","Emberglow","D67C56",""],
   ["6628","Robust Orange","C4633E",""],
-  ["6629","Jalapeño","B1533C",""],
+  ["6629","Jalape\u00f1o","B1533C",""],
   ["6630","Posy","F2E1D2",""],
   ["6631","Naive Peach","F3D3BF",""],
   ["6632","Neighborly Peach","F3C1A3",""],
@@ -908,7 +908,7 @@
   ["6707","Narcissus","F2ECCA",""],
   ["6708","Springtime","E9E5B3",""],
   ["6709","Gleeful","DAD790",""],
-  ["6710","Mélange Green","C4C476",""],
+  ["6710","M\u00e9lange Green","C4C476",""],
   ["6711","Parakeet","B4B05A",""],
   ["6712","Luau Green","989746",""],
   ["6713","Verdant","847E35",""],
@@ -1094,7 +1094,7 @@
   ["6893","Kid's Stuff","EF8834",""],
   ["6894","Forceful Orange","F29312",""],
   ["6895","Laughing Orange","F49807",""],
-  ["6896","Solé","F7DDA1",""],
+  ["6896","Sol\u00e9","F7DDA1",""],
   ["6897","Sundance","FAC76C",""],
   ["6898","Social Butterfly","F9B952",""],
   ["6899","Nasturtium","F9AC34",""],
@@ -1372,10 +1372,10 @@
   ["7553","Fragile Beauty","E7D7C6",""],
   ["7554","Steamed Milk","ECE1D1",""],
   ["7555","Patience","E2D3BF",""],
-  ["7556","Crème","F4E8D2",""],
+  ["7556","Cr\u00e8me","F4E8D2",""],
   ["7557","Summer White","F4E9D6",""],
   ["7558","Medici Ivory","F3E9D7",""],
-  ["7559","Décor White","F2E5CF",""],
+  ["7559","D\u00e9cor White","F2E5CF",""],
   ["7560","Impressive Ivory","F4DEC3",""],
   ["7561","Lemon Meringue","F5EACC",""],
   ["7562","Roman Column","F6F0E2",""],
@@ -1761,15 +1761,15 @@
     function slugifyName(name) {
         var s = String(name).toLowerCase();
         // Accent -> ASCII (covers SW names like Rose, Jalapeno, Cote d'Azur, Decor, Creme, Melange, Sole, Protege)
-        s = s.replace(/[à-å]/g, "a")
-             .replace(/[è-ë]/g, "e")
-             .replace(/[ì-ï]/g, "i")
-             .replace(/[ò-öø]/g, "o")
-             .replace(/[ù-ü]/g, "u")
-             .replace(/ñ/g, "n")
-             .replace(/ç/g, "c");
+        s = s.replace(/[\u00e0-\u00e5]/g, "a")
+             .replace(/[\u00e8-\u00eb]/g, "e")
+             .replace(/[\u00ec-\u00ef]/g, "i")
+             .replace(/[\u00f2-\u00f6\u00f8]/g, "o")
+             .replace(/[\u00f9-\u00fc]/g, "u")
+             .replace(/\u00f1/g, "n")
+             .replace(/\u00e7/g, "c");
         // Strip apostrophes (straight and curly) so "queen anne's" -> "queen annes"
-        s = s.replace(/['‘’]/g, "");
+        s = s.replace(/['\u2018\u2019]/g, "");
         // Replace any run of non-alphanumeric with a single hyphen
         s = s.replace(/[^a-z0-9]+/g, "-");
         // Trim leading/trailing hyphens
