@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "Wrap Processor",
   "description": "Export proofs/prints or convert wrap templates with proof-based path prefilling. Convert mode auto-converts RGB docs to CMYK via BridgeTalk-isolated calls.",
-  "version": "2.0",
+  "version": "2.1",
   "target": "illustrator",
   "tags": ["export", "artboards", "jpg", "proof", "print", "wrap", "template", "cmyk"]
 }@END_METADATA*/
@@ -12,7 +12,7 @@
 // MAIN ENTRY POINT
 // ============================================================================
 try {
-    // No doc-required check here — "Open Wrap TIFs" mode needs to run with
+    // No doc-required check here -- "Open Wrap TIFs" mode needs to run with
     // zero docs open. Modes that need a doc check inside their handlers.
     showModeSelectionDialog();
 } catch (e) {
@@ -83,7 +83,7 @@ function findAllTifs(folder) {
 }
 
 // ============================================================================
-// IS WRAP-SIDE TIF — name contains driver/front/pssngr/passenger/rear/top
+// IS WRAP-SIDE TIF -- name contains driver/front/pssngr/passenger/rear/top
 // ============================================================================
 function isWrapSideTIF(filename) {
     var lower = filename.toLowerCase();
@@ -511,7 +511,7 @@ function showOpenTifsDialog(selectedProofDoc) {
         checkboxes = [];
 
         if (!currentFolder || !currentFolder.exists) {
-            listPanel.add("statictext", undefined, "(Folder not found — pick one with Browse)");
+            listPanel.add("statictext", undefined, "(Folder not found -- pick one with Browse)");
             try { dialog.layout.layout(true); } catch (e) {}
             return;
         }
@@ -670,7 +670,7 @@ function openSelectedTifs(tifFiles) {
 
     var msg = "Opened " + openedCount + " TIF file" + (openedCount === 1 ? "" : "s") + ".";
     if (errors.length > 0) {
-        msg += "\n\nErrors:\n  • " + errors.join("\n  • ");
+        msg += "\n\nErrors:\n  \u2022 " + errors.join("\n  \u2022 ");
     }
     alert(msg);
 }
@@ -1151,7 +1151,7 @@ function exportArtboard(doc, artboardIndex, artboardName, docName, destFolder, r
 }
 
 // ============================================================================
-// CONVERT DOCUMENT PROCESSING LOOP (v2.0 — BridgeTalk-isolated CMYK conversion)
+// CONVERT DOCUMENT PROCESSING LOOP (v2.0 -- BridgeTalk-isolated CMYK conversion)
 // ============================================================================
 // The CMYK conversion uses app.executeMenuCommand("doc-color-cmyk"), which in
 // this Illustrator install throws a spurious "there is no document" error
@@ -1160,7 +1160,7 @@ function exportArtboard(doc, artboardIndex, artboardName, docName, destFolder, r
 // Workaround: every Illustrator API call lives inside a BridgeTalk message.
 // Each BT body runs in a fresh script context, so the broken bridge from one
 // message can't leak into the next. The main script never touches app.*
-// during iteration — it only orchestrates BT calls and reads back result
+// during iteration -- it only orchestrates BT calls and reads back result
 // strings.
 //
 // Per file:
@@ -1259,7 +1259,7 @@ function processConvertDocuments(documents, saveFolder, prefix, reopenPdfs) {
 
 // ============================================================================
 // COMPUTE PDF OUTPUT PATH (proof-based naming, matches the original)
-// e.g. "FooJob_Crew_ShortB_Rear.tif" + prefix "PromaserB" → "PromaserB_Rear.pdf"
+// e.g. "FooJob_Crew_ShortB_Rear.tif" + prefix "PromaserB" -> "PromaserB_Rear.pdf"
 // ============================================================================
 function computePdfOutputPath(docName, designFolder, prefix) {
     var baseName = docName.replace(/\.[^\/\.]+$/, "");
