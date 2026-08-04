@@ -2,8 +2,8 @@
 @METADATA
 {
   "name": "Save email proof",
-  "description": "Save an EmProof PDF (downsampled); also save a full-res Proof if the doc has unsaved changes",
-  "version": "2.3",
+  "description": "Save a downsampled Em proof then a full-res proof (proof saved last so the doc keeps the proof name)",
+  "version": "2.4",
   "target": "illustrator",
   "tags": ["proof", "email", "pdf", "save", "export"]
 }
@@ -16,14 +16,21 @@
   against Illustrator 2026 (30.6): the two presets differ only in the size-driving
   options below.
 
-    EmProof -> downsample images to 150ppi (color/gray) / 300ppi (mono), Average
-               method; no editability, no Acrobat layers, no thumbnails.  (~4 MB)
-    Proof   -> full resolution (no downsampling); preserve editability, Acrobat
-               layers + thumbnails on.  (full size)
+    Em proof -> downsample images to 150ppi (color/gray) / 300ppi (mono), Average
+                method; no editability, no Acrobat layers, no thumbnails.  (~4 MB)
+    Proof    -> full resolution (no downsampling); preserve editability, Acrobat
+                layers + thumbnails on.  (full size)
 
-  Behavior: the EmProof is always saved. The full-res Proof is ALSO saved whenever
-  the document has unsaved changes, so those changes are preserved in a lossless,
-  editable PDF and are not lost by only saving the downsampled EmProof.
+  Order: the Em proof is saved FIRST and the full-res proof SECOND, so after the
+  script runs the active document is the full-res proof (not the Em version) and
+  you can keep working under the normal proof name. Saving the full-res proof last
+  also preserves any unsaved changes in a lossless, editable PDF.
+
+  Naming: the proof-type token is detected from the current file name so both
+  conventions work --
+      *_Proof / *.ai / etc.  -> saves  *_EmProof  and  *_Proof
+      *_ProdProof            -> saves  *_EmProdProof  and  *_ProdProof
+  (Any existing _Em/_Proof/_ProdProof suffix on the open file is stripped first.)
 
   Shared: Acrobat 1.6, ZIP/Flate image compression (color & gray), compress art,
   embed fonts (subset 100%), colors unchanged, fast-web-view off.
@@ -34,9 +41,6 @@
 */
 
 (function () {
-    var EMPROOF_SUFFIX = "_EmProof";
-    var PROOF_SUFFIX = "_Proof";
-
     // --- Preflight ---
     if (app.documents.length === 0) {
         alert("No document is open.");
@@ -45,10 +49,6 @@
 
     var doc = app.activeDocument;
     var sep = ($.os.indexOf("Windows") !== -1) ? "\\" : "/";
-
-    // Capture BEFORE any saveAs (saveAs marks the document as saved).
-    // doc.saved === false means there are unsaved changes (or it was never saved).
-    var hasUnsavedChanges = (doc.saved === false);
 
     // Tolerant setter: skips (and records) any property/enum this AI version rejects.
     var rejected = [];
@@ -67,9 +67,18 @@
         saveFolder = picked;
     }
 
-    // Build the base name: strip extension and any existing proof suffix.
-    var baseName = decodeURI(doc.name).replace(/\.[^\.]+$/, "");
-    baseName = baseName.replace(/(_EmProof|_Proof)$/i, "");
+    // --- Base name + proof-naming style, detected from the current file name ---
+    // Recognizes a trailing _Proof / _EmProof (standard) or _ProdProof / _EmProdProof.
+    var rawName = decodeURI(doc.name).replace(/\.[^\.]+$/, "");
+    var baseName = rawName;
+    var isProd = false;
+    var m = rawName.match(/^(.*)_(Em)?(Prod)?Proof$/i);
+    if (m) {
+        baseName = m[1];
+        isProd = (m[3] !== undefined && m[3] !== null && m[3] !== "");
+    }
+    var emSuffix    = isProd ? "_EmProdProof" : "_EmProof";
+    var proofSuffix = isProd ? "_ProdProof"   : "_Proof";
 
     // --- Settings shared by both presets ---
     function applyShared(o) {
@@ -84,7 +93,7 @@
         // monochromeCompression left at default (see header note).
     }
 
-    // --- EmProof preset (downsampled, smaller file) ---
+    // --- Em proof preset (downsampled, smaller file) ---
     function makeEmProofOptions() {
         var o = new PDFSaveOptions();
         applyShared(o);
@@ -122,15 +131,13 @@
     }
 
     try {
-        // If the document has unsaved changes, save the full-res Proof first so a
-        // lossless, editable copy of the current state is preserved.
-        if (hasUnsavedChanges) {
-            savePDF(PROOF_SUFFIX, makeProofOptions());
-        }
+        // 1) Em proof FIRST (downsampled). Built from the current in-memory artwork.
+        savePDF(emSuffix, makeEmProofOptions());
 
-        // Always save the EmProof. Saved from the same in-memory artwork, so it is
-        // NOT built from any earlier save.
-        savePDF(EMPROOF_SUFFIX, makeEmProofOptions());
+        // 2) Full-res proof LAST, so the active document ends up as the proof file
+        //    (normal name) and you can keep working. Also built from the same
+        //    in-memory artwork, so it is full resolution (not the downsampled Em).
+        savePDF(proofSuffix, makeProofOptions());
 
         // Only surface a popup if a setting was rejected (should not happen).
         if (rejected.length) {
