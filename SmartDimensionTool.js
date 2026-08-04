@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "4.7",
+  "version": "4.8",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
@@ -947,7 +947,7 @@ function main() {
         app.redraw();
     } catch (eRestore) {}
 
-    // (Completion confirmation removed — runs silently.)
+    // (Completion confirmation removed -- runs silently.)
 }
 
 // NEW METHOD: Get bounds using temporary artboard and Fit to Selected Art
