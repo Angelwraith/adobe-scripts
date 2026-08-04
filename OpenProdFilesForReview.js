@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "1.9",
+  "version": "2.0",
   "target": "illustrator",
   "tags": ["review", "check", "file"]
 }@END_METADATA*/
@@ -51,7 +51,7 @@
         }
         XMPMeta.registerNamespace('http://extremecolor.net/packing/', 'packing');
     } catch (e) {
-        // XMP not available — dropdown will fall back to folder names
+        // XMP not available -- dropdown will fall back to folder names
     }
 
     // Build display names by reading proof file metadata from each folder's PRIME subfolder
@@ -95,7 +95,7 @@
 
             if (parts.length > 0) return parts.join(" - ");
         } catch (e) {
-            // Any error reading metadata — fall back to folder name
+            // Any error reading metadata -- fall back to folder name
         }
         return folderName;
     }
