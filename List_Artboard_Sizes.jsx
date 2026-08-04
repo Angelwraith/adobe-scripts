@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "List Artboard Sizes",
-  "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Includes copy buttons for spreadsheet TSV and shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
-  "version": "1.3",
+  "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Includes copy buttons for spreadsheet TSV and shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
+  "version": "1.5",
   "target": "illustrator",
   "tags": ["artboard", "size", "measure", "list", "multi-document"]
 }@END_METADATA*/
@@ -18,7 +18,7 @@ var ESTIMATION_DEFAULTS = {
     bleed: 2,                       // inches per side
     rlWaste: 8,                     // inches added to run length per panel
     pinchMargin: 2,                 // inches lost to pinch rollers per roll
-    rollWidths: [36, 54, 60]        // available stocked rolls
+    rollWidths: [36, 48, 54, 60]    // available stocked rolls
 };
 
 // ============================================================================
@@ -56,7 +56,7 @@ function listArtboardSizes() {
 // DOCUMENT SELECTION DIALOG
 // ============================================================================
 function showDocumentSelectionDialog() {
-    // Filter out any documents with "proof" in the name — never useful for sizing
+    // Filter out any documents with "proof" in the name -- never useful for sizing
     var eligibleDocs = [];
     for (var d = 0; d < app.documents.length; d++) {
         if (app.documents[d].name.toLowerCase().indexOf("proof") === -1) {
@@ -222,32 +222,78 @@ function formatSize(n) {
     return rounded.toString();
 }
 
+// Finished (printed) dimension = trim + bleed on both sides, rounded up to 0.5".
+// bleed is in the same x10 scale as the trim size (finalW/finalH).
+function finishedDim(trim, bleed) {
+    return Math.ceil((trim + bleed * 2) * 2) / 2;
+}
+
 function padRight(str, len) {
     var out = str;
     while (out.length < len) out += " ";
     return out;
 }
 
-function buildDisplayText(rows) {
-    var maxNameLen = 0;
+function padLeft(str, len) {
+    var out = str;
+    while (out.length < len) out = " " + out;
+    return out;
+}
+
+// Build structured rows for the multi-column list control. Returns an array of
+// objects: { sep:true } marks a blank separator between document sets, otherwise
+// { sep:false, num, name, trim, bleed, roll, run } holds one cell per column.
+// The trim / w-bleed size pairs keep their numbers padded to fixed sub-widths so
+// the "x" reads cleanly even in a proportional font.
+//
+// Columns:  #   Panel   Trim   W/ Bleed   Roll   Run
+//   Roll = smallest stocked roll the panel fits on (from r._estimate)
+//   Run  = run length consumed on that roll, incl. R.L. waste (runWithWaste)
+function buildDisplayRows(rows, bleed) {
+    // First pass: find sub-field widths so the size numbers line up
+    var wTw = 0, wTh = 0, wBw = 0, wBh = 0;
+    var rawTw = [], rawTh = [], rawBw = [], rawBh = [];
     for (var i = 0; i < rows.length; i++) {
-        if (rows[i].name.length > maxNameLen) maxNameLen = rows[i].name.length;
+        var r = rows[i];
+        var tw = formatSize(r.finalW), th = formatSize(r.finalH);
+        var bw = formatSize(finishedDim(r.finalW, bleed)), bh = formatSize(finishedDim(r.finalH, bleed));
+        rawTw.push(tw); rawTh.push(th); rawBw.push(bw); rawBh.push(bh);
+        if (tw.length > wTw) wTw = tw.length;
+        if (th.length > wTh) wTh = th.length;
+        if (bw.length > wBw) wBw = bw.length;
+        if (bh.length > wBh) wBh = bh.length;
     }
 
-    var lines = [];
-    lines.push("Artboard sizes (x10, rounded up to 0.5\"):");
-    lines.push("");
+    var out = [];
     var lastDocName = null;
     for (var j = 0; j < rows.length; j++) {
-        var r = rows[j];
-        if (lastDocName !== null && r.docName !== lastDocName) {
-            lines.push(""); // separator between document sets
+        var r2 = rows[j];
+        if (lastDocName !== null && r2.docName !== lastDocName) {
+            out.push({ sep: true });
         }
-        var paddedName = padRight(r.name, maxNameLen);
-        lines.push(r.index + ". " + paddedName + "   " + formatSize(r.finalW) + "\" x " + formatSize(r.finalH) + "\"");
-        lastDocName = r.docName;
+
+        var est = r2._estimate;
+        var roll, run;
+        if (est && est.ok) {
+            roll = formatSize(est.rollSize) + "\"";
+            run  = formatSize(est.runWithWaste) + "\"";
+        } else {
+            roll = "--";
+            run  = "--";
+        }
+
+        out.push({
+            sep: false,
+            num:  r2.index + ".",
+            name: r2.name,
+            trim:  padLeft(rawTw[j], wTw) + "\" x " + padLeft(rawTh[j], wTh) + "\"",
+            bleed: padLeft(rawBw[j], wBw) + "\" x " + padLeft(rawBh[j], wBh) + "\"",
+            roll: roll,
+            run:  run
+        });
+        lastDocName = r2.docName;
     }
-    return lines.join("\n");
+    return out;
 }
 
 // Find the longest common prefix shared by all strings, trimmed back to a
@@ -280,11 +326,11 @@ function findCommonPrefix(strings) {
     return prefix;
 }
 
-// TSV: no header, columns Name, Height, Width.
+// TSV: no header, columns Name, TrimHeight, TrimWidth, BleedHeight, BleedWidth.
 // Strips any prefix common to all artboard names so the spreadsheet
 // has just the unique parts (e.g. "Driver - QP" instead of "Job_File_Driver - QP").
 // Inserts a blank row between document sets.
-function buildTSV(rows) {
+function buildTSV(rows, bleed) {
     var names = [];
     for (var i = 0; i < rows.length; i++) names.push(rows[i].name);
     var commonPrefix = findCommonPrefix(names);
@@ -297,7 +343,9 @@ function buildTSV(rows) {
             lines.push(""); // blank row between document sets
         }
         var trimmedName = (commonPrefix.length > 0) ? r.name.substring(commonPrefix.length) : r.name;
-        lines.push(trimmedName + "\t" + formatSize(r.finalH) + "\t" + formatSize(r.finalW));
+        lines.push(trimmedName + "\t" +
+                   formatSize(r.finalH) + "\t" + formatSize(r.finalW) + "\t" +
+                   formatSize(finishedDim(r.finalH, bleed)) + "\t" + formatSize(finishedDim(r.finalW, bleed)));
         lastDocName = r.docName;
     }
     return lines.join("\n");
@@ -613,7 +661,7 @@ function getProjectInfo(estimate, multiDoc) {
     return info;
 }
 
-// Build email-friendly plain text — summary only (coverage + roll info).
+// Build email-friendly plain text -- summary only (coverage + roll info).
 // No per-section breakdown, no parameters block.
 function buildEmailText(rows, estimate, multiDoc) {
     var t = estimate.totals;
@@ -657,7 +705,7 @@ function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// Build rich-text HTML — summary only (coverage + roll info).
+// Build rich-text HTML -- summary only (coverage + roll info).
 // Pasted into Outlook/Gmail/Apple Mail, this renders as a clean styled block.
 function buildEmailHtml(rows, estimate, multiDoc) {
     var t = estimate.totals;
@@ -932,8 +980,6 @@ function performMirrorDP() {
 // RESULTS DIALOG
 // ============================================================================
 function showResults(rows, multiDoc) {
-    var displayText = buildDisplayText(rows);
-
     var dlg = new Window("dialog", "Artboard Sizes & Estimate (" + rows.length + ")");
     dlg.alignChildren = ["fill", "fill"];
     dlg.spacing = 10;
@@ -964,7 +1010,7 @@ function showResults(rows, multiDoc) {
     var resetBtn = paramsRow1.add("button", undefined, "Reset");
     resetBtn.preferredSize.width = 60;
 
-    // Roll-availability checkboxes — uncheck a size to force panels onto the
+    // Roll-availability checkboxes -- uncheck a size to force panels onto the
     // next available larger roll
     var paramsRow2 = paramsPanel.add("group");
     paramsRow2.orientation = "row";
@@ -978,7 +1024,7 @@ function showResults(rows, multiDoc) {
         rollCheckboxes.push({ width: rw, checkbox: rcb });
     }
 
-    // Custom (unusual) roll size — enabled when checked and the field has a
+    // Custom (unusual) roll size -- enabled when checked and the field has a
     // valid positive number. Gets merged into the sorted roll list so panels
     // pick the smallest fitting roll as usual.
     var customRollCheckbox = paramsRow2.add("checkbox", undefined, "Custom:");
@@ -988,9 +1034,61 @@ function showResults(rows, multiDoc) {
     paramsRow2.add("statictext", undefined, '"');
 
     // ---- Artboard list ----
-    var listLabel = dlg.add("statictext", undefined, "Artboard sizes (x10, rounded up to 0.5\"):");
-    var edit = dlg.add("edittext", undefined, displayText, {multiline: true, scrolling: true, readonly: false});
-    edit.preferredSize = [600, 280];
+    var listLabel = dlg.add("statictext", undefined, "Artboard sizes (x10, rounded up to 0.5\")   [ trim -> w/ bleed ]:");
+
+    // Real multi-column table: column boundaries are fixed in pixels, so the
+    // columns stay aligned regardless of the platform font. Widths are sized to
+    // the content so nothing clips.
+    var initRows = buildDisplayRows(rows, ESTIMATION_DEFAULTS.bleed);
+    var maxLen = { num: 1, name: 5, trim: 4, bleed: 8, roll: 4, run: 3 };
+    for (var mi = 0; mi < initRows.length; mi++) {
+        var dr = initRows[mi];
+        if (dr.sep) continue;
+        if (dr.num.length   > maxLen.num)   maxLen.num   = dr.num.length;
+        if (dr.name.length  > maxLen.name)  maxLen.name  = dr.name.length;
+        if (dr.trim.length  > maxLen.trim)  maxLen.trim  = dr.trim.length;
+        if (dr.bleed.length > maxLen.bleed) maxLen.bleed = dr.bleed.length;
+        if (dr.roll.length  > maxLen.roll)  maxLen.roll  = dr.roll.length;
+        if (dr.run.length   > maxLen.run)   maxLen.run   = dr.run.length;
+    }
+    var CH = 8; // approx px per character
+    var colWidths = [
+        Math.max(34, maxLen.num  * CH + 10),
+        Math.max(70, maxLen.name * CH + 16),
+        Math.max(80, maxLen.trim * CH + 16),
+        Math.max(80, maxLen.bleed* CH + 16),
+        Math.max(50, maxLen.roll * CH + 12),
+        Math.max(50, maxLen.run  * CH + 12)
+    ];
+    var listW = 24;
+    for (var cwI = 0; cwI < colWidths.length; cwI++) listW += colWidths[cwI];
+
+    var list = dlg.add("listbox", undefined, [], {
+        numberOfColumns: 6,
+        showHeaders: true,
+        columnTitles: ["#", "Panel", "Trim", "W/ Bleed", "Roll", "Run"],
+        columnWidths: colWidths
+    });
+    list.preferredSize = [Math.min(listW, 900), 300];
+
+    // Fill (and refill) the table from the current bleed value.
+    function fillList(bleed) {
+        list.removeAll();
+        var drows = buildDisplayRows(rows, bleed);
+        for (var di = 0; di < drows.length; di++) {
+            var d = drows[di];
+            if (d.sep) {
+                list.add("item", ""); // blank separator row
+                continue;
+            }
+            var it = list.add("item", d.num);
+            it.subItems[0].text = d.name;
+            it.subItems[1].text = d.trim;
+            it.subItems[2].text = d.bleed;
+            it.subItems[3].text = d.roll;
+            it.subItems[4].text = d.run;
+        }
+    }
 
     // ---- Estimate summary panel ----
     var summaryPanel = dlg.add("panel", undefined, "Material Estimate");
@@ -1052,6 +1150,9 @@ function showResults(rows, multiDoc) {
         var params = readParams();
         currentEstimate = calculateOverallEstimate(rows, params);
         summaryText.text = buildEstimateSummary(currentEstimate, multiDoc);
+        // Rebuild the size table so the w/ bleed, Roll, and Run columns track
+        // the current parameters
+        fillList(params.bleed);
     }
 
     bleedField.onChange = refresh;
@@ -1095,10 +1196,10 @@ function showResults(rows, multiDoc) {
 
     // ---- Button handlers ----
     copyTSVBtn.onClick = function() {
-        var tsv = buildTSV(rows);
+        var tsv = buildTSV(rows, readParams().bleed);
         var ok = setClipboardText(tsv);
         if (ok) {
-            alert("Copied " + rows.length + " row(s) to clipboard.\nPaste into a spreadsheet — columns: Name, Height, Width.");
+            alert("Copied " + rows.length + " row(s) to clipboard.\nPaste into a spreadsheet -- columns: Name, Trim H, Trim W, Bleed H, Bleed W.");
         } else {
             showCopyFallbackDialog(tsv);
         }
