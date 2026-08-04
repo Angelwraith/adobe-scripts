@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Merge Text",
   "description": "Merges selected text frames top-to-bottom into a single frame, preserving character formatting (kerning, tracking, color, fonts) and exact vertical pixel spacing via per-line leading",
-  "version": "1.0",
+  "version": "1.1",
   "target": "illustrator",
   "tags": ["text", "merge", "combine", "labels"]
 }@END_METADATA*/
@@ -15,8 +15,8 @@
 //
 //   1. Top-only sort (no separator/sort UI). Stacked labels almost always go
 //      top-to-bottom; the dropdown options were redundant for that use case.
-//   2. Preserves all character attributes — kerning, tracking, color, font,
-//      manual offsets — by using textRange.move() instead of overwriting
+//   2. Preserves all character attributes -- kerning, tracking, color, font,
+//      manual offsets -- by using textRange.move() instead of overwriting
 //      .contents with a separator string (which silently destroys formatting).
 //   3. Captures the exact pixel gap between each pair of frames before merging
 //      and applies it as leading on the corresponding line of the merged
@@ -55,7 +55,7 @@
         return diff;
     });
 
-    // Snapshot original top positions BEFORE merging — geometry shifts as we
+    // Snapshot original top positions BEFORE merging -- geometry shifts as we
     // move text around, and we need the original gaps for leading calculation.
     var tops = [];
     for (var i = 0; i < tfs.length; i++) {
@@ -68,7 +68,7 @@
         var source = tfs[i];
         var gap = tops[i - 1] - tops[i]; // exact pixel distance, top-to-top
 
-        // Index where target's current text ends — the join point
+        // Index where target's current text ends -- the join point
         var oldLength = target.contents.length;
 
         // Append paragraph break. characters.add() inherits formatting from
@@ -76,7 +76,7 @@
         target.textRange.characters.add("\r");
 
         // Move source's textRange to the end of target.
-        // CRITICAL: move() preserves all character attributes — kerning,
+        // CRITICAL: move() preserves all character attributes -- kerning,
         // tracking, color, font, size, manual letter offsets. The original
         // script's `arr[i].textRange.contents = separator + arr[i].textRange.contents`
         // was destroying every per-character attribute before the move.
