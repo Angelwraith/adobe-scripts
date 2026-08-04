@@ -3,7 +3,7 @@
 {
   "name": "Scale Selection to Target Size",
   "description": "Select a key object, enter target dimensions, and scale everything proportionally. Also supports ratio conversion (e.g., 3/8\"=1'-0\" -> 1:10).",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["scale", "size", "processors"]
 }
@@ -284,8 +284,60 @@ function getSelectionBounds(selection) {
 // ============================================================================
 // SCALE INPUT PARSING
 // ============================================================================
+// Normalize the fancy characters customers actually send (typographic prime and
+// double-prime, curly quotes, en/em dashes, non-breaking spaces, Unicode fraction
+// glyphs) down to plain ASCII so the rest of the parser can read them. Handles
+// scales pasted with real prime marks, e.g.  1 1/2" = 1'-0"  or  1.5" = 1'-0".
+// Implemented by char code so this source file stays pure ASCII.
+function fractionForCode(c) {
+    switch (c) {
+        case 0x00BC: return '1/4';
+        case 0x00BD: return '1/2';
+        case 0x00BE: return '3/4';
+        case 0x2153: return '1/3';
+        case 0x2154: return '2/3';
+        case 0x2155: return '1/5';
+        case 0x2156: return '2/5';
+        case 0x2157: return '3/5';
+        case 0x2158: return '4/5';
+        case 0x2159: return '1/6';
+        case 0x215A: return '5/6';
+        case 0x215B: return '1/8';
+        case 0x215C: return '3/8';
+        case 0x215D: return '5/8';
+        case 0x215E: return '7/8';
+    }
+    return null;
+}
+
+function normalizeScaleText(input) {
+    if (input === undefined || input === null) return '';
+    var src = String(input);
+    var out = [];
+    for (var i = 0; i < src.length; i++) {
+        var c = src.charCodeAt(i);
+        if (c === 0x201C || c === 0x201D || c === 0x201E || c === 0x201F ||
+            c === 0x2033 || c === 0x3003 || c === 0x301D || c === 0x301E || c === 0x301F) {
+            out.push('"');   // double-prime / smart double quotes -> "
+        } else if (c === 0x2018 || c === 0x2019 || c === 0x201A || c === 0x201B ||
+                   c === 0x2032 || c === 0x00B4 || c === 0x0060) {
+            out.push("'");   // prime / smart single quotes / acute / backtick -> '
+        } else if (c === 0x2010 || c === 0x2011 || c === 0x2012 || c === 0x2013 ||
+                   c === 0x2014 || c === 0x2015 || c === 0x2212) {
+            out.push('-');   // assorted dashes / minus -> hyphen
+        } else if (c === 0x00A0 || (c >= 0x2000 && c <= 0x200B) ||
+                   c === 0x202F || c === 0x205F || c === 0x3000) {
+            out.push(' ');   // assorted spaces (nbsp, thin, figure, ideographic, zero-width) -> space
+        } else {
+            var frac = fractionForCode(c);
+            out.push(frac !== null ? (' ' + frac + ' ') : src.charAt(i));
+        }
+    }
+    return out.join('');
+}
+
 // Parses scale notation into a single number N representing ratio 1:N.
-// Supported formats:
+// Supported formats (quotes/primes are normalized first):
 //   "1:32"           -> 32
 //   "1 : 50"         -> 50
 //   "3/8\" = 1'-0\"" -> 32     (3/8" page = 12" real, so 1:32)
@@ -293,11 +345,13 @@ function getSelectionBounds(selection) {
 //   "1\" = 1'"       -> 12
 //   "1\" = 10\""     -> 10
 //   "1 1/2\" = 1'"   -> 8      (mixed numbers supported)
+//   "1 1/2\" = 12\"" -> 8
+//   "1.5\" = 1'-0\"" -> 8      (decimal source, feet-inch target)
 //   "0.375 = 12"     -> 32     (decimals, no inch marks ok too)
 // Returns null if the input cannot be parsed.
 function parseScaleInput(input) {
     if (input === undefined || input === null) return null;
-    var s = String(input).replace(/^\s+|\s+$/g, '');
+    var s = normalizeScaleText(input).replace(/^\s+|\s+$/g, '');
     if (s === '') return null;
 
     // Format: "1:N" or "1 : N"
@@ -325,11 +379,11 @@ function parseScaleInput(input) {
 
 // Parse an expression representing a length in inches.
 // Handles: feet-inches ("1'-6\""), feet only ("1'"), fractions ("3/8"),
-// mixed numbers ("1 1/2"), decimals ("0.375"), whole numbers ("12"),
-// with or without quote marks.
+// mixed numbers ("1 1/2" or "1-1/2"), decimals ("0.375"), whole numbers ("12"),
+// with or without quote marks. Input is normalized to ASCII first.
 function parseAsInches(text) {
     if (text === undefined || text === null) return null;
-    var s = String(text).replace(/^\s+|\s+$/g, '');
+    var s = normalizeScaleText(text).replace(/^\s+|\s+$/g, '');
     if (s === '') return null;
 
     var totalInches = 0;
@@ -348,8 +402,8 @@ function parseAsInches(text) {
 
     if (s === '') return totalInches;
 
-    // Mixed number: "1 1/2"
-    var mixed = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+    // Mixed number: "1 1/2" or "1-1/2"
+    var mixed = s.match(/^(\d+)[\s\-]+(\d+)\s*\/\s*(\d+)$/);
     if (mixed) {
         var denom = parseFloat(mixed[3]);
         if (denom === 0) return null;
