@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "File Check",
   "description": "Production file readiness analysis with manifest comparison",
-  "version": "3.1",
+  "version": "3.2",
   "target": "illustrator",
   "tags": ["file", "check", "report", "manifest"]
 }@END_METADATA*/
@@ -217,6 +217,39 @@ function extractMaterialFromFilename(filename) {
     return '';
 }
 
+function extractMaterialFromArtboards(doc) {
+    // Fallback material detection for combined/PRIME files whose filename has no
+    // _PRINT_/_CUT_/_PNC_/_CUTONLY_ token. Artboards in these files are named after
+    // the material (e.g. "3mmACM_Pt1", "3mmACM_Pt2"). Strip the _Pt# suffix and, if
+    // every artboard shares the same base name, use it as the material name.
+    // If artboards disagree (mixed materials in one file), return '' rather than guess.
+    try {
+        if (!doc || !doc.artboards || doc.artboards.length === 0) {
+            return '';
+        }
+        var firstMat = null;
+        for (var a = 0; a < doc.artboards.length; a++) {
+            var abName = doc.artboards[a].name;
+            if (!abName) { continue; }
+            // Strip trailing _Pt# (and _Part#) multi-part suffix to match the
+            // normalization used by extractMaterialFromFilename
+            var base = abName.replace(/_Pt\d+$/i, '').replace(/_Part\d+$/i, '');
+            // Trim surrounding whitespace
+            base = base.replace(/^\s+|\s+$/g, '');
+            if (base.length === 0) { continue; }
+            if (firstMat === null) {
+                firstMat = base;
+            } else if (firstMat !== base) {
+                // Mixed materials across artboards - can't safely pick one
+                return '';
+            }
+        }
+        return firstMat || '';
+    } catch (e) {
+        return '';
+    }
+}
+
 function extractFileType(filename) {
     // Returns the production file type: PRINT, CUT, CutOnly, PnC, or empty
     var upperName = filename.toUpperCase();
@@ -404,18 +437,42 @@ function buildManifestComparison(packingData, individualResults) {
     if (individualResults) {
         for (var d = 0; d < individualResults.length; d++) {
             var ir = individualResults[d];
-            var matName = ir.materialName || 'Unknown';
-            if (!foundSizes[matName]) { foundSizes[matName] = {}; }
+            var fileMat = ir.materialName || '';
 
-            // CutOnly and PnC files use CutContour layers, not CutThrough2-Outside
-            // Their cut paths can't be reliably counted (vinyl = multi-piece)
-            if (ir.fileType === 'CutOnly' || ir.fileType === 'PnC') {
-                uncountableMaterials[matName] = true;
-            }
+            // Does this result carry per-artboard material buckets? (mixed PRIME files)
+            var byMat = ir.cutThroughSizesByMaterial;
+            var hasByMat = false;
+            if (byMat) { for (var bmk in byMat) { if (byMat.hasOwnProperty(bmk)) { hasByMat = true; break; } } }
 
-            if (ir.cutThroughSizes) {
-                for (var size in ir.cutThroughSizes) {
-                    foundSizes[matName][size] = (foundSizes[matName][size] || 0) + ir.cutThroughSizes[size];
+            if (fileMat.length > 0) {
+                // Single material known for the whole file (split files, or a PRIME
+                // file whose artboards all share one material). Unchanged behavior.
+                if (!foundSizes[fileMat]) { foundSizes[fileMat] = {}; }
+                if (ir.fileType === 'CutOnly' || ir.fileType === 'PnC') {
+                    uncountableMaterials[fileMat] = true;
+                }
+                if (ir.cutThroughSizes) {
+                    for (var size in ir.cutThroughSizes) {
+                        foundSizes[fileMat][size] = (foundSizes[fileMat][size] || 0) + ir.cutThroughSizes[size];
+                    }
+                }
+            } else if (hasByMat) {
+                // Mixed-material PRIME file: file name gave no material, so bucket
+                // each cut path under the material of the artboard it sits on.
+                for (var pm in byMat) {
+                    if (!byMat.hasOwnProperty(pm)) { continue; }
+                    if (!foundSizes[pm]) { foundSizes[pm] = {}; }
+                    for (var psize in byMat[pm]) {
+                        foundSizes[pm][psize] = (foundSizes[pm][psize] || 0) + byMat[pm][psize];
+                    }
+                }
+            } else {
+                // No material info at all -> fall back to the old Unknown bucket.
+                if (!foundSizes['Unknown']) { foundSizes['Unknown'] = {}; }
+                if (ir.cutThroughSizes) {
+                    for (var usize in ir.cutThroughSizes) {
+                        foundSizes['Unknown'][usize] = (foundSizes['Unknown'][usize] || 0) + ir.cutThroughSizes[usize];
+                    }
                 }
             }
         }
@@ -442,7 +499,7 @@ function buildManifestComparison(packingData, individualResults) {
         expectedLines.push(matName);
         foundLines.push(matName);
 
-        // If this material uses CutOnly/PnC, skip counting — show note instead
+        // If this material uses CutOnly/PnC, skip counting -- show note instead
         if (uncountableMaterials[matName]) {
             var expCount = 0;
             for (var sz in expectedByMat) { expCount += expectedByMat[sz]; }
@@ -569,16 +626,24 @@ function runAnalysis(documents, includePPI) {
             var docResult = analyzeDocument(targetDoc, includePPI, scaleFactor);
             var analysisTime = new Date().getTime() - docStartTime;
 
+            // Determine material name: filename token first, then fall back to
+            // artboard names (handles combined/PRIME files with no _PRINT_/_CUT_ token)
+            var detectedMaterial = extractMaterialFromFilename(doc.name);
+            if (!detectedMaterial || detectedMaterial.length === 0) {
+                detectedMaterial = extractMaterialFromArtboards(targetDoc);
+            }
+
             // Store individual document results
             var individualResult = {
                 name: doc.name,
-                materialName: extractMaterialFromFilename(doc.name),
+                materialName: detectedMaterial,
                 fileType: extractFileType(doc.name),
                 analysisTime: analysisTime,
                 rasterCount: docResult.rasterCount,
                 lowResImages: docResult.lowResImages || [],
                 allImageDetails: docResult.allImageDetails || [],
                 cutThroughSizes: docResult.cutThroughSizes || {},
+                cutThroughSizesByMaterial: docResult.cutThroughSizesByMaterial || {},
                 totalCutThroughPaths: docResult.totalCutThroughPaths || 0,
                 compoundPathWarnings: docResult.compoundPathWarnings || [],
                 totalCompoundPaths: docResult.totalCompoundPaths || 0,
@@ -719,9 +784,39 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
 
     function findPathsWithCutThroughColor(doc) {
         var cutThroughSizes = {};
+        // Cut sizes grouped by the material of the ARTBOARD each path sits on.
+        // This is what lets mixed-material PRIME files match the proof (each board
+        // is one material, so we look up the board a path is on and use its name).
+        var cutThroughSizesByMaterial = {};
         var totalPaths = 0;
         var compoundPathWarnings = [];
         var totalCompoundPaths = 0;
+
+        // Precompute each artboard's rectangle + material name (name minus _Pt#/_Part#).
+        var abInfo = [];
+        try {
+            for (var ab = 0; ab < doc.artboards.length; ab++) {
+                var abName = doc.artboards[ab].name || '';
+                var abMat = abName.replace(/_Pt\d+$/i, '').replace(/_Part\d+$/i, '').replace(/^\s+|\s+$/g, '');
+                if (abMat.length === 0) { abMat = 'Unknown'; }
+                abInfo.push({ rect: doc.artboards[ab].artboardRect, material: abMat });
+            }
+        } catch (eAB) {}
+
+        // Which artboard (material) contains a path, by its center point.
+        // artboardRect and geometricBounds are both [L, T, R, B] in the same
+        // point space, so scaleFactor is irrelevant to this containment test.
+        function materialForBounds(b) {
+            var cx = (b[0] + b[2]) / 2;
+            var cy = (b[1] + b[3]) / 2;
+            for (var q = 0; q < abInfo.length; q++) {
+                var r = abInfo[q].rect;
+                if (cx >= r[0] && cx <= r[2] && cy <= r[1] && cy >= r[3]) {
+                    return abInfo[q].material;
+                }
+            }
+            return 'Unknown';
+        }
 
         try {
             // Verify the spot color exists in this document
@@ -736,6 +831,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
             if (!hasSpot) {
                 return {
                     cutThroughSizes: cutThroughSizes,
+                    cutThroughSizesByMaterial: cutThroughSizesByMaterial,
                     totalCutThroughPaths: 0,
                     compoundPathWarnings: compoundPathWarnings,
                     totalCompoundPaths: 0
@@ -806,12 +902,12 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                 }
             }
 
-            // Walk all layers (including locked/hidden — we still want to count them)
+            // Walk all layers (including locked/hidden -- we still want to count them)
             for (var layerIdx = 0; layerIdx < doc.layers.length; layerIdx++) {
                 walkItems(doc.layers[layerIdx]);
             }
 
-            // Tally sizes
+            // Tally sizes (overall and per artboard-material)
             for (var i = 0; i < allPaths.length; i++) {
                 var size = getPathDimensions(allPaths[i]);
                 if (cutThroughSizes[size]) {
@@ -819,6 +915,9 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                 } else {
                     cutThroughSizes[size] = 1;
                 }
+                var mat = materialForBounds(allPaths[i].geometricBounds);
+                if (!cutThroughSizesByMaterial[mat]) { cutThroughSizesByMaterial[mat] = {}; }
+                cutThroughSizesByMaterial[mat][size] = (cutThroughSizesByMaterial[mat][size] || 0) + 1;
                 totalPaths++;
             }
 
@@ -826,6 +925,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
 
         return {
             cutThroughSizes: cutThroughSizes,
+            cutThroughSizesByMaterial: cutThroughSizesByMaterial,
             totalCutThroughPaths: totalPaths,
             compoundPathWarnings: compoundPathWarnings,
             totalCompoundPaths: totalCompoundPaths
@@ -1026,6 +1126,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
     // CutThrough analysis - FAST METHOD using Find Color
     var cutThroughResults = findPathsWithCutThroughColor(doc);
     var cutThroughSizes = cutThroughResults.cutThroughSizes;
+    var cutThroughSizesByMaterial = cutThroughResults.cutThroughSizesByMaterial || {};
     var totalCutThroughPaths = cutThroughResults.totalCutThroughPaths;
     var compoundPathWarnings = cutThroughResults.compoundPathWarnings;
     var totalCompoundPaths = cutThroughResults.totalCompoundPaths;
@@ -1035,6 +1136,7 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
         lowResImages: lowResImages,
         allImageDetails: allImageDetails,
         cutThroughSizes: cutThroughSizes,
+        cutThroughSizesByMaterial: cutThroughSizesByMaterial,
         totalCutThroughPaths: totalCutThroughPaths,
         compoundPathWarnings: compoundPathWarnings,
         totalCompoundPaths: totalCompoundPaths
