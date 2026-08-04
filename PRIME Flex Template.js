@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "4.2",
+  "version": "4.3",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -571,7 +571,7 @@ function showSetupDialog(docChoice) {
     sizeHeader.graphics.font = ScriptUI.newFont("dialog", "Bold", 10);
     
     var qtyHeader = headerGroup.add("statictext", undefined, "Qty");
-    qtyHeader.preferredSize.width = 80;
+    qtyHeader.preferredSize.width = 72;
     qtyHeader.graphics.font = ScriptUI.newFont("dialog", "Bold", 10);
 
     var regHeader = headerGroup.add("statictext", undefined, "Reg Dots");
@@ -599,6 +599,7 @@ function showSetupDialog(docChoice) {
         
         var materialField = rowGroup.add("edittext", undefined, material ? material.name : "");
         materialField.preferredSize.width = 220;
+        materialField.maximumSize.width = 220;
         
         // Store metadata on the field for later retrieval
         if (material && material.fromPackingData) {
@@ -613,11 +614,13 @@ function showSetupDialog(docChoice) {
         sizeContainer.orientation = "column";
         sizeContainer.alignChildren = "fill";
         sizeContainer.preferredSize.width = 200;
+        sizeContainer.maximumSize.width = 200;
         sizeContainer.spacing = 2;
-        
-        var sizeDropdown = sizeContainer.add("dropdownlist", undefined, 
+
+        var sizeDropdown = sizeContainer.add("dropdownlist", undefined,
             ['Auto/Metadata', '48"w x 96"h', '60"w x 120"h', '50"w x 100"h', 'Custom']);
         sizeDropdown.preferredSize.width = 200;
+        sizeDropdown.maximumSize.width = 200;
         
         if (material) {
             // Check if material has packing data (custom sizes from metadata)
@@ -660,16 +663,19 @@ function showSetupDialog(docChoice) {
         var qtyContainer = rowGroup.add("group");
         qtyContainer.orientation = "column";
         qtyContainer.alignChildren = "fill";
-        qtyContainer.preferredSize.width = 80;
+        qtyContainer.preferredSize.width = 72;
+        qtyContainer.maximumSize.width = 72;
         qtyContainer.spacing = 2;
 
         var qtyDropdown = qtyContainer.add("dropdownlist", undefined,
             ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','Custom']);
         qtyDropdown.selection = material ? Math.min(material.maxPart, 20) - 1 : 0;
-        qtyDropdown.preferredSize.width = 80;
+        qtyDropdown.preferredSize.width = 72;
+        qtyDropdown.maximumSize.width = 72;
 
         var customQtyField = qtyContainer.add("edittext", undefined, "");
-        customQtyField.preferredSize.width = 80;
+        customQtyField.preferredSize.width = 72;
+        customQtyField.maximumSize.width = 72;
         customQtyField.visible = false;
 
         qtyDropdown.onChange = function() {
