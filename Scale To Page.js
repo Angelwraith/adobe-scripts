@@ -2,8 +2,8 @@
 @METADATA
 {
   "name": "Scale To Page",
-  "description": "Copies the selected 1/10 scale art onto the active artboard at a chosen percentage of its current size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. You can enter either a percentage (50%, 2x) or a target ratio (1:12) directly; the resulting scale and equivalent percentage update live as you type, so decimal scales are easy to spot and avoid. The label is written in the format the Smart Dimension Tool auto-detects, so dimensions come out accurate with no extra setup.",
-  "version": "1.1",
+  "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
+  "version": "1.5",
   "target": "illustrator",
   "tags": ["scale", "copy", "layout", "processor"]
 }
@@ -15,54 +15,37 @@
 (function () {
     'use strict';
 
+    // Close any previous instance of this palette (default engine keeps $.global).
+    try {
+        if ($.global.__scaleToPagePalette && $.global.__scaleToPagePalette instanceof Window) {
+            $.global.__scaleToPagePalette.close();
+        }
+    } catch (ePrev) {}
+    $.global.__scaleToPagePalette = null;
+
     if (app.documents.length === 0) {
         alert("Please open a document first.");
         return;
     }
 
-    var doc = app.activeDocument;
-    var sel = doc.selection;
-
-    if (!sel || sel.length === 0) {
+    if (!app.activeDocument.selection || app.activeDocument.selection.length === 0) {
         alert("Select the 1/10 scale art you want to copy onto the page, then run the script.");
         return;
     }
 
-    // --- Snapshot the current selection (running the dialog can clear it) ---
-    var sourceItems = [];
-    for (var i = 0; i < sel.length; i++) {
-        sourceItems.push(sel[i]);
-    }
+    var BASE_DENOMINATOR = 10;                 // art is always extracted at 1:10 scale
+    var PREVIEW_TAG = "__STP_PREVIEW__";       // name applied to transient preview copies
 
     // ------------------------------------------------------------------
-    // Helpers
+    // Number / input helpers (UI-side only -- safe in palette handlers)
     // ------------------------------------------------------------------
 
-    // Look up a character style by name (matches SmartDimensionTool's DimStyle usage)
-    function getCharacterStyle(styleName) {
-        try {
-            for (var i = 0; i < doc.characterStyles.length; i++) {
-                if (doc.characterStyles[i].name === styleName) {
-                    return doc.characterStyles[i];
-                }
-            }
-        } catch (e) {}
-        return null;
-    }
-
-    // Trim trailing zeros / format a number cleanly for the scale label.
     function fmtNum(n) {
-        var r = Math.round(n * 100) / 100;      // 2 decimals max
-        if (Math.abs(r - Math.round(r)) < 1e-9) {
-            return String(Math.round(r));       // whole number
-        }
-        var s = r.toFixed(2);
-        s = s.replace(/0+$/, "").replace(/\.$/, "");
-        return s;
+        var r = Math.round(n * 100) / 100;
+        if (Math.abs(r - Math.round(r)) < 1e-9) return String(Math.round(r));
+        return r.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
     }
 
-    // Parse a percentage input. Accepts "50", "50%", "2x", "x2".
-    // Returns a percent number (e.g. 50, 200) or NaN.
     function parsePercent(raw) {
         if (raw === null) return NaN;
         var s = String(raw).replace(/^\s+|\s+$/g, "").toLowerCase();
@@ -76,70 +59,192 @@
         return mult ? v * 100 : v;
     }
 
-    // Parse either a percentage ("50", "50%", "2x") OR a target scale ratio
-    // ("1:12", "2:24"). Returns { pct, factor, denominator } or null.
-    //   - percentage: factor = pct/100, on-page denominator = 10*100/pct
-    //   - ratio a:b : on-page denominator = b/a, factor = 10/denominator
-    function parseInput(raw) {
+    function parseRatio(raw) {
         if (raw === null) return null;
         var s = String(raw).replace(/^\s+|\s+$/g, "");
-        if (s.length === 0) return null;
+        if (s.indexOf(":") === -1) return null;
+        var parts = s.split(":");
+        var a = parseFloat(parts[0]);
+        var b = parseFloat(parts[1]);
+        if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) return null;
+        return { a: a, b: b, denominator: b / a };
+    }
 
-        if (s.indexOf(":") !== -1) {
-            var parts = s.split(":");
-            var a = parseFloat(parts[0]);
-            var b = parseFloat(parts[1]);
-            if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) return null;
-            var denom = b / a;                              // on-page scale 1:denom
-            var factorR = BASE_DENOMINATOR / denom;         // multiplier vs current size
-            return { pct: factorR * 100, factor: factorR, denominator: denom };
-        }
-
-        var pct = parsePercent(s);
-        if (isNaN(pct) || pct <= 0) return null;
+    function computeFromPct(pct) {
         return { pct: pct, factor: pct / 100, denominator: BASE_DENOMINATOR * 100 / pct };
     }
+    function computeFromRatio(denom) {
+        var factor = BASE_DENOMINATOR / denom;
+        return { pct: factor * 100, factor: factor, denominator: denom };
+    }
 
-    // Collective geometric bounds of an array of page items -> [L, T, R, B]
-    function collectiveBounds(items) {
-        var minL = Infinity, maxT = -Infinity, maxR = -Infinity, minB = Infinity;
-        for (var k = 0; k < items.length; k++) {
-            var b = items[k].geometricBounds; // [L, T, R, B]
-            if (b[0] < minL) minL = b[0];
-            if (b[1] > maxT) maxT = b[1];
-            if (b[2] > maxR) maxR = b[2];
-            if (b[3] < minB) minB = b[3];
+    var lastEdited = "pct"; // which field the user touched most recently
+
+    function currentParams() {
+        var p = null;
+        if (lastEdited === "ratio") {
+            var r = parseRatio(ratioInput.text);
+            if (r) p = computeFromRatio(r.denominator);
+        } else {
+            var pct = parsePercent(pctInput.text);
+            if (!isNaN(pct) && pct > 0) p = computeFromPct(pct);
         }
-        return [minL, maxT, maxR, minB];
+        if (!p) return null;
+        p.scaleString = "1:" + fmtNum(p.denominator);
+        return p;
     }
 
     // ------------------------------------------------------------------
-    // Dialog
+    // Document work runs in Illustrator's MAIN engine via BridgeTalk.
+    // (A palette's own handlers can't reliably touch app.activeDocument --
+    //  doing so directly is what froze the earlier version.)
     // ------------------------------------------------------------------
 
-    var dlg = new Window("dialog", "Scale To Page");
+    function runInMain(body, onDone) {
+        try {
+            var bt = new BridgeTalk();
+            bt.target = "illustrator";
+            bt.body = body;
+            bt.onResult = function (res) { if (onDone) onDone(res.body); };
+            bt.onError = function (err) { if (onDone) onDone("ERR:" + ((err && err.body) || "unknown")); };
+            bt.send();
+        } catch (e) {
+            if (onDone) onDone("ERR:" + e.message);
+        }
+    }
+
+    // Build the placement script (as a string) for the main engine.
+    //   isPreview true  -> tag copies with PREVIEW_TAG, keep source selected, leave existing labels alone
+    //   isPreview false -> remove old "Scale" labels, add the real label, select the copies
+    // Existing PREVIEW_TAG items are always cleared first (so re-preview / commit don't stack).
+    // Preview copies live on their own layer named PREVIEW_TAG. Creating/removing
+    // a layer is instant -- unlike scanning d.pageItems, which is brutally slow on
+    // large production files (that scan was the source of the lag).
+    function buildPlaceScript(factor, scaleString, doLabel, isPreview) {
+        var s = "";
+        s += "var __r='OK';";
+        s += "try{";
+        s += "if(app.documents.length===0){__r='NODOC';}else{";
+        s += "var d=app.activeDocument;";
+        s += "var sel=d.selection;";
+        s += "if(!sel||sel.length===0){__r='NOSEL';}else{";
+        s += "var LYR='" + PREVIEW_TAG + "';";
+        s += "var factor=" + factor + ";";
+        s += "function cb(items){var L=1/0,T=-1/0,R=-1/0,B=1/0;for(var k=0;k<items.length;k++){var b=items[k].geometricBounds;if(b[0]<L)L=b[0];if(b[1]>T)T=b[1];if(b[2]>R)R=b[2];if(b[3]<B)B=b[3];}return [L,T,R,B];}";
+        // Capture the source, then remove any existing preview layer (fast).
+        s += "var src=[];for(var i=0;i<sel.length;i++){src.push(sel[i]);}";
+        s += "try{for(var li=d.layers.length-1;li>=0;li--){if(d.layers[li].name===LYR){d.layers[li].remove();}}}catch(e){}";
+        // Duplicate + scale as a unit about the collective top-left.
+        s += "var copies=[];for(var s2=0;s2<src.length;s2++){copies.push(src[s2].duplicate());}";
+        s += "var pre=cb(copies);var ax=pre[0],ay=pre[1];";
+        s += "for(var c=0;c<copies.length;c++){var it=copies[c];var bb=it.geometricBounds;var oL=bb[0],oT=bb[1];";
+        s += "it.resize(factor*100,factor*100,true,true,true,true,true,Transformation.TOPLEFT);";
+        s += "var nL=ax+factor*(oL-ax);var nT=ay+factor*(oT-ay);it.translate(nL-oL,nT-oT);}";
+        // Center on the active artboard.
+        s += "var ai=d.artboards.getActiveArtboardIndex();var ar=d.artboards[ai].artboardRect;";
+        s += "var acx=(ar[0]+ar[2])/2,acy=(ar[1]+ar[3])/2;";
+        s += "var post=cb(copies);var ccx=(post[0]+post[2])/2,ccy=(post[1]+post[3])/2;var dx=acx-ccx,dy=acy-ccy;";
+        s += "for(var m=0;m<copies.length;m++){copies[m].translate(dx,dy);}";
+        s += "var lbl=null;";
+        if (doLabel) {
+            if (!isPreview) {
+                // Remove existing "Scale ..." labels sitting on the active artboard.
+                s += "try{for(var t=d.textFrames.length-1;t>=0;t--){var tf=d.textFrames[t];var cn='';try{cn=tf.contents;}catch(e){cn='';}";
+                s += "if(cn.toLowerCase().indexOf('scale ')!==0)continue;var tb=tf.geometricBounds;var lcx=(tb[0]+tb[2])/2,lcy=(tb[1]+tb[3])/2;";
+                s += "if(lcx>=ar[0]&&lcx<=ar[2]&&lcy<=ar[1]&&lcy>=ar[3])tf.remove();}}catch(e){}";
+            }
+            s += "var lay=d.activeLayer;try{if(lay.locked||!lay.visible){for(var Lz=0;Lz<d.layers.length;Lz++){if(!d.layers[Lz].locked&&d.layers[Lz].visible){lay=d.layers[Lz];break;}}}}catch(e){}";
+            s += "try{var lx=ar[0]+(4*72);var ly=ar[1]-(6.9816*72);lbl=lay.textFrames.add();lbl.contents='Scale " + scaleString + "';";
+            s += "var cs=null;try{for(var ci=0;ci<d.characterStyles.length;ci++){if(d.characterStyles[ci].name==='DimStyle'){cs=d.characterStyles[ci];break;}}}catch(e){}";
+            s += "if(cs){lbl.textRange.characterAttributes.characterStyle=cs;}";
+            s += "lbl.textRange.characterAttributes.size=7;lbl.textRange.paragraphAttributes.justification=Justification.CENTER;";
+            s += "lbl.top=ly;lbl.left=lx-(lbl.width/2);}catch(e){}";
+        }
+        if (isPreview) {
+            // Move the copies (and label) onto a fresh preview layer; keep the
+            // source selected so re-preview / commit still see it.
+            s += "try{var pl=d.layers.add();pl.name=LYR;for(var mv=copies.length-1;mv>=0;mv--){try{copies[mv].moveToBeginning(pl);}catch(e){}}";
+            s += "if(lbl){try{lbl.moveToBeginning(pl);}catch(e){}}}catch(e){}";
+            s += "try{d.selection=src;}catch(e){}";
+        } else {
+            s += "try{d.selection=null;for(var sc=0;sc<copies.length;sc++){copies[sc].selected=true;}}catch(e){}";
+        }
+        s += "app.redraw();";
+        s += "}}";
+        s += "}catch(e){__r='ERR:'+e.message;}";
+        s += "__r;";
+        return s;
+    }
+
+    // Remove the preview layer (and everything on it) -- instant, no page scan.
+    function buildClearScript() {
+        var s = "";
+        s += "var __r='OK';try{if(app.documents.length>0){var d=app.activeDocument;";
+        s += "for(var li=d.layers.length-1;li>=0;li--){try{if(d.layers[li].name==='" + PREVIEW_TAG + "')d.layers[li].remove();}catch(e){}}";
+        s += "app.redraw();}}catch(e){__r='ERR:'+e.message;}__r;";
+        return s;
+    }
+
+    var busy = false; // guard against overlapping BridgeTalk operations
+
+    function reportProblem(code) {
+        if (code === "NOSEL") {
+            statusText.text = "Select the source art first (it must stay selected).";
+        } else if (code === "NODOC") {
+            statusText.text = "No document open.";
+        } else if (code && code.indexOf("ERR:") === 0) {
+            statusText.text = "Error: " + code.substring(4);
+        } else {
+            statusText.text = "";
+        }
+    }
+
+    function renderPreview() {
+        if (busy) return;
+        var p = currentParams();
+        if (!p) return;
+        busy = true;
+        runInMain(buildPlaceScript(p.factor, p.scaleString, cbLabel.value, true), function (r) {
+            busy = false;
+            reportProblem(r === "OK" ? "" : r);
+        });
+    }
+
+    function clearPreview(onDone) {
+        runInMain(buildClearScript(), function (r) { if (onDone) onDone(r); });
+    }
+
+    // ------------------------------------------------------------------
+    // Palette UI (non-blocking)
+    // ------------------------------------------------------------------
+
+    var dlg = new Window("palette", "Scale To Page");
     dlg.orientation = "column";
     dlg.alignChildren = "fill";
     dlg.margins = 16;
     dlg.spacing = 10;
+    $.global.__scaleToPagePalette = dlg;
 
-    var BASE_DENOMINATOR = 10; // art is always extracted at 1:10 scale
+    var srcCount = app.activeDocument.selection.length;
+    dlg.add("statictext", undefined, "Selected art: " + srcCount + " object(s)   (starting scale 1:10)");
 
-    dlg.add("statictext", undefined, "Selected art: " + sourceItems.length + " object(s)   (starting scale 1:10)");
-
-    // Resize amount: a percentage OR a target scale ratio
     var pctGroup = dlg.add("group");
     pctGroup.add("statictext", undefined, "Resize to:");
     var pctInput = pctGroup.add("edittext", undefined, "100%");
     pctInput.characters = 8;
-    pctGroup.add("statictext", undefined, "% of current size, or a target ratio like 1:12");
+    pctGroup.add("statictext", undefined, "% of current size");
 
-    // Live preview of the resulting scale
+    var ratioGroup = dlg.add("group");
+    var ratioLbl = ratioGroup.add("statictext", undefined, "Target ratio:");
+    ratioLbl.preferredSize.width = 62;
+    var ratioInput = ratioGroup.add("edittext", undefined, "1:10");
+    ratioInput.characters = 8;
+    ratioGroup.add("statictext", undefined, "e.g. 1:12   (updates with the percentage)");
+
     var previewText = dlg.add("statictext", undefined, "New scale on page:  1:10   (100% of current)");
-    previewText.preferredSize.width = 360; // room for longer messages
+    previewText.preferredSize.width = 360;
     previewText.graphics.font = ScriptUI.newFont(previewText.graphics.font.name, "BOLD", 13);
 
-    // Options
     var optPanel = dlg.add("panel", undefined, "Options");
     optPanel.orientation = "column";
     optPanel.alignChildren = "left";
@@ -147,196 +252,100 @@
     optPanel.add("statictext", undefined, "Copies are always placed on the ACTIVE artboard.");
     var cbLabel = optPanel.add("checkbox", undefined, "Add \"Scale 1:N\" label (matches Smart Dimension Tool exactly)");
     cbLabel.value = true;
+    var cbPreview = optPanel.add("checkbox", undefined, "Preview on page (keeps this palette open so you can adjust)");
+    cbPreview.value = false;
 
-    function refreshPreview() {
-        var r = parseInput(pctInput.text);
-        if (!r) {
-            previewText.text = "New scale on page:  --";
-            return;
-        }
-        var txt = "New scale on page:  1:" + fmtNum(r.denominator) +
-                  "   (" + fmtNum(r.pct) + "% of current)";
-        // Flag non-whole ratios so decimals are easy to avoid
-        if (Math.abs(r.denominator - Math.round(r.denominator)) > 1e-9) {
-            txt += "   <-- has decimals";
-        }
+    var statusText = dlg.add("statictext", undefined, "");
+    statusText.preferredSize.width = 360;
+
+    // ------------------------------------------------------------------
+    // Field sync + live text preview
+    // ------------------------------------------------------------------
+    var syncing = false;
+
+    function refreshPreviewText() {
+        var p = currentParams();
+        if (!p) { previewText.text = "New scale on page:  --"; return; }
+        var txt = "New scale on page:  1:" + fmtNum(p.denominator) + "   (" + fmtNum(p.pct) + "% of current)";
+        if (Math.abs(p.denominator - Math.round(p.denominator)) > 1e-9) txt += "   <-- has decimals";
         previewText.text = txt;
     }
-    pctInput.onChanging = refreshPreview;
-    refreshPreview();
 
+    function syncFromPct() {
+        if (syncing) return;
+        syncing = true;
+        lastEdited = "pct";
+        var pct = parsePercent(pctInput.text);
+        if (!isNaN(pct) && pct > 0) ratioInput.text = "1:" + fmtNum(BASE_DENOMINATOR * 100 / pct);
+        syncing = false;
+        refreshPreviewText();
+    }
+    function syncFromRatio() {
+        if (syncing) return;
+        syncing = true;
+        lastEdited = "ratio";
+        var r = parseRatio(ratioInput.text);
+        if (r) pctInput.text = fmtNum(BASE_DENOMINATOR * 100 / r.denominator) + "%";
+        syncing = false;
+        refreshPreviewText();
+    }
+    pctInput.onChanging = syncFromPct;
+    ratioInput.onChanging = syncFromRatio;
+
+    // Refresh the on-page preview when a field edit is committed or options change.
+    function onFieldCommit() { if (cbPreview.value) renderPreview(); }
+    pctInput.onChange = onFieldCommit;
+    ratioInput.onChange = onFieldCommit;
+
+    cbPreview.onClick = function () {
+        if (cbPreview.value) renderPreview();
+        else clearPreview();
+    };
+    cbLabel.onClick = function () { if (cbPreview.value) renderPreview(); };
+
+    refreshPreviewText();
+
+    // ------------------------------------------------------------------
     // Buttons
+    // ------------------------------------------------------------------
     var btnGroup = dlg.add("group");
     btnGroup.alignment = "right";
     var cancelBtn = btnGroup.add("button", undefined, "Cancel", { name: "cancel" });
-    var okBtn = btnGroup.add("button", undefined, "OK", { name: "ok" });
+    var okBtn = btnGroup.add("button", undefined, "OK");
+    dlg.defaultElement = okBtn;
+    dlg.cancelElement = cancelBtn;
 
-    if (dlg.show() !== 1) {
-        return; // cancelled
-    }
+    var committed = false;
 
-    // ------------------------------------------------------------------
-    // Validate inputs
-    // ------------------------------------------------------------------
-
-    var parsed = parseInput(pctInput.text);
-
-    if (!parsed) {
-        alert("Please enter a valid resize amount.\n\nExamples:\n  50%    (half of current size)\n  2x     (double)\n  1:12   (target on-page scale)");
-        return;
-    }
-
-    var factor = parsed.factor;             // scale multiplier applied to the art
-    var pct = parsed.pct;                   // percentage of current size
-    var denominator = parsed.denominator;   // resulting scale ratio 1:denominator
-    var scaleString = "1:" + fmtNum(denominator);
-    var doLabel = cbLabel.value;
-
-    // ------------------------------------------------------------------
-    // 1. Duplicate the source art
-    // ------------------------------------------------------------------
-
-    var copies = [];
-    try {
-        for (var d = 0; d < sourceItems.length; d++) {
-            copies.push(sourceItems[d].duplicate());
+    okBtn.onClick = function () {
+        if (busy) return;
+        var p = currentParams();
+        if (!p) {
+            alert("Please enter a valid resize amount.\n\nExamples:\n  50%    (half of current size)\n  2x     (double)\n  1:12   (target on-page scale)");
+            return;
         }
-    } catch (e) {
-        alert("Could not duplicate the selection.\n" + e);
-        return;
-    }
-
-    // ------------------------------------------------------------------
-    // 2. Scale the copies as a unit (preserves relative layout)
-    //    Anchor everything to the collective top-left, scale about that
-    //    point so the whole arrangement grows/shrinks together.
-    // ------------------------------------------------------------------
-
-    var pre = collectiveBounds(copies);
-    var anchorX = pre[0]; // collective left
-    var anchorY = pre[1]; // collective top
-
-    for (var c = 0; c < copies.length; c++) {
-        var item = copies[c];
-        var b = item.geometricBounds;   // [L, T, R, B]
-        var objL = b[0];
-        var objT = b[1];
-
-        // Scale the object about its own top-left (keeps that point fixed)
-        item.resize(
-            factor * 100, factor * 100,
-            true,  // changePositions
-            true,  // changeFillPatterns
-            true,  // changeFillGradients
-            true,  // changeStrokePattern
-            true,  // changeLineWidths
-            Transformation.TOPLEFT
-        );
-
-        // Move its top-left so its offset from the anchor is scaled too
-        var newL = anchorX + factor * (objL - anchorX);
-        var newT = anchorY + factor * (objT - anchorY);
-        item.translate(newL - objL, newT - objT);
-    }
-
-    // ------------------------------------------------------------------
-    // 3. Place the scaled copies on the ACTIVE artboard (always centered
-    //    there, so there is never any guessing about where they land)
-    // ------------------------------------------------------------------
-
-    var abIndex = doc.artboards.getActiveArtboardIndex();
-    var abRect = doc.artboards[abIndex].artboardRect; // [L, T, R, B]
-    var abCenterX = (abRect[0] + abRect[2]) / 2;
-    var abCenterY = (abRect[1] + abRect[3]) / 2;
-
-    var post = collectiveBounds(copies);
-    var curCenterX = (post[0] + post[2]) / 2;
-    var curCenterY = (post[1] + post[3]) / 2;
-    var dx = abCenterX - curCenterX;
-    var dy = abCenterY - curCenterY;
-    for (var m = 0; m < copies.length; m++) {
-        copies[m].translate(dx, dy);
-    }
-
-    // ------------------------------------------------------------------
-    // 4. Write / replace the "Scale 1:N" label.
-    //    Built to match SmartDimensionTool's "On Proof" setting exactly:
-    //    same "Scale " + value contents, DimStyle character style, 7pt,
-    //    centered, positioned 4" from the artboard's left edge and 6.9816"
-    //    down from its top. This is precisely where the dimension tool's
-    //    "On Proof" option would place it, so it's already set.
-    // ------------------------------------------------------------------
-
-    if (doLabel) {
-        // Remove any existing "Scale ..." label already sitting on this artboard
-        try {
-            for (var t = doc.textFrames.length - 1; t >= 0; t--) {
-                var tf = doc.textFrames[t];
-                var contents = "";
-                try { contents = tf.contents; } catch (eC) { contents = ""; }
-                if (contents.toLowerCase().indexOf("scale ") !== 0) continue;
-
-                var tb = tf.geometricBounds; // [L, T, R, B]
-                var cx = (tb[0] + tb[2]) / 2;
-                var cy = (tb[1] + tb[3]) / 2;
-                // Inside the active artboard?
-                if (cx >= abRect[0] && cx <= abRect[2] &&
-                    cy <= abRect[1] && cy >= abRect[3]) {
-                    tf.remove();
-                }
+        busy = true;
+        statusText.text = "Placing...";
+        runInMain(buildPlaceScript(p.factor, p.scaleString, cbLabel.value, false), function (r) {
+            busy = false;
+            if (r === "OK") {
+                committed = true;
+                dlg.close();
+            } else {
+                reportProblem(r);
             }
-        } catch (eRem) { /* non-fatal */ }
+        });
+    };
 
-        // Pick a usable layer for the label (active layer, fall back if locked/hidden)
-        var labelLayer = doc.activeLayer;
-        try {
-            if (labelLayer.locked || !labelLayer.visible) {
-                for (var L = 0; L < doc.layers.length; L++) {
-                    if (!doc.layers[L].locked && doc.layers[L].visible) {
-                        labelLayer = doc.layers[L];
-                        break;
-                    }
-                }
-            }
-        } catch (eLay) {}
+    cancelBtn.onClick = function () { dlg.close(); };
 
-        try {
-            // "On Proof" position: fixed relative to the active artboard.
-            //   x = 4"   from the artboard's left edge
-            //   y = 6.9816" down from the artboard's top edge
-            var labelX = abRect[0] + (4 * 72);
-            var labelY = abRect[1] - (6.9816 * 72);
+    // Closing any non-commit way removes the transient preview from the page.
+    dlg.onClose = function () {
+        if (!committed) clearPreview();
+        $.global.__scaleToPagePalette = null;
+        return true;
+    };
 
-            var label = labelLayer.textFrames.add();
-            label.contents = "Scale " + scaleString;
-
-            // Apply DimStyle character style if it exists (matches dimension tool)
-            var characterStyle = getCharacterStyle("DimStyle");
-            if (characterStyle) {
-                label.textRange.characterAttributes.characterStyle = characterStyle;
-            }
-
-            label.textRange.characterAttributes.size = 7;
-            label.textRange.paragraphAttributes.justification = Justification.CENTER;
-
-            label.top = labelY;
-            label.left = labelX - (label.width / 2);
-        } catch (eLbl) {
-            alert("Copies placed, but the scale label could not be added.\n" + eLbl);
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // 5. Leave the new copies selected for the next step (dimension tool)
-    // ------------------------------------------------------------------
-
-    try {
-        doc.selection = null;
-        for (var s = 0; s < copies.length; s++) {
-            copies[s].selected = true;
-        }
-    } catch (eSel) { /* non-fatal */ }
-
-    app.redraw();
-
+    dlg.center();
+    dlg.show(); // palette -> non-blocking; the document stays interactive
 })();
