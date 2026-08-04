@@ -3,7 +3,7 @@
 {
   "name": "Qty: Sum",
   "description": "Sum Quantities from Selected Text Objects",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["Qty", "sum", "utility"]
 }
@@ -83,9 +83,9 @@ function displayResults(total, quantities, textFrameCount) {
     if (quantities.length === 0) {
         message += "No quantities found starting with 'Qty:'\n\n";
         message += "Make sure your text contains patterns like:\n";
-        message += "• Qty: 5\n";
-        message += "• Qty:10\n";
-        message += "• Qty: 3.5";
+        message += "\u2022 Qty: 5\n";
+        message += "\u2022 Qty:10\n";
+        message += "\u2022 Qty: 3.5";
     } else {
         message += "Quantities found: " + quantities.join(", ") + "\n";
         message += "Total sum: " + total;
