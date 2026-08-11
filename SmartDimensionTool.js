@@ -1,10 +1,306 @@
 /*@METADATA{
   "name": "Smart Dimension Tool",
   "description": "Add dimensions to an array of signs without the fuss",
-  "version": "4.8",
+  "version": "5.0",
   "target": "illustrator",
   "tags": ["Measure", "Smart", "Utility"]
 }@END_METADATA*/
+
+// ===== Measurement formatting helpers =====
+
+// Fraction slash glyph (U+2044) -- kerns tightly against numerator/denominator
+var FRACTION_SLASH = String.fromCharCode(8260);
+
+// Greatest common divisor (for reducing fractions)
+function gcd(a, b) {
+    a = Math.abs(a);
+    b = Math.abs(b);
+    while (b > 0) {
+        var t = b;
+        b = a % b;
+        a = t;
+    }
+    return a;
+}
+
+// Convert a decimal inch value to a fraction string like: 12 3/8  (no quote mark)
+// The value is rounded to the nearest 1/denominator first, then reduced.
+function toFractionString(value, denominator) {
+    if (!denominator || denominator < 1) denominator = 16;
+    var negative = value < 0;
+    var v = Math.abs(value);
+    var totalUnits = Math.round(v * denominator);
+    var whole = Math.floor(totalUnits / denominator);
+    var numer = totalUnits - (whole * denominator);
+    var result;
+    if (numer === 0) {
+        result = String(whole);
+    } else {
+        var g = gcd(numer, denominator);
+        var fracStr = (numer / g) + "/" + (denominator / g);
+        result = (whole > 0) ? (whole + " " + fracStr) : fracStr;
+    }
+    return negative ? "-" + result : result;
+}
+
+// Format a decimal value to a fixed precision, then strip trailing zeros
+function toDecimalString(value, precision) {
+    var s = value.toFixed(precision);
+    if (s.indexOf('.') > -1) {
+        s = s.replace(/\.?0+$/, '');
+    }
+    return s;
+}
+
+// Format a dimension value (inches) per the current settings:
+// applies rounding, then renders as a fraction or decimal.
+// Fractions require a rounding increment -- if rounding is "None",
+// the value always renders as decimal.
+function formatDimensionValue(value, settings) {
+    var rounded = value;
+    if (settings.roundingIncrement > 0) {
+        rounded = Math.round(value / settings.roundingIncrement) * settings.roundingIncrement;
+    }
+    if (settings.useFractions && settings.roundingIncrement > 0) {
+        var denom = Math.round(1 / settings.roundingIncrement);
+        if (denom < 1) denom = 1;
+        return toFractionString(rounded, denom);
+    }
+    return toDecimalString(rounded, settings.precision);
+}
+
+// ===== Typographic fraction styling =====
+
+// Get the full-size point size of a measurement label. Uses the last
+// character (the inch mark, which is never shrunk) so it works on frames
+// that already have fraction styling applied.
+function getBaseTextSize(textFrame) {
+    try {
+        var chars = textFrame.characters;
+        return chars[chars.length - 1].characterAttributes.size;
+    } catch (e) {}
+    try {
+        return textFrame.textRange.characterAttributes.size;
+    } catch (e2) {}
+    return 12;
+}
+
+// Reset a text frame to uniform styling (used before re-writing contents,
+// so leftover small/raised fraction characters don't bleed into new text)
+function resetTextStyling(textFrame, baseSize) {
+    try {
+        textFrame.textRange.characterAttributes.size = baseSize;
+        textFrame.textRange.characterAttributes.baselineShift = 0;
+    } catch (e) {}
+}
+
+// Turn the "N/D" part of a measurement label into a typographic fraction:
+// numerator shrunk and raised, slash swapped for the fraction-slash glyph,
+// denominator shrunk on the baseline. The space between the whole number
+// and the fraction is also shrunk so the label reads as one unit.
+// Safe to call on labels with no fraction (does nothing).
+function styleFractionText(textFrame, baseSize) {
+    try {
+        var content = String(textFrame.contents);
+        var normalized = content.split(FRACTION_SLASH).join("/");
+        var m = normalized.match(/^(?:(\d+)[ -])?(\d+)\/(\d+)\s*"$/);
+        if (!m) return;
+
+        var wholeLen = m[1] ? m[1].length + 1 : 0; // +1 for the separator
+        var numLen = m[2].length;
+        var denLen = m[3].length;
+        var slashIdx = wholeLen + numLen;
+
+        // Swap a plain slash for the fraction-slash glyph
+        if (content.charAt(slashIdx) !== FRACTION_SLASH) {
+            textFrame.characters[slashIdx].contents = FRACTION_SLASH;
+        }
+
+        var smallSize = baseSize * 0.62;
+        var i;
+
+        // Shrink the separator space so the fraction tucks in close
+        if (wholeLen > 0) {
+            textFrame.characters[wholeLen - 1].characterAttributes.size = smallSize;
+        }
+        // Numerator: small and raised
+        for (i = wholeLen; i < wholeLen + numLen; i++) {
+            textFrame.characters[i].characterAttributes.size = smallSize;
+            textFrame.characters[i].characterAttributes.baselineShift = baseSize * 0.31;
+        }
+        // Denominator: small, on the baseline
+        for (i = slashIdx + 1; i < slashIdx + 1 + denLen; i++) {
+            textFrame.characters[i].characterAttributes.size = smallSize;
+            textFrame.characters[i].characterAttributes.baselineShift = 0;
+        }
+    } catch (e) {}
+}
+
+// ===== Existing-dimension conversion (runs when nothing is selected) =====
+
+// Try to parse a text frame's contents as a measurement string.
+// Returns { type: "decimal"|"fraction", value: <inches> } or null.
+// Matches:  12.375"   12"   3/8"   12 3/8"   12-3/8"
+function parseMeasurementText(content) {
+    var s = String(content).replace(/^\s+|\s+$/g, '');
+    // Normalize the fraction-slash glyph so styled fractions parse too
+    s = s.split(FRACTION_SLASH).join("/");
+    // Decimal (or whole number) like 12.375" or 12"
+    var mDec = s.match(/^(\d+(?:\.\d+)?)\s*"$/);
+    if (mDec) {
+        return { type: "decimal", value: parseFloat(mDec[1]), isWhole: s.indexOf('.') === -1 && s.indexOf('/') === -1 };
+    }
+    // Fraction like 12 3/8", 12-3/8", or 3/8"
+    var mFrac = s.match(/^(?:(\d+)[ -])?(\d+)\/(\d+)\s*"$/);
+    if (mFrac) {
+        var whole = mFrac[1] ? parseInt(mFrac[1], 10) : 0;
+        var n = parseInt(mFrac[2], 10);
+        var d = parseInt(mFrac[3], 10);
+        if (d === 0) return null;
+        return { type: "fraction", value: whole + (n / d) };
+    }
+    return null;
+}
+
+// Scan the document for measurement text frames on the dimensions layer
+// and convert them between decimal and fraction formats.
+function convertDimensionTexts() {
+    var doc = app.activeDocument;
+    var LAYER_NAME = "Dimensions";
+
+    // Find the dimensions layer
+    var dimLayer = null;
+    for (var i = 0; i < doc.layers.length; i++) {
+        if (doc.layers[i].name === LAYER_NAME) {
+            dimLayer = doc.layers[i];
+            break;
+        }
+    }
+    if (!dimLayer) {
+        alert("Nothing is selected and no \"" + LAYER_NAME + "\" layer was found.\n\n" +
+              "Select objects to add dimensions, or open a document that has a \"" +
+              LAYER_NAME + "\" layer to convert existing measurements.");
+        return;
+    }
+
+    // Collect measurement text frames on that layer (includes frames nested
+    // inside dimension groups -- doc.textFrames covers the whole document)
+    var found = [];
+    var decimalCount = 0;
+    var fractionCount = 0;
+    for (var i = 0; i < doc.textFrames.length; i++) {
+        var tf = doc.textFrames[i];
+        var onLayer = false;
+        try {
+            onLayer = (tf.layer.name === LAYER_NAME);
+        } catch (e) {}
+        if (!onLayer) continue;
+
+        var parsed = parseMeasurementText(tf.contents);
+        if (!parsed) continue;
+
+        found.push({ frame: tf, parsed: parsed });
+        if (parsed.type === "decimal" && !parsed.isWhole) {
+            decimalCount++;
+        } else if (parsed.type === "fraction") {
+            fractionCount++;
+        }
+    }
+
+    if (found.length === 0) {
+        alert("No measurement text (like 12.375\" or 12 3/8\") was found on the \"" +
+              LAYER_NAME + "\" layer.");
+        return;
+    }
+
+    // Build the conversion dialog
+    var dlg = new Window("dialog", "Convert Dimension Text");
+    dlg.alignChildren = "fill";
+
+    var infoPanel = dlg.add("panel", undefined, "Found on \"" + LAYER_NAME + "\" layer");
+    infoPanel.alignChildren = "left";
+    infoPanel.add("statictext", undefined,
+        found.length + " measurement label(s): " + decimalCount + " decimal, " +
+        fractionCount + " fraction" + (found.length - decimalCount - fractionCount > 0 ?
+        ", " + (found.length - decimalCount - fractionCount) + " whole number" : ""));
+
+    var dirPanel = dlg.add("panel", undefined, "Convert");
+    dirPanel.alignChildren = "left";
+    var toFractionsRadio = dirPanel.add("radiobutton", undefined, "Decimal -> Fractions  (12.375\" -> 12 3/8\")");
+    var toDecimalsRadio = dirPanel.add("radiobutton", undefined, "Fractions -> Decimal  (12 3/8\" -> 12.375\")");
+
+    // Smart default: convert whichever style is more common into the other
+    if (fractionCount > decimalCount) {
+        toDecimalsRadio.value = true;
+    } else {
+        toFractionsRadio.value = true;
+    }
+
+    var precRow = dirPanel.add("group");
+    precRow.add("statictext", undefined, "Fraction precision:");
+    var precDropdown = precRow.add("dropdownlist", undefined, ["1/2", "1/4", "1/8", "1/16", "1/32"]);
+    precDropdown.selection = 3; // Default to 1/16
+    precDropdown.enabled = toFractionsRadio.value;
+
+    toFractionsRadio.onClick = function() { precDropdown.enabled = true; };
+    toDecimalsRadio.onClick = function() { precDropdown.enabled = false; };
+
+    var btns = dlg.add("group");
+    btns.add("button", undefined, "OK", { name: "ok" });
+    btns.add("button", undefined, "Cancel", { name: "cancel" });
+
+    if (dlg.show() == 2) return;
+
+    var convertedCount = 0;
+    var restyledCount = 0;
+
+    if (toFractionsRadio.value) {
+        // Decimal -> Fractions. Also re-renders existing fraction labels so
+        // plain ones (e.g. from older versions) pick up the typographic style.
+        var denom = parseInt(precDropdown.selection.text.split("/")[1], 10) || 16;
+        for (var i = 0; i < found.length; i++) {
+            var entry = found[i];
+            if (entry.parsed.type === "decimal" && entry.parsed.isWhole) continue;
+
+            var baseSize = getBaseTextSize(entry.frame);
+            var newPlain = toFractionString(entry.parsed.value, denom) + '"';
+            var oldNormalized = String(entry.frame.contents).split(FRACTION_SLASH).join("/");
+            var alreadyStyled = String(entry.frame.contents).indexOf(FRACTION_SLASH) > -1;
+
+            if (oldNormalized !== newPlain || !alreadyStyled) {
+                resetTextStyling(entry.frame, baseSize);
+                entry.frame.contents = newPlain;
+                styleFractionText(entry.frame, baseSize);
+                if (entry.parsed.type === "decimal" || oldNormalized !== newPlain) {
+                    convertedCount++;
+                } else {
+                    restyledCount++;
+                }
+            }
+        }
+    } else {
+        // Fractions -> Decimal (5 decimals covers 1/32, trailing zeros stripped)
+        for (var i = 0; i < found.length; i++) {
+            var entry = found[i];
+            if (entry.parsed.type !== "fraction") continue;
+
+            var baseSize = getBaseTextSize(entry.frame);
+            var newText = toDecimalString(entry.parsed.value, 5) + '"';
+            if (newText !== entry.frame.contents) {
+                entry.frame.contents = newText;
+                resetTextStyling(entry.frame, baseSize);
+                convertedCount++;
+            }
+        }
+    }
+
+    app.redraw();
+    var report = "Converted " + convertedCount + " measurement label(s).";
+    if (restyledCount > 0) {
+        report += "\nRestyled " + restyledCount + " existing fraction label(s).";
+    }
+    alert(report);
+}
 
 // Get character style by name
 function getCharacterStyle(styleName) {
@@ -464,7 +760,9 @@ function main() {
     var sel = doc.selection;
     
     if (sel.length === 0) {
-        alert("Please select one or more objects to dimension.");
+        // Nothing selected: scan the Dimensions layer for measurement text
+        // and offer to switch between decimal and fraction formats.
+        convertDimensionTexts();
         return;
     }
 
@@ -684,6 +982,38 @@ function main() {
     }
     roundingRadios[1].value = true; // Default to 1/16"
 
+    // Format - decimal vs fraction display for dimension text.
+    // Fractions need a rounding increment, so "None" rounding forces Decimal.
+    var formatGroup = dimPanel.add("group");
+    formatGroup.add("statictext", undefined, "Format:");
+    var formatDecimalRadio = formatGroup.add("radiobutton", undefined, "Decimal");
+    var formatFractionRadio = formatGroup.add("radiobutton", undefined, "Fractions");
+    formatFractionRadio.value = true; // Default to fractions
+
+    // Remember the user's format choice while rounding is "None" so it can be
+    // restored if they pick a rounding increment again
+    var formatBeforeNone = "Fractions";
+    function syncFormatToRounding() {
+        if (getRoundingValue() === "None") {
+            if (formatFractionRadio.enabled) {
+                formatBeforeNone = formatFractionRadio.value ? "Fractions" : "Decimal";
+            }
+            formatFractionRadio.value = false;
+            formatDecimalRadio.value = true;
+            formatFractionRadio.enabled = false;
+        } else if (!formatFractionRadio.enabled) {
+            formatFractionRadio.enabled = true;
+            if (formatBeforeNone === "Fractions") {
+                formatFractionRadio.value = true;
+                formatDecimalRadio.value = false;
+            }
+        }
+    }
+    for (var fri = 0; fri < roundingRadios.length; fri++) {
+        roundingRadios[fri].onClick = syncFormatToRounding;
+    }
+    syncFormatToRounding();
+
     // Include Scale - row of selectable buttons (radio buttons) for one-click selection
     var scaleTextGroup = dimPanel.add("group");
     scaleTextGroup.add("statictext", undefined, "Include Scale:");
@@ -818,6 +1148,7 @@ function main() {
         scaleRatio: scaleRatio,
         precision: precisionDropdown.selection.index,
         roundingIncrement: roundingIncrement,
+        useFractions: formatFractionRadio.value,
         scaleTextPosition: getScaleTextValue(),
         lineColor: colorDropdown.selection.text,
         lineWeight: 1,
@@ -834,48 +1165,22 @@ function main() {
         qtyValue: (qtyValueInput.text && qtyValueInput.text.replace(/^\s+|\s+$/g, "").length > 0) ? qtyValueInput.text.replace(/^\s+|\s+$/g, "") : "XX"
     };
     
-    // Map user-friendly color names to graphic style names
-    var colorToStyleMap = {
-        "Black": "Dim-Blk",
-        "White": "Dim-Wht",
-        "Red": "Dim-Red"
-    };
-    settings.graphicStyleName = colorToStyleMap[settings.lineColor];
-    
-    // Check if the required graphic style exists
-    var styleExists = getGraphicStyle(settings.graphicStyleName) !== null;
-    
-    if (!styleExists) {
-        var confirmDialog = confirm(
-            "The graphic style '" + settings.graphicStyleName + "' was not found in this document.\n\n" +
-            "Dimensions will be created WITHOUT arrowheads.\n\n" +
-            "Click OK to continue without arrowheads, or Cancel to stop.\n\n" +
-            "(To use arrowheads, you need to have the dimension graphic styles in your document.)"
-        );
-        
-        if (!confirmDialog) {
-            return; // User cancelled
-        }
-        
-        settings.useArrowheads = false;
-    }
-    
-    // Map user-friendly color names to graphic style names
-    var colorToStyleMap = {
-        "Black": "Dim-Blk",
-        "White": "Dim-Wht",
-        "Red": "Dim-Red"
-    };
-    settings.graphicStyleName = colorToStyleMap[settings.lineColor];
-    
     if (!checkTop.value && !checkBottom.value && !checkLeft.value && !checkRight.value) {
         alert("Please select at least one dimension location.");
         return;
     }
-    
+
+    // Map user-friendly color names to graphic style names
+    var colorToStyleMap = {
+        "Black": "Dim-Blk",
+        "White": "Dim-Wht",
+        "Red": "Dim-Red"
+    };
+    settings.graphicStyleName = colorToStyleMap[settings.lineColor];
+
     // Check if the required graphic style exists
     var styleExists = getGraphicStyle(settings.graphicStyleName) !== null;
-    
+
     if (!styleExists) {
         var confirmDialog = confirm(
             "The graphic style '" + settings.graphicStyleName + "' was not found in this document.\n\n" +
@@ -883,11 +1188,11 @@ function main() {
             "Click OK to continue without arrowheads, or Cancel to stop.\n\n" +
             "(To use arrowheads, you need to have the dimension graphic styles in your document.)"
         );
-        
+
         if (!confirmDialog) {
             return; // User cancelled
         }
-        
+
         settings.useArrowheads = false;
     }
     
@@ -1310,18 +1615,8 @@ function createDimension(x1, y1, x2, y2, value, isHorizontal, position, settings
         // Create text with matching color
         var text = dimGroup.textFrames.add();
         
-        // Round to the specified increment if not "None"
-        var roundedValue = value;
-        if (settings.roundingIncrement > 0) {
-            roundedValue = Math.round(value / settings.roundingIncrement) * settings.roundingIncrement;
-        }
-        
-        // Format the value with precision, then remove trailing zeros
-        var formattedValue = roundedValue.toFixed(settings.precision);
-        if (formattedValue.indexOf('.') > -1) {
-            formattedValue = formattedValue.replace(/\.?0+$/, '');
-        }
-        
+        // Round and format per settings (fraction or decimal)
+        var formattedValue = formatDimensionValue(value, settings);
         text.contents = formattedValue + '"';
         
         try {
@@ -1332,9 +1627,15 @@ function createDimension(x1, y1, x2, y2, value, isHorizontal, position, settings
         
         text.textRange.characterAttributes.size = settings.fontSize;
         text.textRange.characterAttributes.fillColor = color;
-        
+
         // Set text to center alignment for better editability
         text.textRange.paragraphAttributes.justification = Justification.CENTER;
+
+        // Style the fraction part typographically (raised numerator, fraction
+        // slash, small denominator) so values like 11 11/16" read cleanly
+        if (settings.useFractions && formattedValue.indexOf("/") > -1) {
+            styleFractionText(text, settings.fontSize);
+        }
         
         // Position text based on whether it's horizontal or vertical
         var centerX = (x1 + x2) / 2;
