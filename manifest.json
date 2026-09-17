@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-08-11T09:13:14.116131",
+  "last_updated": "2026-09-17T10:53:15.518918",
   "deployer_version": "3.0",
-  "total_scripts": 28,
+  "total_scripts": 29,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -234,10 +234,10 @@
           "file"
         ]
       },
-      "hash": "597472fa92d9ad87b7821bb375b8d9b3",
+      "hash": "f53eb126ff26f5bb80093b93e3713149",
       "local_path": "C:\\Dev\\Illustrator Scripts\\OpenProdFilesForReview.js",
-      "file_size": 15255,
-      "last_modified": "2026-08-04T11:43:09.239833",
+      "file_size": 15627,
+      "last_modified": "2026-08-12T09:44:16.469959",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
     },
@@ -245,7 +245,7 @@
       "filename": "Optimal PRIME transformer.js",
       "metadata": {
         "name": "Optimal PRIME Transformer",
-        "version": "1.9.3",
+        "version": "1.9.5",
         "description": "Generate Production Files From a PRIME",
         "author": "Unknown",
         "target": "illustrator",
@@ -256,10 +256,10 @@
           "scaleFactor"
         ]
       },
-      "hash": "d5a463185b2a03e10a7c681a057f2d4a",
+      "hash": "92ce5e1462e3ad8c1427f7b672f6193d",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Optimal PRIME transformer.js",
-      "file_size": 55354,
-      "last_modified": "2026-07-10T13:05:40.410275",
+      "file_size": 56303,
+      "last_modified": "2026-09-14T09:19:14.759751",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
@@ -463,8 +463,8 @@
       "filename": "List_Artboard_Sizes.jsx",
       "metadata": {
         "name": "List Artboard Sizes",
-        "version": "1.5",
-        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Includes copy buttons for spreadsheet TSV and shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
+        "version": "1.7",
+        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Copy for Email can include the panel size table as a clean HTML table. Also copies shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -475,10 +475,10 @@
           "multi-document"
         ]
       },
-      "hash": "b048e956b10ef26a34907c4d1caea67f",
+      "hash": "852553575ead5d170c6486d966c9258f",
       "local_path": "C:\\Dev\\Illustrator Scripts\\List_Artboard_Sizes.jsx",
-      "file_size": 47729,
-      "last_modified": "2026-08-04T11:39:04.027964",
+      "file_size": 50984,
+      "last_modified": "2026-08-12T12:25:49.237086",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx"
     },
@@ -617,6 +617,34 @@
       "last_modified": "2026-08-03T15:44:28.408179",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js"
+    },
+    "Pathfinder Per Group.js": {
+      "filename": "Pathfinder Per Group.js",
+      "metadata": {
+        "name": "Pathfinder Per Group",
+        "version": "2.0",
+        "description": "Runs any Pathfinder operation (Unite, Minus Front, Intersect, Exclude, Divide, Trim, Merge, Crop, Outline, Minus Back) on each selected group individually. Each group's contents get combined into its own result instead of every group's contents being merged together (which is what happens if you run Pathfinder on the full selection at once).",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "pathfinder",
+          "unite",
+          "exclude",
+          "divide",
+          "trim",
+          "merge",
+          "crop",
+          "outline",
+          "processor",
+          "group"
+        ]
+      },
+      "hash": "cb838efd1cdba5060381a38add9493a6",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Pathfinder Per Group.js",
+      "file_size": 7517,
+      "last_modified": "2026-08-17T10:28:13.525533",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Pathfinder%20Per%20Group.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Pathfinder%20Per%20Group.js"
     }
   }
 }
