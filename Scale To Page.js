@@ -2,8 +2,8 @@
 @METADATA
 {
   "name": "Scale To Page",
-  "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
-  "version": "1.5",
+  "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. When the page already carries a \"Scale 1:N\" callout (architectural notation like 3/8\" = 1'-0\" works too) the target ratio prefills to match it, so the copies are resized to the page's scale instead of just relabeled. Source art is assumed to be 1:10 and can be overridden. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
+  "version": "1.7",
   "target": "illustrator",
   "tags": ["scale", "copy", "layout", "processor"]
 }
@@ -29,12 +29,19 @@
     }
 
     if (!app.activeDocument.selection || app.activeDocument.selection.length === 0) {
-        alert("Select the 1/10 scale art you want to copy onto the page, then run the script.");
+        alert("Select the scaled art you want to copy onto the page, then run the script.");
         return;
     }
 
-    var BASE_DENOMINATOR = 10;                 // art is always extracted at 1:10 scale
+    var DEFAULT_DENOMINATOR = 10;              // fallback when the page has no scale callout
     var PREVIEW_TAG = "__STP_PREVIEW__";       // name applied to transient preview copies
+
+    // The SOURCE art is what comes out of the extractor -- 1:10 unless the user
+    // says otherwise in the palette. A scale callout found on the page is the
+    // TARGET: "the page is at 1:16, match it", which is a resize, not a relabel.
+    var detectedScale = detectPageScale(app.activeDocument);
+    var baseDenominator = DEFAULT_DENOMINATOR;
+    var targetDenominator = (detectedScale && detectedScale.ratio > 0) ? detectedScale.ratio : DEFAULT_DENOMINATOR;
 
     // ------------------------------------------------------------------
     // Number / input helpers (UI-side only -- safe in palette handlers)
@@ -59,32 +66,23 @@
         return mult ? v * 100 : v;
     }
 
-    function parseRatio(raw) {
-        if (raw === null) return null;
-        var s = String(raw).replace(/^\s+|\s+$/g, "");
-        if (s.indexOf(":") === -1) return null;
-        var parts = s.split(":");
-        var a = parseFloat(parts[0]);
-        var b = parseFloat(parts[1]);
-        if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) return null;
-        return { a: a, b: b, denominator: b / a };
-    }
-
     function computeFromPct(pct) {
-        return { pct: pct, factor: pct / 100, denominator: BASE_DENOMINATOR * 100 / pct };
+        return { pct: pct, factor: pct / 100, denominator: baseDenominator * 100 / pct };
     }
     function computeFromRatio(denom) {
-        var factor = BASE_DENOMINATOR / denom;
+        var factor = baseDenominator / denom;
         return { pct: factor * 100, factor: factor, denominator: denom };
     }
 
-    var lastEdited = "pct"; // which field the user touched most recently
+    // Which field the user touched most recently. When a scale was read off the
+    // page the target ratio is the authoritative value, so start there.
+    var lastEdited = (detectedScale && detectedScale.ratio > 0) ? "ratio" : "pct";
 
     function currentParams() {
         var p = null;
         if (lastEdited === "ratio") {
-            var r = parseRatio(ratioInput.text);
-            if (r) p = computeFromRatio(r.denominator);
+            var r = parseScaleExpression(ratioInput.text);
+            if (r) p = computeFromRatio(r.ratio);
         } else {
             var pct = parsePercent(pctInput.text);
             if (!isNaN(pct) && pct > 0) p = computeFromPct(pct);
@@ -92,6 +90,233 @@
         if (!p) return null;
         p.scaleString = "1:" + fmtNum(p.denominator);
         return p;
+    }
+
+    // ------------------------------------------------------------------
+    // Scale detection -- read the drawing scale off the page
+    // ------------------------------------------------------------------
+    // Looks for a scale callout in the document's text (the "Scale 1:N" label
+    // this script and the Smart Dimension Tool write, or architectural notation
+    // like 3/8" = 1'-0"). Returns {text, ratio, source} or null.
+
+    function detectPageScale(doc) {
+        var frames;
+        try {
+            frames = doc.textFrames;
+        } catch (e) {
+            return null;
+        }
+        if (!frames || frames.length === 0) return null;
+
+        var artRect = null;
+        try {
+            var abIndex = doc.artboards.getActiveArtboardIndex();
+            if (abIndex >= 0 && abIndex < doc.artboards.length) {
+                artRect = doc.artboards[abIndex].artboardRect;
+            }
+        } catch (eAb) {
+            artRect = null;
+        }
+
+        var limit = frames.length;
+        if (limit > 3000) limit = 3000; // sanity cap on very heavy documents
+
+        var best = null;
+        var bestScore = -1;
+
+        for (var i = 0; i < limit; i++) {
+            var contents;
+            try {
+                contents = frames[i].contents;
+            } catch (eC) {
+                continue;
+            }
+            if (!contents) continue;
+
+            var onArtboard = false;
+            if (artRect) {
+                try {
+                    var b = frames[i].geometricBounds; // [left, top, right, bottom]
+                    var cx = (b[0] + b[2]) / 2;
+                    var cy = (b[1] + b[3]) / 2;
+                    onArtboard = (cx >= artRect[0] && cx <= artRect[2] &&
+                                  cy <= artRect[1] && cy >= artRect[3]);
+                } catch (eB) {}
+            }
+
+            var lines = String(contents).split(/[\r\n]+/);
+            for (var j = 0; j < lines.length; j++) {
+                var hit = scaleFromLine(lines[j]);
+                if (!hit) continue;
+
+                // A line that says "Scale" beats a bare ratio, and a callout on
+                // the active artboard beats one elsewhere in the document.
+                var score = (hit.labeled ? 2 : 0) + (onArtboard ? 1 : 0);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = hit;
+                }
+            }
+        }
+
+        return best;
+    }
+
+    function scaleFromLine(line) {
+        var raw = normalizeScaleText(line).replace(/^\s+|\s+$/g, '');
+        if (raw === '') return null;
+
+        var s = raw;
+        var labeled = false;
+
+        var labelMatch = s.match(/scale[\s:=\-]+(.+)$/i);
+        if (labelMatch) {
+            labeled = true;
+            s = labelMatch[1];
+        }
+
+        s = s.replace(/^[\s\(\[]+/, '').replace(/[\s\)\]\.,;]+$/, '');
+        if (s === '') return null;
+
+        var parsed = parseScaleExpression(s);
+        if (!parsed) return null;
+
+        parsed.labeled = labeled;
+        parsed.source = raw;
+        return parsed;
+    }
+
+    // Parse a scale expression into {text: "A:B", ratio: N} where N is what an
+    // on-page measurement is multiplied by to get real-world size.
+    //   "1:10"           -> ratio 10
+    //   "2:1"            -> ratio 0.5
+    //   "3/8\" = 1'-0\"" -> ratio 32  (text "1:32")
+    function parseScaleExpression(text) {
+        var s = normalizeScaleText(text).replace(/^\s+|\s+$/g, '');
+        if (s === '') return null;
+
+        var ratioMatch = s.match(/^(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)$/);
+        if (ratioMatch) {
+            var a = parseFloat(ratioMatch[1]);
+            var b = parseFloat(ratioMatch[2]);
+            if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) return null;
+            return { text: fmtNum(a) + ":" + fmtNum(b), ratio: b / a };
+        }
+
+        var eqIdx = s.indexOf('=');
+        if (eqIdx > 0 && eqIdx < s.length - 1) {
+            var leftIn = parseAsInches(s.substring(0, eqIdx));
+            var rightIn = parseAsInches(s.substring(eqIdx + 1));
+            if (leftIn === null || rightIn === null || leftIn <= 0 || rightIn <= 0) {
+                return null;
+            }
+            var r = rightIn / leftIn;
+            return { text: "1:" + fmtNum(r), ratio: r };
+        }
+
+        return null;
+    }
+
+    // Parse an expression representing a length in inches. Handles feet-inches
+    // ("1'-6\""), feet only ("1'"), fractions ("3/8"), mixed numbers ("1 1/2"),
+    // decimals, and whole numbers.
+    function parseAsInches(text) {
+        if (text === undefined || text === null) return null;
+        var s = normalizeScaleText(text).replace(/^\s+|\s+$/g, '');
+        if (s === '') return null;
+
+        var totalInches = 0;
+
+        var feetMatch = s.match(/^(\d+(?:\.\d+)?)\s*'/);
+        if (feetMatch) {
+            totalInches += parseFloat(feetMatch[1]) * 12;
+            s = s.substring(feetMatch[0].length);
+            s = s.replace(/^[\s\-]+/, '');
+        }
+
+        s = s.replace(/"\s*$/, '').replace(/^\s+|\s+$/g, '');
+
+        if (s === '') return totalInches;
+
+        var mixed = s.match(/^(\d+)[\s\-]+(\d+)\s*\/\s*(\d+)$/);
+        if (mixed) {
+            var mDenom = parseFloat(mixed[3]);
+            if (mDenom === 0) return null;
+            totalInches += parseFloat(mixed[1]) + (parseFloat(mixed[2]) / mDenom);
+            return totalInches;
+        }
+
+        var frac = s.match(/^(\d+)\s*\/\s*(\d+)$/);
+        if (frac) {
+            var fDenom = parseFloat(frac[2]);
+            if (fDenom === 0) return null;
+            totalInches += parseFloat(frac[1]) / fDenom;
+            return totalInches;
+        }
+
+        if (/^\d+(?:\.\d+)?$/.test(s)) {
+            totalInches += parseFloat(s);
+            return totalInches;
+        }
+
+        return null;
+    }
+
+    // Normalize the typographic characters real proofs contain (prime and
+    // double-prime marks, curly quotes, en/em dashes, non-breaking spaces,
+    // Unicode fraction glyphs) down to plain ASCII. Done by char code so this
+    // source file stays pure ASCII.
+    function normalizeScaleText(input) {
+        if (input === undefined || input === null) return '';
+        var src = String(input);
+        var out = [];
+        for (var i = 0; i < src.length; i++) {
+            var c = src.charCodeAt(i);
+            if (c === 0x201C || c === 0x201D || c === 0x201E || c === 0x201F ||
+                c === 0x2033 || c === 0x3003 || c === 0x301D || c === 0x301E || c === 0x301F) {
+                out.push('"');   // double-prime / smart double quotes -> "
+            } else if (c === 0x2018 || c === 0x2019 || c === 0x201A || c === 0x201B ||
+                       c === 0x2032 || c === 0x00B4 || c === 0x0060) {
+                out.push("'");   // prime / smart single quotes / acute / backtick -> '
+            } else if (c === 0x2010 || c === 0x2011 || c === 0x2012 || c === 0x2013 ||
+                       c === 0x2014 || c === 0x2015 || c === 0x2212) {
+                out.push('-');   // assorted dashes / minus -> hyphen
+            } else if (c === 0x00A0 || (c >= 0x2000 && c <= 0x200B) ||
+                       c === 0x202F || c === 0x205F || c === 0x3000) {
+                out.push(' ');   // assorted spaces -> space
+            } else {
+                var fr = fractionForCode(c);
+                out.push(fr !== null ? (' ' + fr + ' ') : src.charAt(i));
+            }
+        }
+        return out.join('');
+    }
+
+    function fractionForCode(c) {
+        switch (c) {
+            case 0x00BC: return '1/4';
+            case 0x00BD: return '1/2';
+            case 0x00BE: return '3/4';
+            case 0x2153: return '1/3';
+            case 0x2154: return '2/3';
+            case 0x2155: return '1/5';
+            case 0x2156: return '2/5';
+            case 0x2157: return '3/5';
+            case 0x2158: return '4/5';
+            case 0x2159: return '1/6';
+            case 0x215A: return '5/6';
+            case 0x215B: return '1/8';
+            case 0x215C: return '3/8';
+            case 0x215D: return '5/8';
+            case 0x215E: return '7/8';
+        }
+        return null;
+    }
+
+    function truncateForDisplay(text, maxLen) {
+        var s = String(text || '').replace(/^\s+|\s+$/g, '');
+        if (s.length <= maxLen) return s;
+        return s.substring(0, maxLen - 3) + '...';
     }
 
     // ------------------------------------------------------------------
@@ -226,20 +451,33 @@
     $.global.__scaleToPagePalette = dlg;
 
     var srcCount = app.activeDocument.selection.length;
-    dlg.add("statictext", undefined, "Selected art: " + srcCount + " object(s)   (starting scale 1:10)");
+    dlg.add("statictext", undefined, "Selected art: " + srcCount + " object(s)");
+
+    var baseGroup = dlg.add("group");
+    var baseLbl = baseGroup.add("statictext", undefined, "Source art:");
+    baseLbl.preferredSize.width = 80;
+    var baseInput = baseGroup.add("edittext", undefined, "1:" + fmtNum(baseDenominator));
+    baseInput.characters = 8;
+    var baseNote = baseGroup.add("statictext", undefined, "scale of the art you selected");
+    baseNote.preferredSize.width = 250;
 
     var pctGroup = dlg.add("group");
-    pctGroup.add("statictext", undefined, "Resize to:");
-    var pctInput = pctGroup.add("edittext", undefined, "100%");
+    var pctLbl = pctGroup.add("statictext", undefined, "Resize to:");
+    pctLbl.preferredSize.width = 80;
+    var pctInput = pctGroup.add("edittext", undefined, fmtNum(baseDenominator * 100 / targetDenominator) + "%");
     pctInput.characters = 8;
     pctGroup.add("statictext", undefined, "% of current size");
 
     var ratioGroup = dlg.add("group");
     var ratioLbl = ratioGroup.add("statictext", undefined, "Target ratio:");
-    ratioLbl.preferredSize.width = 62;
-    var ratioInput = ratioGroup.add("edittext", undefined, "1:10");
+    ratioLbl.preferredSize.width = 80;
+    var ratioInput = ratioGroup.add("edittext", undefined, "1:" + fmtNum(targetDenominator));
     ratioInput.characters = 8;
-    ratioGroup.add("statictext", undefined, "e.g. 1:12   (updates with the percentage)");
+    var ratioNote = ratioGroup.add("statictext", undefined, "");
+    ratioNote.preferredSize.width = 250;
+    ratioNote.text = detectedScale
+        ? ('matching page: "' + truncateForDisplay(detectedScale.source, 28) + '"')
+        : "e.g. 1:12   (updates with the percentage)";
 
     var previewText = dlg.add("statictext", undefined, "New scale on page:  1:10   (100% of current)");
     previewText.preferredSize.width = 360;
@@ -276,7 +514,7 @@
         syncing = true;
         lastEdited = "pct";
         var pct = parsePercent(pctInput.text);
-        if (!isNaN(pct) && pct > 0) ratioInput.text = "1:" + fmtNum(BASE_DENOMINATOR * 100 / pct);
+        if (!isNaN(pct) && pct > 0) ratioInput.text = "1:" + fmtNum(baseDenominator * 100 / pct);
         syncing = false;
         refreshPreviewText();
     }
@@ -284,18 +522,38 @@
         if (syncing) return;
         syncing = true;
         lastEdited = "ratio";
-        var r = parseRatio(ratioInput.text);
-        if (r) pctInput.text = fmtNum(BASE_DENOMINATOR * 100 / r.denominator) + "%";
+        var r = parseScaleExpression(ratioInput.text);
+        if (r) pctInput.text = fmtNum(baseDenominator * 100 / r.ratio) + "%";
+        syncing = false;
+        refreshPreviewText();
+    }
+    // Editing the source art's scale keeps whichever field was last touched and
+    // recalculates the other one against the new base.
+    function syncFromBase() {
+        if (syncing) return;
+        var parsed = parseScaleExpression(baseInput.text);
+        if (!parsed || !(parsed.ratio > 0)) return;
+        baseDenominator = parsed.ratio;
+        syncing = true;
+        if (lastEdited === "ratio") {
+            var r = parseScaleExpression(ratioInput.text);
+            if (r) pctInput.text = fmtNum(baseDenominator * 100 / r.ratio) + "%";
+        } else {
+            var pct = parsePercent(pctInput.text);
+            if (!isNaN(pct) && pct > 0) ratioInput.text = "1:" + fmtNum(baseDenominator * 100 / pct);
+        }
         syncing = false;
         refreshPreviewText();
     }
     pctInput.onChanging = syncFromPct;
     ratioInput.onChanging = syncFromRatio;
+    baseInput.onChanging = syncFromBase;
 
     // Refresh the on-page preview when a field edit is committed or options change.
     function onFieldCommit() { if (cbPreview.value) renderPreview(); }
     pctInput.onChange = onFieldCommit;
     ratioInput.onChange = onFieldCommit;
+    baseInput.onChange = onFieldCommit;
 
     cbPreview.onClick = function () {
         if (cbPreview.value) renderPreview();
