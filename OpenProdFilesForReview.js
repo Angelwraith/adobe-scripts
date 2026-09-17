@@ -317,11 +317,22 @@
                 foundFiles = foundFiles.concat(subFiles);
             } else if (files[i] instanceof File) {
                 var fileName = files[i].name.toUpperCase();
-                
-                // Check if file contains any of the keywords and is an AI/EPS/PDF file
+
+                // Skip hidden/temp/partial files (e.g. "._Foo.ai", "~syncthing~Foo.ai.tmp")
+                if (/^[._~]/.test(files[i].name)) {
+                    continue;
+                }
+
+                // File must actually END with .ai/.eps/.pdf (not just contain it,
+                // which would match things like "Foo_PRINT.ai.tmp" or "Foo_CUT.pdf.crdownload"
+                // and cause Illustrator to open them as text)
+                if (!/\.(AI|EPS|PDF)$/.test(fileName)) {
+                    continue;
+                }
+
+                // Check if file contains any of the keywords
                 for (var k = 0; k < keywords.length; k++) {
-                    if (fileName.indexOf(keywords[k].toUpperCase()) != -1 && 
-                        (fileName.indexOf(".AI") != -1 || fileName.indexOf(".EPS") != -1 || fileName.indexOf(".PDF") != -1)) {
+                    if (fileName.indexOf(keywords[k].toUpperCase()) != -1) {
                         foundFiles.push(files[i]);
                         break;
                     }
