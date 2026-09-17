@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "List Artboard Sizes",
-  "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Includes copy buttons for spreadsheet TSV and shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
-  "version": "1.5",
+  "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Copy for Email can include the panel size table as a clean HTML table. Also copies shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
+  "version": "1.7",
   "target": "illustrator",
   "tags": ["artboard", "size", "measure", "list", "multi-document"]
 }@END_METADATA*/
@@ -326,31 +326,6 @@ function findCommonPrefix(strings) {
     return prefix;
 }
 
-// TSV: no header, columns Name, TrimHeight, TrimWidth, BleedHeight, BleedWidth.
-// Strips any prefix common to all artboard names so the spreadsheet
-// has just the unique parts (e.g. "Driver - QP" instead of "Job_File_Driver - QP").
-// Inserts a blank row between document sets.
-function buildTSV(rows, bleed) {
-    var names = [];
-    for (var i = 0; i < rows.length; i++) names.push(rows[i].name);
-    var commonPrefix = findCommonPrefix(names);
-
-    var lines = [];
-    var lastDocName = null;
-    for (var j = 0; j < rows.length; j++) {
-        var r = rows[j];
-        if (lastDocName !== null && r.docName !== lastDocName) {
-            lines.push(""); // blank row between document sets
-        }
-        var trimmedName = (commonPrefix.length > 0) ? r.name.substring(commonPrefix.length) : r.name;
-        lines.push(trimmedName + "\t" +
-                   formatSize(r.finalH) + "\t" + formatSize(r.finalW) + "\t" +
-                   formatSize(finishedDim(r.finalH, bleed)) + "\t" + formatSize(finishedDim(r.finalW, bleed)));
-        lastDocName = r.docName;
-    }
-    return lines.join("\n");
-}
-
 // ============================================================================
 // CLIPBOARD HELPERS
 // ============================================================================
@@ -661,9 +636,9 @@ function getProjectInfo(estimate, multiDoc) {
     return info;
 }
 
-// Build email-friendly plain text -- summary only (coverage + roll info).
-// No per-section breakdown, no parameters block.
-function buildEmailText(rows, estimate, multiDoc) {
+// Build email-friendly plain text -- coverage + roll info, and optionally the
+// per-panel size table (trim / w-bleed / roll / run).
+function buildEmailText(rows, estimate, multiDoc, includeSizes, bleed) {
     var t = estimate.totals;
     var info = getProjectInfo(estimate, multiDoc);
     var util = (t.printed > 0) ? (t.installed / t.printed) : 0;
@@ -671,6 +646,39 @@ function buildEmailText(rows, estimate, multiDoc) {
 
     lines.push("Project: " + info.projectName);
     lines.push("");
+
+    if (includeSizes) {
+        var drows = buildDisplayRows(rows, bleed);
+
+        // Column widths for aligned plain text
+        var wNum = 2, wName = 5, wTrim = 4, wBleed = 8, wRoll = 4;
+        for (var di = 0; di < drows.length; di++) {
+            var d0 = drows[di];
+            if (d0.sep) continue;
+            if (d0.num.length   > wNum)   wNum   = d0.num.length;
+            if (d0.name.length  > wName)  wName  = d0.name.length;
+            if (d0.trim.length  > wTrim)  wTrim  = d0.trim.length;
+            if (d0.bleed.length > wBleed) wBleed = d0.bleed.length;
+            if (d0.roll.length  > wRoll)  wRoll  = d0.roll.length;
+        }
+
+        lines.push("PANEL SIZES (x10, rounded up to 0.5\")");
+        lines.push("--------------------------------------");
+        lines.push(padRight("#", wNum) + "  " + padRight("Panel", wName) + "  " +
+                   padRight("Trim", wTrim) + "  " + padRight("W/ Bleed", wBleed) + "  " +
+                   padRight("Roll", wRoll) + "  " + "Run");
+        for (var dj = 0; dj < drows.length; dj++) {
+            var d1 = drows[dj];
+            if (d1.sep) {
+                lines.push("");
+                continue;
+            }
+            lines.push(padRight(d1.num, wNum) + "  " + padRight(d1.name, wName) + "  " +
+                       padRight(d1.trim, wTrim) + "  " + padRight(d1.bleed, wBleed) + "  " +
+                       padRight(d1.roll, wRoll) + "  " + d1.run);
+        }
+        lines.push("");
+    }
 
     lines.push("TOTAL COVERAGE");
     lines.push("--------------");
@@ -705,9 +713,10 @@ function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// Build rich-text HTML -- summary only (coverage + roll info).
-// Pasted into Outlook/Gmail/Apple Mail, this renders as a clean styled block.
-function buildEmailHtml(rows, estimate, multiDoc) {
+// Build rich-text HTML -- coverage + roll info, and optionally the per-panel
+// size table. Pasted into Outlook/Gmail/Apple Mail, this renders as a clean
+// styled block.
+function buildEmailHtml(rows, estimate, multiDoc, includeSizes, bleed) {
     var t = estimate.totals;
     var info = getProjectInfo(estimate, multiDoc);
     var util = (t.printed > 0) ? (t.installed / t.printed) : 0;
@@ -723,6 +732,37 @@ function buildEmailHtml(rows, estimate, multiDoc) {
     html += '<div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;font-size:13px;line-height:1.5;">';
 
     html += '<div style="margin:0 0 12px;color:#222;font-size:14px;"><b>Project:</b> ' + escapeHtml(info.projectName) + '</div>';
+
+    if (includeSizes) {
+        var drows = buildDisplayRows(rows, bleed);
+        html += '<div ' + h3 + '>Panel Sizes <span style="font-weight:normal;text-transform:none;letter-spacing:0;">(x10, rounded up to 0.5&quot;)</span></div>';
+        html += '<table ' + tableStyle + '>';
+        html += '<tr>';
+        html += '<th ' + thStyle + '>#</th>';
+        html += '<th ' + thStyle + '>Panel</th>';
+        html += '<th ' + thRight + '>Trim</th>';
+        html += '<th ' + thRight + '>W/ Bleed</th>';
+        html += '<th ' + thRight + '>Roll</th>';
+        html += '<th ' + thRight + '>Run</th>';
+        html += '</tr>';
+        for (var di = 0; di < drows.length; di++) {
+            var d = drows[di];
+            if (d.sep) {
+                // Spacer row between document sets
+                html += '<tr><td colspan="6" style="padding:8px 0;border-bottom:none;"></td></tr>';
+                continue;
+            }
+            html += '<tr>';
+            html += '<td ' + tdStyle + '>' + escapeHtml(d.num) + '</td>';
+            html += '<td ' + tdStyle + '>' + escapeHtml(d.name) + '</td>';
+            html += '<td ' + tdRight + ' nowrap>' + escapeHtml(d.trim) + '</td>';
+            html += '<td ' + tdRight + ' nowrap>' + escapeHtml(d.bleed) + '</td>';
+            html += '<td ' + tdRight + '>' + escapeHtml(d.roll) + '</td>';
+            html += '<td ' + tdRight + '>' + escapeHtml(d.run) + '</td>';
+            html += '</tr>';
+        }
+        html += '</table>';
+    }
 
     html += '<div ' + h3 + '>Total Coverage</div>';
     html += '<table ' + tableStyle + '>';
@@ -788,13 +828,29 @@ function setClipboardHtml(html, plainText) {
 
         // PowerShell script that loads both files and puts them on the clipboard
         // as a single DataObject containing HTML + plain text formats.
+        //
+        // IMPORTANT: the Windows "HTML Format" clipboard type requires a CF_HTML
+        // header with byte offsets (StartHTML/EndHTML/StartFragment/EndFragment).
+        // Without it, browsers (Gmail/Chrome) reject the HTML and paste falls
+        // back to plain text. Offsets are UTF-8 BYTE positions, so the payload
+        // is written as a UTF-8 byte stream, not a .NET string.
         var ps = "";
         ps += "Add-Type -AssemblyName System.Windows.Forms\n";
         ps += "$html = Get-Content -Raw -Encoding UTF8 -Path '" + tempHtml.fsName.replace(/'/g, "''") + "'\n";
         ps += "$text = Get-Content -Raw -Encoding UTF8 -Path '" + tempText.fsName.replace(/'/g, "''") + "'\n";
+        ps += "$enc = [System.Text.Encoding]::UTF8\n";
+        ps += "$pre = '<html><body><!--StartFragment-->'\n";
+        ps += "$post = '<!--EndFragment--></body></html>'\n";
+        ps += "$tpl = \"Version:0.9`r`nStartHTML:{0:D10}`r`nEndHTML:{1:D10}`r`nStartFragment:{2:D10}`r`nEndFragment:{3:D10}`r`n\"\n";
+        ps += "$hdrLen = $enc.GetByteCount(($tpl -f 0,0,0,0))\n";
+        ps += "$startFrag = $hdrLen + $enc.GetByteCount($pre)\n";
+        ps += "$endFrag = $startFrag + $enc.GetByteCount($html)\n";
+        ps += "$endHtml = $endFrag + $enc.GetByteCount($post)\n";
+        ps += "$cf = ($tpl -f $hdrLen, $endHtml, $startFrag, $endFrag) + $pre + $html + $post\n";
+        ps += "$ms = New-Object System.IO.MemoryStream (,$enc.GetBytes($cf))\n";
         ps += "$do = New-Object System.Windows.Forms.DataObject\n";
         ps += "$do.SetText($text)\n";
-        ps += "$do.SetText($html, [System.Windows.Forms.TextDataFormat]::Html)\n";
+        ps += "$do.SetData('HTML Format', $ms)\n";
         ps += "[System.Windows.Forms.Clipboard]::SetDataObject($do, $true)\n";
 
         var tempPs = new File(Folder.temp + "/_artboard_clip.ps1");
@@ -1103,7 +1159,8 @@ function showResults(rows, multiDoc) {
     var btnGroup = dlg.add("group");
     btnGroup.alignment = "right";
 
-    var copyTSVBtn = btnGroup.add("button", undefined, "Copy for Spreadsheet");
+    var includeSizesCheckbox = btnGroup.add("checkbox", undefined, "Include panel sizes");
+    includeSizesCheckbox.value = true;
     var copyEmailBtn = btnGroup.add("button", undefined, "Copy for Email");
     var copyShapesBtn = btnGroup.add("button", undefined, "Copy Shapes");
     var mirrorBtn = btnGroup.add("button", undefined, "Mirror D/P");
@@ -1195,22 +1252,20 @@ function showResults(rows, multiDoc) {
     refresh();
 
     // ---- Button handlers ----
-    copyTSVBtn.onClick = function() {
-        var tsv = buildTSV(rows, readParams().bleed);
-        var ok = setClipboardText(tsv);
-        if (ok) {
-            alert("Copied " + rows.length + " row(s) to clipboard.\nPaste into a spreadsheet -- columns: Name, Trim H, Trim W, Bleed H, Bleed W.");
-        } else {
-            showCopyFallbackDialog(tsv);
-        }
-    };
-
     copyEmailBtn.onClick = function() {
         if (!currentEstimate) refresh();
-        var emailText = buildEmailText(rows, currentEstimate, multiDoc);
-        var ok = setClipboardText(emailText);
+        var includeSizes = includeSizesCheckbox.value;
+        var bleed = readParams().bleed;
+        var emailText = buildEmailText(rows, currentEstimate, multiDoc, includeSizes, bleed);
+        var emailHtml = buildEmailHtml(rows, currentEstimate, multiDoc, includeSizes, bleed);
+
+        // Rich HTML + plain-text on the clipboard: email clients paste the
+        // styled tables, plain-text editors get the aligned text version.
+        var ok = setClipboardHtml(emailHtml, emailText);
         if (ok) {
-            alert("Email-ready estimate copied to clipboard.\nPaste into your email.");
+            alert("Email-ready estimate copied to clipboard." +
+                  (includeSizes ? "\nIncludes the panel size table." : "") +
+                  "\nPaste into your email.");
         } else {
             showCopyFallbackDialog(emailText);
         }
