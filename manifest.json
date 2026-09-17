@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-09-17T10:53:15.518918",
+  "last_updated": "2026-09-17T13:10:21.515653",
   "deployer_version": "3.0",
   "total_scripts": 29,
   "launcher_version": "4.0",
@@ -139,8 +139,8 @@
       "filename": "image_quality_analyzer.js",
       "metadata": {
         "name": "Image Quality Analysis",
-        "version": "2.1",
-        "description": "Analyze selected images and label them with resolution info",
+        "version": "2.2",
+        "description": "Analyze selected images and label them with resolution info; auto-detects the drawing scale from the page",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -150,10 +150,10 @@
           "PPI"
         ]
       },
-      "hash": "5202eb82102dee2a6d95706e757111e4",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\image_quality_analyzer.js",
-      "file_size": 12177,
-      "last_modified": "2025-11-12T10:41:55.209850",
+      "hash": "5e49b857975f4797bbee7b80af5a2bca",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\image_quality_analyzer.js",
+      "file_size": 22153,
+      "last_modified": "2026-09-17T11:20:53.719687",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js"
     },
@@ -600,8 +600,8 @@
       "filename": "Scale To Page.js",
       "metadata": {
         "name": "Scale To Page",
-        "version": "1.5",
-        "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Starting scale is assumed to be 1:10, so 50% -> 1:20, 200% -> 1:5, etc. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
+        "version": "1.7",
+        "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. When the page already carries a \"Scale 1:N\" callout (architectural notation like 3/8\" = 1'-0\" works too) the target ratio prefills to match it, so the copies are resized to the page's scale instead of just relabeled. Source art is assumed to be 1:10 and can be overridden. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -611,10 +611,10 @@
           "processor"
         ]
       },
-      "hash": "7a1f899b6a72f9b48b20679eabc03444",
+      "hash": "07d37cd8b2d84eb98846718fdec8241c",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Scale To Page.js",
-      "file_size": 16038,
-      "last_modified": "2026-08-03T15:44:28.408179",
+      "file_size": 26392,
+      "last_modified": "2026-09-17T13:09:10.734522",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js"
     },
