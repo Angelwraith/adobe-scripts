@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.9.3",
+  "version": "1.9.5",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -359,7 +359,7 @@
 
     // Check if Cut Path Separator has been run by looking for CPS-created layers with content
     function checkForCPSProcessing() {
-        var cpsLayerNames = ["CutThrough2-Outside", "CutThrough1-Inside", "PinMountHoles-Inside", "CutThrough-Knifecut", "CutContour", "Spot1"];
+        var cpsLayerNames = ["CutThrough2-Outside", "CutThrough1-Inside", "PinMountHoles-Inside", "PinHoles", "CutThrough-Knifecut", "CutContour", "Spot1"];
         var foundLayers = [];
         var layersWithContent = [];
         
@@ -901,6 +901,7 @@ function isolateArtboard(artboardIndex) {
         var tempDoc = app.open(tempFile);
         
         var hasKnifeCut = false;
+        var knifeCutLayerName = "";
         var otherCuts = [];
         var hasAnyContent = false;
         
@@ -932,8 +933,10 @@ function isolateArtboard(artboardIndex) {
                 continue;
             }
             
-            // Keep PinMountHoles-Inside if it has content
-            if (layerName === "PinMountHoles-Inside") {
+            // Keep pin hole layers if they have content.
+            // Matches both the legacy "PinMountHoles-Inside" name and the
+            // current "PinHoles" name (and any other pin/hole variant).
+            if (isPinHoleLayerName(layerName)) {
                 if (!layerHasContent(layer)) {
                     layer.remove();
                 } else {
@@ -949,8 +952,9 @@ function isolateArtboard(artboardIndex) {
                     layer.remove();
                 } else {
                     hasAnyContent = true;
-                    if (layerName === "CutThrough3-Knifecut") {
+                    if (isKnifeCutLayerName(layerName)) {
                         hasKnifeCut = true;
+                        knifeCutLayerName = layerName;
                     } else {
                         otherCuts.push(layerName);
                     }
@@ -969,7 +973,7 @@ function isolateArtboard(artboardIndex) {
         
         // Warn if knife cut is with other cuts
         if (hasKnifeCut && otherCuts.length > 0) {
-            alert("Warning: Knife cut (CutThrough3-Knifecut) is on the same artboard as other cut types:\n" + 
+            alert("Warning: Knife cut (" + knifeCutLayerName + ") is on the same artboard as other cut types:\n" + 
                   otherCuts.join(", "));
         }
         
@@ -1053,8 +1057,9 @@ function isolateArtboard(artboardIndex) {
             var layerName = layer.name;
             var layerNameLower = layerName.toLowerCase();
             
-            // Keep only cutcontour/cutcontour_prf/reg that have content
-            if (layerName === "CutContour" || layerName === "CutContour_PRF" || layerNameLower === "reg") {
+            // Keep only cutcontour/cutcontour_prf/reg/pin holes that have content
+            if (layerName === "CutContour" || layerName === "CutContour_PRF" ||
+                layerNameLower === "reg" || isPinHoleLayerName(layerName)) {
                 if (!layerHasContent(layer)) {
                     layer.remove();
                 } else {
@@ -1082,6 +1087,20 @@ function isolateArtboard(artboardIndex) {
         tempDoc.close(SaveOptions.DONOTSAVECHANGES);
     }
     
+    // True for any pin-mount hole layer, regardless of naming convention
+    // ("PinHoles", "PinMountHoles-Inside", "Pin Mount Holes", etc.)
+    function isPinHoleLayerName(layerName) {
+        var n = String(layerName).toLowerCase().replace(/[^a-z]/g, "");
+        return n.indexOf("pin") !== -1 && n.indexOf("hole") !== -1;
+    }
+
+    // True for any knife cut layer, regardless of naming convention
+    // ("CutThrough-Knifecut", "CutThrough3-Knifecut", "Knife Cut", etc.)
+    function isKnifeCutLayerName(layerName) {
+        var n = String(layerName).toLowerCase().replace(/[^a-z]/g, "");
+        return n.indexOf("knifecut") !== -1;
+    }
+
     // Check if layer has content
     function layerHasContent(layer) {
         if (layer.pageItems.length > 0) {
