@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-09-17T13:10:21.515653",
+  "last_updated": "2026-09-22T12:48:48.560784",
   "deployer_version": "3.0",
-  "total_scripts": 29,
+  "total_scripts": 30,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -139,8 +139,8 @@
       "filename": "image_quality_analyzer.js",
       "metadata": {
         "name": "Image Quality Analysis",
-        "version": "2.2",
-        "description": "Analyze selected images and label them with resolution info; auto-detects the drawing scale from the page",
+        "version": "2.4",
+        "description": "Analyze selected images and label them with resolution info; auto-detects the drawing scale from the page the selected art is on",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -150,10 +150,10 @@
           "PPI"
         ]
       },
-      "hash": "5e49b857975f4797bbee7b80af5a2bca",
+      "hash": "d0c40184727362348aea570247bfb2a0",
       "local_path": "C:\\Dev\\Illustrator Scripts\\image_quality_analyzer.js",
-      "file_size": 22153,
-      "last_modified": "2026-09-17T11:20:53.719687",
+      "file_size": 24143,
+      "last_modified": "2026-09-17T13:33:28.683078",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/image_quality_analyzer.js"
     },
@@ -463,8 +463,8 @@
       "filename": "List_Artboard_Sizes.jsx",
       "metadata": {
         "name": "List Artboard Sizes",
-        "version": "1.7",
-        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Copy for Email can include the panel size table as a clean HTML table. Also copies shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
+        "version": "1.8",
+        "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Copy for Email can include the panel size table as a clean HTML table. Also copies shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls. Files with PRIME in the name are treated as nested sheets (bleed already included) and compared against the panel files, with a waste breakdown (bleed / unused roll width / R.L. waste).",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -475,10 +475,10 @@
           "multi-document"
         ]
       },
-      "hash": "852553575ead5d170c6486d966c9258f",
+      "hash": "7ff33cf4d80ad70808cb7b8228962181",
       "local_path": "C:\\Dev\\Illustrator Scripts\\List_Artboard_Sizes.jsx",
-      "file_size": 50984,
-      "last_modified": "2026-08-12T12:25:49.237086",
+      "file_size": 56825,
+      "last_modified": "2026-09-21T13:57:35.062795",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/List_Artboard_Sizes.jsx"
     },
@@ -600,8 +600,8 @@
       "filename": "Scale To Page.js",
       "metadata": {
         "name": "Scale To Page",
-        "version": "1.7",
-        "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. When the page already carries a \"Scale 1:N\" callout (architectural notation like 3/8\" = 1'-0\" works too) the target ratio prefills to match it, so the copies are resized to the page's scale instead of just relabeled. Source art is assumed to be 1:10 and can be overridden. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
+        "version": "1.9",
+        "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Copies land on the page you are looking at (the artboard under the center of the window), not on whatever Illustrator still considers the active artboard. When that page already carries a \"Scale 1:N\" callout (architectural notation like 3/8\" = 1'-0\" works too) the target ratio prefills to match it, so the copies are resized to the page's scale instead of just relabeled. Source art is assumed to be 1:10 and can be overridden. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -611,10 +611,10 @@
           "processor"
         ]
       },
-      "hash": "07d37cd8b2d84eb98846718fdec8241c",
+      "hash": "6642c55a90da44bdfc968c8b7de71c5a",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Scale To Page.js",
-      "file_size": 26392,
-      "last_modified": "2026-09-17T13:09:10.734522",
+      "file_size": 29107,
+      "last_modified": "2026-09-17T13:33:28.355674",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js"
     },
@@ -645,6 +645,29 @@
       "last_modified": "2026-08-17T10:28:13.525533",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Pathfinder%20Per%20Group.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Pathfinder%20Per%20Group.js"
+    },
+    "Open PDF with Comments.js": {
+      "filename": "Open PDF with Comments.js",
+      "metadata": {
+        "name": "Open PDF with Comments",
+        "version": "1.0",
+        "description": "Pick a PDF, have Acrobat flatten its comments into a copy, then place every page as a linked file on its own artboard.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "pdf",
+          "acrobat",
+          "comments",
+          "import",
+          "artboard"
+        ]
+      },
+      "hash": "110095fc8b684d607960ea6528831671",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Open PDF with Comments.js",
+      "file_size": 8051,
+      "last_modified": "2026-09-22T12:44:18.195120",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Open%20PDF%20with%20Comments.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Open%20PDF%20with%20Comments.js"
     }
   }
 }
