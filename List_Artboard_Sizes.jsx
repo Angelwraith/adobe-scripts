@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "List Artboard Sizes",
-  "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Copy for Email can include the panel size table as a clean HTML table. Also copies shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls.",
-  "version": "1.7",
+  "description": "Lists all artboards across one or more open documents with sizes multiplied by 10 and rounded up to the nearest 0.5 inch. Shows trim size plus finished (with-bleed) size for each panel. Copy for Email can include the panel size table as a clean HTML table. Also copies shape duplicates. Supports a custom (unusual) roll width in addition to the stocked rolls. Files with PRIME in the name are treated as nested sheets (bleed already included) and compared against the panel files, with a waste breakdown (bleed / unused roll width / R.L. waste).",
+  "version": "1.8",
   "target": "illustrator",
   "tags": ["artboard", "size", "measure", "list", "multi-document"]
 }@END_METADATA*/
@@ -169,6 +169,8 @@ function collectArtboardRows(docs, multiDoc) {
         }
 
         var baseName = doc.name.replace(/\.[^\.]+$/, "");
+        // PRIME files hold nested print sheets: bleed is already in the artboards
+        var isPrime = /PRIME/i.test(doc.name);
 
         for (var i = 0; i < doc.artboards.length; i++) {
             var ab = doc.artboards[i];
@@ -201,7 +203,8 @@ function collectArtboardRows(docs, multiDoc) {
                 origWpts: widthPts,
                 origHpts: heightPts,
                 finalW: widthRounded,
-                finalH: heightRounded
+                finalH: heightRounded,
+                isPrime: isPrime
             });
         }
     }
@@ -256,7 +259,9 @@ function buildDisplayRows(rows, bleed) {
     for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
         var tw = formatSize(r.finalW), th = formatSize(r.finalH);
-        var bw = formatSize(finishedDim(r.finalW, bleed)), bh = formatSize(finishedDim(r.finalH, bleed));
+        // PRIME sheets already include bleed -- show the sheet size as-is
+        var rb = r.isPrime ? 0 : bleed;
+        var bw = formatSize(finishedDim(r.finalW, rb)), bh = formatSize(finishedDim(r.finalH, rb));
         rawTw.push(tw); rawTh.push(th); rawBw.push(bw); rawBh.push(bh);
         if (tw.length > wTw) wTw = tw.length;
         if (th.length > wTh) wTh = th.length;
@@ -286,7 +291,7 @@ function buildDisplayRows(rows, bleed) {
             sep: false,
             num:  r2.index + ".",
             name: r2.name,
-            trim:  padLeft(rawTw[j], wTw) + "\" x " + padLeft(rawTh[j], wTh) + "\"",
+            trim:  r2.isPrime ? "nested" : padLeft(rawTw[j], wTw) + "\" x " + padLeft(rawTh[j], wTh) + "\"",
             bleed: padLeft(rawBw[j], wBw) + "\" x " + padLeft(rawBh[j], wBh) + "\"",
             roll: roll,
             run:  run
@@ -462,9 +467,19 @@ function copyShapesToClipboard(rows, multiDoc) {
 // (ESTIMATION_DEFAULTS is declared at top of file so it's available at startup)
 
 // Compute the printed-material requirement for one panel.
-function calculatePanelEstimate(width, height, params) {
-    var w1 = width + params.bleed * 2;
-    var h1 = height + params.bleed * 2;
+//
+// isPrime = true means the artboard is a nested PRIME sheet: bleed is already
+// baked into the artboard, so no bleed is added and the artboard area is NOT
+// installed coverage (it includes bleed plus the gaps between nested panels).
+//
+// All area results are in sq ft. The printed area is split into parts so the
+// waste can be explained:
+//   printed = installed + bleed + unused roll width + R.L. waste   (panels)
+//   printed = sheet     + unused roll width + R.L. waste           (PRIME)
+function calculatePanelEstimate(width, height, params, isPrime) {
+    var bleed = isPrime ? 0 : params.bleed;
+    var w1 = width + bleed * 2;
+    var h1 = height + bleed * 2;
     var rollRequired = Math.min(w1, h1); // panel goes across the roll on its short edge
     var runLength = Math.max(w1, h1);    // long edge runs down the roll
 
@@ -478,12 +493,31 @@ function calculatePanelEstimate(width, height, params) {
     }
 
     var ok = (rollSize !== null);
+
+    // If the chosen roll is also wide enough for the long edge, rotate the
+    // panel so the long edge goes across and the short edge becomes the run.
+    // (Happens when smaller rolls are unchecked, e.g. 48x38.5 on a 54" roll.)
+    if (ok && rollSize - params.pinchMargin >= runLength) {
+        var tmp = rollRequired;
+        rollRequired = runLength;
+        runLength = tmp;
+    }
+
     var runWithWaste = runLength + params.rlWaste;
+    var sheetSqFt = (w1 * h1) / 144;
+    var installedSqFt = isPrime ? 0 : (width * height) / 144;
+    var bleedSqFt = isPrime ? 0 : sheetSqFt - installedSqFt;
     var printedSqFt = ok ? (rollSize * runWithWaste) / 144 : 0;
-    var installedSqFt = (width * height) / 144;
+    var sideWasteSqFt = ok ? (rollSize * runLength) / 144 - sheetSqFt : 0;
+    var rlWasteSqFt = ok ? (rollSize * params.rlWaste) / 144 : 0;
 
     return {
+        isPrime: !!isPrime,
         installedSqFt: installedSqFt,
+        sheetSqFt: sheetSqFt,
+        bleedSqFt: bleedSqFt,
+        sideWasteSqFt: sideWasteSqFt,
+        rlWasteSqFt: rlWasteSqFt,
         printedSqFt: printedSqFt,
         rollRequired: rollRequired,
         runLength: runLength,
@@ -493,41 +527,28 @@ function calculatePanelEstimate(width, height, params) {
     };
 }
 
-// Aggregate per-doc and overall estimate from the rows array.
-function calculateOverallEstimate(rows, params) {
-    var perDoc = {};         // docName -> { panels, installed, printed, errorPanels[] }
-    var docOrder = [];
-    var rollUsage = {};      // rollSize -> { count, sqft }
-    var totals = { panels: 0, installed: 0, printed: 0, errorPanels: [] };
+// Aggregate one group of rows (all panel rows, or all PRIME rows).
+function aggregateGroup(rows, params, isPrime) {
+    var t = {
+        count: 0, installed: 0, printed: 0, sheet: 0,
+        bleed: 0, sideWaste: 0, rlWaste: 0, errorPanels: []
+    };
+    var rollUsage = {};
 
     for (var i = 0; i < rows.length; i++) {
         var r = rows[i];
-        var est = calculatePanelEstimate(r.finalW, r.finalH, params);
-
-        // attach for any later use
+        var est = calculatePanelEstimate(r.finalW, r.finalH, params, isPrime);
         r._estimate = est;
 
-        if (!perDoc[r.docName]) {
-            perDoc[r.docName] = {
-                docName: r.docName,
-                docBaseName: r.docBaseName,
-                panels: 0,
-                installed: 0,
-                printed: 0,
-                errorPanels: []
-            };
-            docOrder.push(r.docName);
-        }
-        var bucket = perDoc[r.docName];
-        bucket.panels += 1;
-        bucket.installed += est.installedSqFt;
-
-        totals.panels += 1;
-        totals.installed += est.installedSqFt;
+        t.count += 1;
+        t.installed += est.installedSqFt;
 
         if (est.ok) {
-            bucket.printed += est.printedSqFt;
-            totals.printed += est.printedSqFt;
+            t.printed += est.printedSqFt;
+            t.sheet += est.sheetSqFt;
+            t.bleed += est.bleedSqFt;
+            t.sideWaste += est.sideWasteSqFt;
+            t.rlWaste += est.rlWasteSqFt;
 
             var key = est.rollSize.toString();
             if (!rollUsage[key]) rollUsage[key] = { rollSize: est.rollSize, count: 0, sqft: 0, runInches: 0 };
@@ -535,25 +556,186 @@ function calculateOverallEstimate(rows, params) {
             rollUsage[key].sqft += est.printedSqFt;
             rollUsage[key].runInches += est.runWithWaste;
         } else {
-            bucket.errorPanels.push(r.name);
-            totals.errorPanels.push(r.name);
+            t.errorPanels.push(r.name);
         }
     }
 
-    // build sorted roll usage list
     var rollList = [];
     for (var k in rollUsage) {
         if (rollUsage.hasOwnProperty(k)) rollList.push(rollUsage[k]);
     }
     rollList.sort(function(a, b) { return a.rollSize - b.rollSize; });
 
+    return { isPrime: isPrime, totals: t, rollList: rollList };
+}
+
+// Aggregate per-doc and overall estimate from the rows array.
+// Panel files and PRIME (nested) files are kept in separate groups so the
+// worst-case (no nesting) and nested figures can be compared side by side.
+// When both are selected, the panel files' installed coverage is used as the
+// installed figure for the PRIME too (same job, same panels).
+function calculateOverallEstimate(rows, params) {
+    var panelRows = [], primeRows = [];
+    for (var i = 0; i < rows.length; i++) {
+        if (rows[i].isPrime) primeRows.push(rows[i]);
+        else panelRows.push(rows[i]);
+    }
+
+    var panel = panelRows.length ? aggregateGroup(panelRows, params, false) : null;
+    var prime = primeRows.length ? aggregateGroup(primeRows, params, true) : null;
+
+    var perDoc = {};
+    var docOrder = [];
+    for (var j = 0; j < rows.length; j++) {
+        var r = rows[j];
+        if (!perDoc[r.docName]) {
+            perDoc[r.docName] = {
+                docName: r.docName,
+                docBaseName: r.docBaseName,
+                isPrime: !!r.isPrime,
+                panels: 0,
+                installed: 0,
+                printed: 0
+            };
+            docOrder.push(r.docName);
+        }
+        var b = perDoc[r.docName];
+        b.panels += 1;
+        b.installed += r._estimate.installedSqFt;
+        b.printed += r._estimate.printedSqFt;
+    }
+
     return {
+        panel: panel,
+        prime: prime,
         perDoc: perDoc,
         docOrder: docOrder,
-        totals: totals,
-        rollList: rollList,
         params: params
     };
+}
+
+// Build the coverage report as a list of sections. Each section is
+// { title, rows: [ { label, value, bold, indent } ], note }.
+// The dialog text, plain-text email, and HTML email all render from this so
+// the three always show the same numbers.
+function buildCoverageSections(estimate) {
+    var p = estimate.params;
+    var sections = [];
+    var panel = estimate.panel;
+    var prime = estimate.prime;
+
+    function row(label, value, bold, indent) {
+        return { label: label, value: value, bold: !!bold, indent: !!indent };
+    }
+    function sq(n) { return formatSqFt(n) + " sq ft"; }
+    function pctOf(part, whole) { return whole > 0 ? formatPct(part / whole) : "--"; }
+
+    function rollRows(group) {
+        var out = [];
+        for (var j = 0; j < group.rollList.length; j++) {
+            var rl = group.rollList[j];
+            out.push(row(rl.rollSize + "\" roll", inchesToFeet(rl.runInches) + " ft  (" + sq(rl.sqft) + ")", false, true));
+        }
+        return out;
+    }
+
+    if (panel) {
+        var t = panel.totals;
+        var waste = t.printed - t.installed;
+        var rows = [];
+        rows.push(row("Panels", t.count.toString()));
+        rows.push(row("Installed", sq(t.installed), true));
+        rows.push(row("Printed", sq(t.printed), true));
+        rows.push(row("Utilization", pctOf(t.installed, t.printed)));
+        rows.push(row("Waste", sq(waste) + "  (" + pctOf(waste, t.printed) + ")"));
+        rows.push(row("Bleed (" + p.bleed + "\"/side)", sq(t.bleed) + "  (" + pctOf(t.bleed, t.printed) + ")", false, true));
+        rows.push(row("Unused roll width", sq(t.sideWaste) + "  (" + pctOf(t.sideWaste, t.printed) + ")", false, true));
+        rows.push(row("R.L. waste (" + p.rlWaste + "\" x " + t.count + ")", sq(t.rlWaste) + "  (" + pctOf(t.rlWaste, t.printed) + ")", false, true));
+        rows.push(row("Roll length needed", ""));
+        rows = rows.concat(rollRows(panel));
+        sections.push({
+            title: prime ? "Panels - no nesting (worst case)" : "Total Coverage - panels, no nesting",
+            rows: rows
+        });
+    }
+
+    if (prime) {
+        var tp = prime.totals;
+        var installed = panel ? panel.totals.installed : 0;
+        var prow = [];
+        prow.push(row("Nested sheets", tp.count.toString()));
+        if (panel) prow.push(row("Installed (from panel files)", sq(installed), true));
+        prow.push(row("Printed", sq(tp.printed), true));
+        if (panel) {
+            var pw = tp.printed - installed;
+            var inNest = tp.sheet - installed;
+            prow.push(row("Utilization", pctOf(installed, tp.printed)));
+            prow.push(row("Waste", sq(pw) + "  (" + pctOf(pw, tp.printed) + ")"));
+            prow.push(row("Bleed + gaps inside nests", sq(inNest) + "  (" + pctOf(inNest, tp.printed) + ")", false, true));
+        } else {
+            prow.push(row("Sheet area (incl. bleed)", sq(tp.sheet)));
+        }
+        prow.push(row("Unused roll width", sq(tp.sideWaste) + "  (" + pctOf(tp.sideWaste, tp.printed) + ")", false, true));
+        prow.push(row("R.L. waste (" + p.rlWaste + "\" x " + tp.count + ")", sq(tp.rlWaste) + "  (" + pctOf(tp.rlWaste, tp.printed) + ")", false, true));
+        prow.push(row("Roll length needed", ""));
+        prow = prow.concat(rollRows(prime));
+        sections.push({
+            title: "PRIME - nested (expected)",
+            rows: prow,
+            note: panel ? "" : "Bleed is already in the PRIME artboards, so none is added. Select the panel file(s) too to get installed coverage and utilization."
+        });
+    }
+
+    if (panel && prime) {
+        var saved = panel.totals.printed - prime.totals.printed;
+        sections.push({
+            title: "Nesting Savings",
+            rows: [
+                row("Printed, no nesting", sq(panel.totals.printed)),
+                row("Printed, nested", sq(prime.totals.printed)),
+                row("Saved by nesting", sq(saved) + "  (" + pctOf(saved, panel.totals.printed) + ")", true)
+            ]
+        });
+    }
+
+    var errs = [];
+    if (panel) errs = errs.concat(panel.totals.errorPanels);
+    if (prime) errs = errs.concat(prime.totals.errorPanels);
+    if (errs.length > 0) {
+        var erows = [];
+        for (var e = 0; e < errs.length; e++) erows.push(row("- " + errs[e], ""));
+        sections.push({ title: "WARNING - too wide for any available roll", rows: erows, warning: true });
+    }
+
+    return sections;
+}
+
+// Render sections as aligned plain text.
+function renderSectionsText(sections, underline) {
+    var lines = [];
+    for (var s = 0; s < sections.length; s++) {
+        var sec = sections[s];
+        var w = 0;
+        for (var i = 0; i < sec.rows.length; i++) {
+            var len = sec.rows[i].label.length + (sec.rows[i].indent ? 2 : 0);
+            if (sec.rows[i].value !== "" && len > w) w = len;
+        }
+        if (s > 0) lines.push("");
+        lines.push(sec.title.toUpperCase());
+        if (underline) {
+            var u = "";
+            while (u.length < sec.title.length) u += "-";
+            lines.push(u);
+        }
+        for (var j = 0; j < sec.rows.length; j++) {
+            var r = sec.rows[j];
+            var label = (r.indent ? "  " : "") + r.label;
+            if (r.value === "") lines.push(label + (r.label.charAt(0) === "-" ? "" : ":"));
+            else lines.push(padRight(label + ":", w + 2) + r.value);
+        }
+        if (sec.note) lines.push("(" + sec.note + ")");
+    }
+    return lines.join("\n");
 }
 
 // Format a sq ft number (2 decimals)
@@ -573,42 +755,20 @@ function inchesToFeet(n) {
 
 // Build the in-dialog estimate summary text.
 function buildEstimateSummary(estimate, multiDoc) {
-    var t = estimate.totals;
-    var lines = [];
-
+    var head = "";
     if (multiDoc) {
+        var lines = [];
         for (var i = 0; i < estimate.docOrder.length; i++) {
             var d = estimate.perDoc[estimate.docOrder[i]];
-            lines.push(d.docBaseName + ":  " + d.panels + " panels   Installed: " + formatSqFt(d.installed) + " sq ft   Printed: " + formatSqFt(d.printed) + " sq ft");
+            if (d.isPrime) {
+                lines.push(d.docBaseName + ":  " + d.panels + " nested sheets   Printed: " + formatSqFt(d.printed) + " sq ft   [PRIME]");
+            } else {
+                lines.push(d.docBaseName + ":  " + d.panels + " panels   Installed: " + formatSqFt(d.installed) + " sq ft   Printed: " + formatSqFt(d.printed) + " sq ft");
+            }
         }
-        lines.push("");
+        head = lines.join("\n") + "\n\n";
     }
-
-    lines.push("TOTAL:  " + t.panels + " panels");
-    lines.push("Installed coverage: " + formatSqFt(t.installed) + " sq ft");
-    lines.push("Printed coverage:   " + formatSqFt(t.printed) + " sq ft");
-
-    var utilization = (t.printed > 0) ? (t.installed / t.printed) : 0;
-    lines.push("Utilization: " + formatPct(utilization) + "    Waste: " + formatPct(1 - utilization));
-
-    if (estimate.rollList.length > 0) {
-        lines.push("");
-        lines.push("Roll length needed:");
-        for (var j = 0; j < estimate.rollList.length; j++) {
-            var rl = estimate.rollList[j];
-            lines.push("  " + rl.rollSize + "\" roll:  " + inchesToFeet(rl.runInches) + " ft   (" + formatSqFt(rl.sqft) + " sq ft)");
-        }
-    }
-
-    if (t.errorPanels.length > 0) {
-        lines.push("");
-        lines.push("WARNING: " + t.errorPanels.length + " panel(s) too wide for any roll:");
-        for (var e = 0; e < t.errorPanels.length; e++) {
-            lines.push("  - " + t.errorPanels[e]);
-        }
-    }
-
-    return lines.join("\n");
+    return head + renderSectionsText(buildCoverageSections(estimate), false);
 }
 
 // Compute the project name and per-section labels from doc base names
@@ -639,9 +799,7 @@ function getProjectInfo(estimate, multiDoc) {
 // Build email-friendly plain text -- coverage + roll info, and optionally the
 // per-panel size table (trim / w-bleed / roll / run).
 function buildEmailText(rows, estimate, multiDoc, includeSizes, bleed) {
-    var t = estimate.totals;
     var info = getProjectInfo(estimate, multiDoc);
-    var util = (t.printed > 0) ? (t.installed / t.printed) : 0;
     var lines = [];
 
     lines.push("Project: " + info.projectName);
@@ -680,29 +838,7 @@ function buildEmailText(rows, estimate, multiDoc, includeSizes, bleed) {
         lines.push("");
     }
 
-    lines.push("TOTAL COVERAGE");
-    lines.push("--------------");
-    lines.push("Installed: " + formatSqFt(t.installed) + " sq ft");
-    lines.push("Printed: " + formatSqFt(t.printed) + " sq ft");
-    lines.push("Utilization: " + formatPct(util) + " (waste: " + formatPct(1 - util) + ")");
-    lines.push("");
-
-    if (estimate.rollList.length > 0) {
-        lines.push("ROLL LENGTH NEEDED");
-        lines.push("------------------");
-        for (var j = 0; j < estimate.rollList.length; j++) {
-            var rl = estimate.rollList[j];
-            lines.push(rl.rollSize + "\" roll: " + inchesToFeet(rl.runInches) + " ft (" + formatSqFt(rl.sqft) + " sq ft)");
-        }
-    }
-
-    if (t.errorPanels.length > 0) {
-        lines.push("");
-        lines.push("WARNING - Panels too wide for any stocked roll:");
-        for (var e = 0; e < t.errorPanels.length; e++) {
-            lines.push("- " + t.errorPanels[e]);
-        }
-    }
+    lines.push(renderSectionsText(buildCoverageSections(estimate), true));
 
     return lines.join("\n");
 }
@@ -717,9 +853,7 @@ function escapeHtml(s) {
 // size table. Pasted into Outlook/Gmail/Apple Mail, this renders as a clean
 // styled block.
 function buildEmailHtml(rows, estimate, multiDoc, includeSizes, bleed) {
-    var t = estimate.totals;
     var info = getProjectInfo(estimate, multiDoc);
-    var util = (t.printed > 0) ? (t.installed / t.printed) : 0;
 
     var h3 = 'style="margin:20px 0 6px;font-size:13px;color:#444;text-transform:uppercase;letter-spacing:0.6px;font-weight:bold;border-bottom:1px solid #ddd;padding-bottom:4px;"';
     var tableStyle = 'style="border-collapse:collapse;font-size:13px;margin:0 0 8px 0;"';
@@ -764,41 +898,26 @@ function buildEmailHtml(rows, estimate, multiDoc, includeSizes, bleed) {
         html += '</table>';
     }
 
-    html += '<div ' + h3 + '>Total Coverage</div>';
-    html += '<table ' + tableStyle + '>';
-    html += '<tr><td ' + tdStyle + '>Installed</td><td ' + tdRight + '><b>' + formatSqFt(t.installed) + ' sq ft</b></td></tr>';
-    html += '<tr><td ' + tdStyle + '>Printed</td><td ' + tdRight + '><b>' + formatSqFt(t.printed) + ' sq ft</b></td></tr>';
-    html += '<tr><td ' + tdStyle + '>Utilization</td><td ' + tdRight + '>' + formatPct(util) + '</td></tr>';
-    html += '<tr><td ' + tdStyle + '>Waste</td><td ' + tdRight + '>' + formatPct(1 - util) + '</td></tr>';
-    html += '</table>';
-
-    if (estimate.rollList.length > 0) {
-        html += '<div ' + h3 + '>Roll Length Needed</div>';
+    var h3warn = 'style="margin:20px 0 6px;font-size:13px;color:#c00;text-transform:uppercase;letter-spacing:0.6px;font-weight:bold;"';
+    var tdIndent = 'style="padding:4px 14px 4px 18px;border-bottom:1px solid #eee;color:#555;"';
+    var tdSub = 'style="padding:8px 14px 3px 0;color:#666;font-style:italic;"';
+    var sections = buildCoverageSections(estimate);
+    for (var s = 0; s < sections.length; s++) {
+        var sec = sections[s];
+        html += '<div ' + (sec.warning ? h3warn : h3) + '>' + escapeHtml(sec.title) + '</div>';
         html += '<table ' + tableStyle + '>';
-        html += '<tr>';
-        html += '<th ' + thStyle + '>Roll</th>';
-        html += '<th ' + thRight + '>Length</th>';
-        html += '<th ' + thRight + '>Coverage</th>';
-        html += '</tr>';
-        for (var j = 0; j < estimate.rollList.length; j++) {
-            var rl = estimate.rollList[j];
-            html += '<tr>';
-            html += '<td ' + tdStyle + '>' + rl.rollSize + '" roll</td>';
-            html += '<td ' + tdRight + '><b>' + inchesToFeet(rl.runInches) + ' ft</b></td>';
-            html += '<td ' + tdRight + '>' + formatSqFt(rl.sqft) + ' sq ft</td>';
-            html += '</tr>';
+        for (var ri = 0; ri < sec.rows.length; ri++) {
+            var r = sec.rows[ri];
+            if (r.value === "") {
+                html += '<tr><td colspan="2" ' + (sec.warning ? 'style="color:#c00;padding:2px 0;"' : tdSub) + '>' + escapeHtml(r.label) + '</td></tr>';
+                continue;
+            }
+            var val = escapeHtml(r.value);
+            if (r.bold) val = '<b>' + val + '</b>';
+            html += '<tr><td ' + (r.indent ? tdIndent : tdStyle) + '>' + escapeHtml(r.label) + '</td><td ' + tdRight + ' nowrap>' + val + '</td></tr>';
         }
         html += '</table>';
-    }
-
-    if (t.errorPanels.length > 0) {
-        html += '<div style="margin:20px 0 6px;font-size:13px;color:#c00;text-transform:uppercase;letter-spacing:0.6px;font-weight:bold;">Warning</div>';
-        html += '<div style="color:#c00;margin-bottom:4px;">Panels too wide for any stocked roll:</div>';
-        html += '<ul style="margin:0 0 12px 22px;color:#c00;">';
-        for (var e = 0; e < t.errorPanels.length; e++) {
-            html += '<li>' + escapeHtml(t.errorPanels[e]) + '</li>';
-        }
-        html += '</ul>';
+        if (sec.note) html += '<div style="color:#666;font-size:12px;margin:0 0 8px;">' + escapeHtml(sec.note) + '</div>';
     }
 
     html += '</div>';
@@ -1090,7 +1209,7 @@ function showResults(rows, multiDoc) {
     paramsRow2.add("statictext", undefined, '"');
 
     // ---- Artboard list ----
-    var listLabel = dlg.add("statictext", undefined, "Artboard sizes (x10, rounded up to 0.5\")   [ trim -> w/ bleed ]:");
+    var listLabel = dlg.add("statictext", undefined, "Artboard sizes (x10, rounded up to 0.5\")   [ trim -> w/ bleed ]   PRIME files: sheet size, bleed already included");
 
     // Real multi-column table: column boundaries are fixed in pixels, so the
     // columns stay aligned regardless of the platform font. Widths are sized to
