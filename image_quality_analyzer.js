@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Image Quality Analysis",
-  "description": "Analyze selected images and label them with resolution info; auto-detects the drawing scale from the page",
-  "version": "2.2",
+  "description": "Analyze selected images and label them with resolution info; auto-detects the drawing scale from the page the selected art is on",
+  "version": "2.4",
   "target": "illustrator",
   "tags": ["image", "quality", "resolution", "PPI"]
 }@END_METADATA*/
@@ -21,10 +21,10 @@ function main() {
     }
     
     // Look for a scale callout on the page so the dialog can prefill it
-    var detectedScale = detectPageScale(doc);
+    var detectedScale = detectPageScale(doc, sel);
 
     // Show scale selection dialog
-    var scaleDialog = new Window("dialog", "Image Quality Analysis - Select Scale");
+    var scaleDialog = new Window("dialog", "Image Quality Analysis  v2.4 - Select Scale");
     scaleDialog.alignChildren = "fill";
     scaleDialog.spacing = 15;
     scaleDialog.margins = 20;
@@ -84,10 +84,10 @@ function main() {
             customScaleDenominator.enabled = true;
         }
 
-        statusText.text = "Found on page: " + detectedScale.text +
+        statusText.text = "Found on this page: " + detectedScale.text +
             '   (from "' + truncateForDisplay(detectedScale.source, 40) + '")';
     } else {
-        statusText.text = "No scale found on the page - using the default 1:10.";
+        statusText.text = "No scale on this page - using the default 1:10.";
     }
 
     var buttonGroup = scaleDialog.add("group");
@@ -395,11 +395,66 @@ function createImageLabel(bounds, ppi, isLowRes, layer) {
 // ============================================================================
 // SCALE DETECTION
 // ============================================================================
-// Scan the document's text for a drawing scale callout so the dialog can
-// prefill it. Recognizes ratio notation ("Scale 1:10", "1:20") and
-// architectural notation ('3/8" = 1'-0"', '1/4" = 1\''). Returns
-// {text: "1:10", ratio: 10, source: "Scale 1:10"} or null if nothing parses.
-function detectPageScale(doc) {
+// Scan text ON THE ACTIVE ARTBOARD for a drawing scale callout so the dialog
+// can prefill it. Text on other artboards is ignored. Recognizes ratio notation
+// ("Scale 1:10", "1:20") and architectural notation ('3/8" = 1'-0"', '1/4" = 1\'').
+// Returns {text: "1:10", ratio: 10, source: "Scale 1:10"} or null.
+// Which artboard's scale applies: the one holding the selected art. Illustrator's
+// "active artboard" does not follow the window and is often a different page
+// entirely, so it is only the last resort. Order: artboard containing the
+// selection's center -> artboard under the center of the current view -> active.
+function resolveArtboardIndex(doc, sel) {
+    var boards;
+    try {
+        boards = doc.artboards;
+    } catch (eB) {
+        return -1;
+    }
+
+    function boardContaining(x, y) {
+        for (var i = 0; i < boards.length; i++) {
+            try {
+                var r = boards[i].artboardRect; // [left, top, right, bottom]
+                if (x >= r[0] && x <= r[2] && y <= r[1] && y >= r[3]) return i;
+            } catch (eR) {}
+        }
+        return -1;
+    }
+
+    // 1. The artboard the selected art sits on
+    if (sel && sel.length > 0) {
+        var left = null, top = null, right = null, bottom = null;
+        for (var s = 0; s < sel.length; s++) {
+            try {
+                var gb = sel[s].geometricBounds;
+                if (left === null || gb[0] < left) left = gb[0];
+                if (top === null || gb[1] > top) top = gb[1];
+                if (right === null || gb[2] > right) right = gb[2];
+                if (bottom === null || gb[3] < bottom) bottom = gb[3];
+            } catch (eS) {}
+        }
+        if (left !== null) {
+            var hit = boardContaining((left + right) / 2, (top + bottom) / 2);
+            if (hit >= 0) return hit;
+        }
+    }
+
+    // 2. The artboard under the center of the current view
+    try {
+        var c = doc.views[0].centerPoint;
+        var viewHit = boardContaining(c[0], c[1]);
+        if (viewHit >= 0) return viewHit;
+    } catch (eV) {}
+
+    // 3. Whatever Illustrator still calls active
+    try {
+        return doc.artboards.getActiveArtboardIndex();
+    } catch (eA) {}
+
+    return -1;
+}
+
+function detectPageScale(doc, sel) {
     var frames;
     try {
         frames = doc.textFrames;
@@ -408,16 +463,18 @@ function detectPageScale(doc) {
     }
     if (!frames || frames.length === 0) return null;
 
-    // Bounds of the active artboard, used to prefer callouts on the current page
+    // Only ONE artboard is considered: the one holding the images being
+    // analyzed. A scale callout on another page says nothing about this art.
+    var abIndex = resolveArtboardIndex(doc, sel);
     var artRect = null;
     try {
-        var abIndex = doc.artboards.getActiveArtboardIndex();
         if (abIndex >= 0 && abIndex < doc.artboards.length) {
             artRect = doc.artboards[abIndex].artboardRect;
         }
     } catch (e) {
         artRect = null;
     }
+    if (!artRect) return null;
 
     var limit = frames.length;
     if (limit > 3000) limit = 3000; // sanity cap on very heavy documents
@@ -434,25 +491,24 @@ function detectPageScale(doc) {
         }
         if (!contents) continue;
 
+        // Skip anything whose center is not on the active artboard
         var onArtboard = false;
-        if (artRect) {
-            try {
-                var b = frames[i].geometricBounds; // [left, top, right, bottom]
-                var cx = (b[0] + b[2]) / 2;
-                var cy = (b[1] + b[3]) / 2;
-                onArtboard = (cx >= artRect[0] && cx <= artRect[2] &&
-                              cy <= artRect[1] && cy >= artRect[3]);
-            } catch (e) {}
-        }
+        try {
+            var b = frames[i].geometricBounds; // [left, top, right, bottom]
+            var cx = (b[0] + b[2]) / 2;
+            var cy = (b[1] + b[3]) / 2;
+            onArtboard = (cx >= artRect[0] && cx <= artRect[2] &&
+                          cy <= artRect[1] && cy >= artRect[3]);
+        } catch (eB) {}
+        if (!onArtboard) continue;
 
         var lines = String(contents).split(/[\r\n]+/);
         for (var j = 0; j < lines.length; j++) {
             var hit = scaleFromLine(lines[j]);
             if (!hit) continue;
 
-            // A line that actually says "Scale" beats a bare ratio, and a
-            // callout on the active artboard beats one somewhere else.
-            var score = (hit.labeled ? 2 : 0) + (onArtboard ? 1 : 0);
+            // A line that actually says "Scale" beats a bare ratio
+            var score = hit.labeled ? 1 : 0;
             if (score > bestScore) {
                 bestScore = score;
                 best = hit;
