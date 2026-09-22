@@ -2,8 +2,8 @@
 @METADATA
 {
   "name": "Scale To Page",
-  "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. When the page already carries a \"Scale 1:N\" callout (architectural notation like 3/8\" = 1'-0\" works too) the target ratio prefills to match it, so the copies are resized to the page's scale instead of just relabeled. Source art is assumed to be 1:10 and can be overridden. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
-  "version": "1.7",
+  "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Copies land on the page you are looking at (the artboard under the center of the window), not on whatever Illustrator still considers the active artboard. When that page already carries a \"Scale 1:N\" callout (architectural notation like 3/8\" = 1'-0\" works too) the target ratio prefills to match it, so the copies are resized to the page's scale instead of just relabeled. Source art is assumed to be 1:10 and can be overridden. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
+  "version": "1.9",
   "target": "illustrator",
   "tags": ["scale", "copy", "layout", "processor"]
 }
@@ -37,9 +37,11 @@
     var PREVIEW_TAG = "__STP_PREVIEW__";       // name applied to transient preview copies
 
     // The SOURCE art is what comes out of the extractor -- 1:10 unless the user
-    // says otherwise in the palette. A scale callout found on the page is the
-    // TARGET: "the page is at 1:16, match it", which is a resize, not a relabel.
-    var detectedScale = detectPageScale(app.activeDocument);
+    // says otherwise in the palette. A scale callout on the ACTIVE artboard (the
+    // one the copies land on) is the TARGET: "this page is at 1:16, match it",
+    // which is a resize, not a relabel.
+    var targetArtboardIndex = resolveArtboardIndex(app.activeDocument);
+    var detectedScale = detectPageScale(app.activeDocument, targetArtboardIndex);
     var baseDenominator = DEFAULT_DENOMINATOR;
     var targetDenominator = (detectedScale && detectedScale.ratio > 0) ? detectedScale.ratio : DEFAULT_DENOMINATOR;
 
@@ -93,13 +95,40 @@
     }
 
     // ------------------------------------------------------------------
-    // Scale detection -- read the drawing scale off the page
+    // Scale detection -- read the drawing scale off the ACTIVE artboard
     // ------------------------------------------------------------------
-    // Looks for a scale callout in the document's text (the "Scale 1:N" label
-    // this script and the Smart Dimension Tool write, or architectural notation
-    // like 3/8" = 1'-0"). Returns {text, ratio, source} or null.
+    // Looks for a scale callout in text sitting on the active artboard (the
+    // "Scale 1:N" label this script and the Smart Dimension Tool write, or
+    // architectural notation like 3/8" = 1'-0"). Text on other artboards is
+    // ignored. Returns {text, ratio, source} or null.
 
-    function detectPageScale(doc) {
+    // Which artboard the copies are going onto. Illustrator's "active artboard"
+    // does NOT follow the window -- it stays put when you scroll, and selecting
+    // source art on another page drags it along. So the page you are LOOKING at
+    // wins: the artboard under the center of the current view. The active
+    // artboard is only the fallback (no view, or the view sits between pages).
+    function resolveArtboardIndex(doc) {
+        var fallback = -1;
+        try {
+            fallback = doc.artboards.getActiveArtboardIndex();
+        } catch (eA) {
+            fallback = -1;
+        }
+
+        try {
+            var c = doc.views[0].centerPoint; // [x, y] in document coordinates
+            for (var i = 0; i < doc.artboards.length; i++) {
+                var r = doc.artboards[i].artboardRect; // [left, top, right, bottom]
+                if (c[0] >= r[0] && c[0] <= r[2] && c[1] <= r[1] && c[1] >= r[3]) {
+                    return i;
+                }
+            }
+        } catch (eV) {}
+
+        return fallback;
+    }
+
+    function detectPageScale(doc, artIndex) {
         var frames;
         try {
             frames = doc.textFrames;
@@ -108,15 +137,17 @@
         }
         if (!frames || frames.length === 0) return null;
 
+        // Only the TARGET artboard counts -- that is where the copies land, so a
+        // callout on any other page is irrelevant (and misleading).
         var artRect = null;
         try {
-            var abIndex = doc.artboards.getActiveArtboardIndex();
-            if (abIndex >= 0 && abIndex < doc.artboards.length) {
-                artRect = doc.artboards[abIndex].artboardRect;
+            if (artIndex >= 0 && artIndex < doc.artboards.length) {
+                artRect = doc.artboards[artIndex].artboardRect;
             }
         } catch (eAb) {
             artRect = null;
         }
+        if (!artRect) return null;
 
         var limit = frames.length;
         if (limit > 3000) limit = 3000; // sanity cap on very heavy documents
@@ -133,25 +164,24 @@
             }
             if (!contents) continue;
 
+            // Skip anything whose center is not on the active artboard
             var onArtboard = false;
-            if (artRect) {
-                try {
-                    var b = frames[i].geometricBounds; // [left, top, right, bottom]
-                    var cx = (b[0] + b[2]) / 2;
-                    var cy = (b[1] + b[3]) / 2;
-                    onArtboard = (cx >= artRect[0] && cx <= artRect[2] &&
-                                  cy <= artRect[1] && cy >= artRect[3]);
-                } catch (eB) {}
-            }
+            try {
+                var b = frames[i].geometricBounds; // [left, top, right, bottom]
+                var cx = (b[0] + b[2]) / 2;
+                var cy = (b[1] + b[3]) / 2;
+                onArtboard = (cx >= artRect[0] && cx <= artRect[2] &&
+                              cy <= artRect[1] && cy >= artRect[3]);
+            } catch (eB) {}
+            if (!onArtboard) continue;
 
             var lines = String(contents).split(/[\r\n]+/);
             for (var j = 0; j < lines.length; j++) {
                 var hit = scaleFromLine(lines[j]);
                 if (!hit) continue;
 
-                // A line that says "Scale" beats a bare ratio, and a callout on
-                // the active artboard beats one elsewhere in the document.
-                var score = (hit.labeled ? 2 : 0) + (onArtboard ? 1 : 0);
+                // A line that says "Scale" beats a bare ratio
+                var score = hit.labeled ? 1 : 0;
                 if (score > bestScore) {
                     bestScore = score;
                     best = hit;
@@ -366,7 +396,13 @@
         s += "it.resize(factor*100,factor*100,true,true,true,true,true,Transformation.TOPLEFT);";
         s += "var nL=ax+factor*(oL-ax);var nT=ay+factor*(oT-ay);it.translate(nL-oL,nT-oT);}";
         // Center on the active artboard.
-        s += "var ai=d.artboards.getActiveArtboardIndex();var ar=d.artboards[ai].artboardRect;";
+        // Same target-artboard rule as the palette, evaluated fresh in the main
+        // engine so scrolling to another page while this palette is open still
+        // puts the copies where you are looking.
+        s += "function __ab(dd){var fb=-1;try{fb=dd.artboards.getActiveArtboardIndex();}catch(e){}";
+        s += "try{var c=dd.views[0].centerPoint;for(var q=0;q<dd.artboards.length;q++){var rr=dd.artboards[q].artboardRect;";
+        s += "if(c[0]>=rr[0]&&c[0]<=rr[2]&&c[1]<=rr[1]&&c[1]>=rr[3]){return q;}}}catch(e){}return fb;}";
+        s += "var ai=__ab(d);if(ai<0||ai>=d.artboards.length){ai=0;}var ar=d.artboards[ai].artboardRect;";
         s += "var acx=(ar[0]+ar[2])/2,acy=(ar[1]+ar[3])/2;";
         s += "var post=cb(copies);var ccx=(post[0]+post[2])/2,ccy=(post[1]+post[3])/2;var dx=acx-ccx,dy=acy-ccy;";
         s += "for(var m=0;m<copies.length;m++){copies[m].translate(dx,dy);}";
@@ -443,7 +479,7 @@
     // Palette UI (non-blocking)
     // ------------------------------------------------------------------
 
-    var dlg = new Window("palette", "Scale To Page");
+    var dlg = new Window("palette", "Scale To Page  v1.9");
     dlg.orientation = "column";
     dlg.alignChildren = "fill";
     dlg.margins = 16;
@@ -452,6 +488,20 @@
 
     var srcCount = app.activeDocument.selection.length;
     dlg.add("statictext", undefined, "Selected art: " + srcCount + " object(s)");
+
+    // Say out loud which page this is aimed at -- if it is not the one you are
+    // looking at, nothing below it can be right.
+    var targetName = "";
+    try {
+        if (targetArtboardIndex >= 0 && targetArtboardIndex < app.activeDocument.artboards.length) {
+            targetName = app.activeDocument.artboards[targetArtboardIndex].name;
+        }
+    } catch (eName) {}
+    var targetLine = dlg.add("statictext", undefined,
+        "Target page: artboard " + (targetArtboardIndex + 1) + " of " +
+        app.activeDocument.artboards.length +
+        (targetName ? "  (" + truncateForDisplay(targetName, 24) + ")" : ""));
+    targetLine.preferredSize.width = 360;
 
     var baseGroup = dlg.add("group");
     var baseLbl = baseGroup.add("statictext", undefined, "Source art:");
@@ -476,8 +526,8 @@
     var ratioNote = ratioGroup.add("statictext", undefined, "");
     ratioNote.preferredSize.width = 250;
     ratioNote.text = detectedScale
-        ? ('matching page: "' + truncateForDisplay(detectedScale.source, 28) + '"')
-        : "e.g. 1:12   (updates with the percentage)";
+        ? ('matching this page: "' + truncateForDisplay(detectedScale.source, 24) + '"')
+        : "no scale on this page - defaulting to 1:10";
 
     var previewText = dlg.add("statictext", undefined, "New scale on page:  1:10   (100% of current)");
     previewText.preferredSize.width = 360;
@@ -487,7 +537,7 @@
     optPanel.orientation = "column";
     optPanel.alignChildren = "left";
     optPanel.margins = 12;
-    optPanel.add("statictext", undefined, "Copies are always placed on the ACTIVE artboard.");
+    optPanel.add("statictext", undefined, "Copies are placed on the page shown above (the one in view).");
     var cbLabel = optPanel.add("checkbox", undefined, "Add \"Scale 1:N\" label (matches Smart Dimension Tool exactly)");
     cbLabel.value = true;
     var cbPreview = optPanel.add("checkbox", undefined, "Preview on page (keeps this palette open so you can adjust)");
