@@ -3,7 +3,7 @@
 {
   "name": "Scale To Page",
   "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Copies land on the page you are looking at (the artboard under the center of the window), not on whatever Illustrator still considers the active artboard. When that page already carries a \"Scale 1:N\" callout (architectural notation like 3/8\" = 1'-0\" works too) the target ratio prefills to match it, so the copies are resized to the page's scale instead of just relabeled. Source art is assumed to be 1:10 and can be overridden. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
-  "version": "1.9",
+  "version": "1.9.1",
   "target": "illustrator",
   "tags": ["scale", "copy", "layout", "processor"]
 }
@@ -393,7 +393,9 @@
         s += "var copies=[];for(var s2=0;s2<src.length;s2++){copies.push(src[s2].duplicate());}";
         s += "var pre=cb(copies);var ax=pre[0],ay=pre[1];";
         s += "for(var c=0;c<copies.length;c++){var it=copies[c];var bb=it.geometricBounds;var oL=bb[0],oT=bb[1];";
-        s += "it.resize(factor*100,factor*100,true,true,true,true,true,Transformation.TOPLEFT);";
+        // 7th arg is the line-width SCALE PERCENT (not a boolean). Passing true
+        // (=1) set strokes/effects to 1% -- a 1pt stroke became 0.01pt.
+        s += "it.resize(factor*100,factor*100,true,true,true,true,factor*100,Transformation.TOPLEFT);";
         s += "var nL=ax+factor*(oL-ax);var nT=ay+factor*(oT-ay);it.translate(nL-oL,nT-oT);}";
         // Center on the active artboard.
         // Same target-artboard rule as the palette, evaluated fresh in the main
@@ -479,7 +481,7 @@
     // Palette UI (non-blocking)
     // ------------------------------------------------------------------
 
-    var dlg = new Window("palette", "Scale To Page  v1.9");
+    var dlg = new Window("palette", "Scale To Page  v1.9.1");
     dlg.orientation = "column";
     dlg.alignChildren = "fill";
     dlg.margins = 16;
