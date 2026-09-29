@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-09-22T12:48:48.560784",
+  "last_updated": "2026-09-29T10:00:12.529123",
   "deployer_version": "3.0",
-  "total_scripts": 30,
+  "total_scripts": 31,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -202,8 +202,8 @@
       "filename": "Merge Text.js",
       "metadata": {
         "name": "Merge Text",
-        "version": "1.1",
-        "description": "Merges selected text frames top-to-bottom into a single frame, preserving character formatting (kerning, tracking, color, fonts) and exact vertical pixel spacing via per-line leading",
+        "version": "1.2",
+        "description": "Merges selected text frames into one, preserving character formatting and exact positions. Frames side-by-side join on the same line (spacing kept via tracking); stacked frames join as new lines (spacing kept via leading).",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -213,10 +213,10 @@
           "labels"
         ]
       },
-      "hash": "5cdc85b47d65589ee6a3dc0d8ff7548c",
+      "hash": "4b3c277c661d8e5d84039447387c8564",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Merge Text.js",
-      "file_size": 4891,
-      "last_modified": "2026-08-04T11:43:09.244333",
+      "file_size": 5773,
+      "last_modified": "2026-09-25T12:45:37.340518",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Merge%20Text.js"
     },
@@ -600,7 +600,7 @@
       "filename": "Scale To Page.js",
       "metadata": {
         "name": "Scale To Page",
-        "version": "1.9",
+        "version": "1.9.1",
         "description": "Copies the currently selected 1/10 scale art onto the active artboard at a chosen size, keeping the relative layout, then writes a matching \"Scale 1:N\" label at the bottom of the page. Copies land on the page you are looking at (the artboard under the center of the window), not on whatever Illustrator still considers the active artboard. When that page already carries a \"Scale 1:N\" callout (architectural notation like 3/8\" = 1'-0\" works too) the target ratio prefills to match it, so the copies are resized to the page's scale instead of just relabeled. Source art is assumed to be 1:10 and can be overridden. Enter either a percentage OR a target ratio -- the two fields stay in sync as you type. This is a non-blocking palette, so you can pan/zoom the document while it is open; turn on Preview to drop the copies on the page and adjust the size before committing. Keep the source art selected while you work. The label matches the Smart Dimension Tool format so dimensions come out accurate with no extra setup.",
         "author": "Unknown",
         "target": "illustrator",
@@ -611,10 +611,10 @@
           "processor"
         ]
       },
-      "hash": "6642c55a90da44bdfc968c8b7de71c5a",
+      "hash": "91b84ff004ce4b98ab4f29df5793e930",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Scale To Page.js",
-      "file_size": 29107,
-      "last_modified": "2026-09-17T13:33:28.355674",
+      "file_size": 29271,
+      "last_modified": "2026-09-23T11:33:09.619986",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Scale%20To%20Page.js"
     },
@@ -650,8 +650,8 @@
       "filename": "Open PDF with Comments.js",
       "metadata": {
         "name": "Open PDF with Comments",
-        "version": "1.0",
-        "description": "Pick a PDF, have Acrobat flatten its comments into a copy, then place every page as a linked file on its own artboard.",
+        "version": "2.0",
+        "description": "Pick a PDF, place every page as a linked file on its own artboard, and redraw its Acrobat comments as editable art on a top 'Acrobat Notes' layer.",
         "author": "Unknown",
         "target": "illustrator",
         "tags": [
@@ -659,15 +659,39 @@
           "acrobat",
           "comments",
           "import",
-          "artboard"
+          "artboard",
+          "notes"
         ]
       },
-      "hash": "110095fc8b684d607960ea6528831671",
+      "hash": "7a2003f24ddf2e2fe2c615ac3d0bbb3f",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Open PDF with Comments.js",
-      "file_size": 8051,
-      "last_modified": "2026-09-22T12:44:18.195120",
+      "file_size": 23091,
+      "last_modified": "2026-09-22T13:29:42.491850",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Open%20PDF%20with%20Comments.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Open%20PDF%20with%20Comments.js"
+    },
+    "Offset Rectangle.js": {
+      "filename": "Offset Rectangle.js",
+      "metadata": {
+        "name": "Offset Rectangle",
+        "version": "1.0",
+        "description": "Samples the bounds of the selected art (clipping-mask aware, same method as Smart Dimension Tool) and draws a rectangle that is that size plus or minus an offset on all sides. Example: 1.8 x 2 art with a 0.1 in offset makes a 2 x 2.2 rectangle. Negative offsets shrink the rectangle. Can make one rectangle around the whole selection or one per selected object.",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "rectangle",
+          "offset",
+          "bounds",
+          "measure",
+          "utility"
+        ]
+      },
+      "hash": "bd373db3ede2f32434da58adc8defbe5",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Offset Rectangle.js",
+      "file_size": 10049,
+      "last_modified": "2026-09-23T11:17:15.947370",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Offset%20Rectangle.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Offset%20Rectangle.js"
     }
   }
 }
