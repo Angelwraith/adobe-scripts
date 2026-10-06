@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "4.3",
+  "version": "4.4",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -687,8 +687,23 @@ function showSetupDialog(docChoice) {
         var regDropdown = rowGroup.add("dropdownlist", undefined, regLabels);
         regDropdown.preferredSize.width = 120;
         // Default: Auto when this row has packing metadata, otherwise Left/Right (marks on)
+        // Vinyl materials default to None (no reg dots)
         var hasMeta = material && material.fromPackingData;
-        regDropdown.selection = hasMeta ? 0 : 2;
+        var defaultRegIndex = hasMeta ? 0 : 2;
+        function isVinyl(name) { return /vinyl/i.test(name || ""); }
+        regDropdown.selection = isVinyl(materialField.text) ? 3 : defaultRegIndex;
+        regDropdown.__userSet = false;
+        regDropdown.onChange = function() { regDropdown.__userSet = true; };
+
+        // Re-apply the vinyl default as the material name is typed, unless the user picked a Reg option manually
+        materialField.onChanging = function() {
+            if (regDropdown.__userSet) return;
+            var target = isVinyl(materialField.text) ? 3 : defaultRegIndex;
+            if (!regDropdown.selection || regDropdown.selection.index !== target) {
+                regDropdown.selection = target;
+                regDropdown.__userSet = false; // programmatic change, not a user pick
+            }
+        };
 
         var rowData = {
             group: rowGroup,
@@ -1260,6 +1275,16 @@ function createArtboards(config) {
             
             var rowStartY = currentY;
             var maxHeightInRow = artboardHeight;
+
+            // If adding to a material that was a single (un-numbered) artboard, rename it to _Pt1
+            if (spec.startingPartNumber && spec.startingPartNumber > 1) {
+                for (var ea = 0; ea < doc.artboards.length; ea++) {
+                    if (doc.artboards[ea].name === spec.material) {
+                        doc.artboards[ea].name = spec.material + "_Pt1";
+                        $.writeln("Renamed existing single artboard to: " + spec.material + "_Pt1");
+                    }
+                }
+            }
             
             for (var q = 0; q < spec.quantity; q++) {
                 $.writeln("Creating artboard " + (q+1) + " of " + spec.quantity);
