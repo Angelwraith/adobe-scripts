@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-09-29T10:00:12.529123",
+  "last_updated": "2026-10-06T13:08:44.081461",
   "deployer_version": "3.0",
   "total_scripts": 31,
   "launcher_version": "4.0",
@@ -267,7 +267,7 @@
       "filename": "PRIME Flex Template.js",
       "metadata": {
         "name": "PRIME Flex Template",
-        "version": "4.3",
+        "version": "4.4",
         "description": "Create artboards with reg dots for flexible materials",
         "author": "Unknown",
         "target": "illustrator",
@@ -277,10 +277,10 @@
           "setup"
         ]
       },
-      "hash": "d825d8ebbf9b953074214b528a6dfda8",
+      "hash": "2650f2c4b07afe06df33cf4f74223d7a",
       "local_path": "C:\\Dev\\Illustrator Scripts\\PRIME Flex Template.js",
-      "file_size": 76443,
-      "last_modified": "2026-08-04T11:02:37.122073",
+      "file_size": 77834,
+      "last_modified": "2026-10-06T13:06:10.795154",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js"
     },
@@ -650,7 +650,7 @@
       "filename": "Open PDF with Comments.js",
       "metadata": {
         "name": "Open PDF with Comments",
-        "version": "2.0",
+        "version": "3.1",
         "description": "Pick a PDF, place every page as a linked file on its own artboard, and redraw its Acrobat comments as editable art on a top 'Acrobat Notes' layer.",
         "author": "Unknown",
         "target": "illustrator",
@@ -663,10 +663,10 @@
           "notes"
         ]
       },
-      "hash": "7a2003f24ddf2e2fe2c615ac3d0bbb3f",
+      "hash": "421e52b6c9c8af301fcd40566b66dcb8",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Open PDF with Comments.js",
-      "file_size": 23091,
-      "last_modified": "2026-09-22T13:29:42.491850",
+      "file_size": 25362,
+      "last_modified": "2026-09-29T11:22:49.246531",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Open%20PDF%20with%20Comments.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Open%20PDF%20with%20Comments.js"
     },
