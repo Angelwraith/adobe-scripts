@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open PDF with Comments",
   "description": "Pick a PDF, place every page as a linked file on its own artboard, and redraw its Acrobat comments as editable art on a top 'Acrobat Notes' layer.",
-  "version": "2.0",
+  "version": "3.1",
   "target": "illustrator",
   "tags": ["pdf", "acrobat", "comments", "import", "artboard", "notes"]
 }@END_METADATA*/
@@ -13,17 +13,17 @@
     2. Acrobat (running hidden) reads every comment - type, position,
        colors, text - and hands it back to Illustrator.
     3. A new document is created with one artboard per page. Each page is
-       PLACED AS A LINK to the ORIGINAL PDF (so Embed / Flatten
-       Transparency still work, and the art stays clean).
+       PLACED AS A LINK (so Embed / Flatten Transparency still work).
     4. Comments are redrawn as native Illustrator objects on a separate
-       top-level "Acrobat Notes" layer, grouped per page.
-       - Text boxes, sticky notes, rectangles, ovals, lines, arrows,
-         polygons, pencil marks, highlights/underlines/strikeouts are
-         redrawn as editable paths and text.
-       - Anything that cannot be redrawn (stamps, attachments, etc.) is
-         shown by clipping that spot out of a flattened copy of the PDF,
-         saved next to the original as "<name> - NOTES FLATTENED.pdf".
-         That copy is only made when the PDF contains such comments.
+       top-level "Acrobat Notes" layer, grouped per page - text boxes,
+       sticky notes, rectangles, ovals, lines, arrows, polygons, pencil
+       marks, highlights/underlines/strikeouts.
+    5. Stamps (and anything else that cannot be redrawn) are treated as
+       ARTWORK, since applied stamps often carry real content. Acrobat
+       deletes the redrawable comments from a copy, flattens what is left,
+       and saves "<name> - WITH STAMPS.pdf" next to the original. The pages
+       then link to that copy instead. It is only made when such items
+       exist; otherwise the pages link to the untouched original.
 
     Requires: Windows + Acrobat Pro or Standard (not Reader).
 */
@@ -33,7 +33,7 @@
 (function () {
 
     // ---------------- settings ----------------
-    var SUFFIX          = " - NOTES FLATTENED";
+    var SUFFIX          = " - WITH STAMPS";
     var COLUMNS         = 4;          // artboards per row
     var GAP             = 72;         // points between artboards (72 = 1 in)
     var TIMEOUT_SEC     = 180;        // how long to wait for Acrobat
@@ -55,11 +55,14 @@
 
     var baseName = decodeURI(src.name).replace(/\.pdf$/i, "");
     var flatFile = new File(src.parent.fsName + "\\" + baseName + SUFFIX + ".pdf");
+    var linkFile = src;
 
     // ---------- 1. Read comments via Acrobat ----------
     var info = runAcrobat(src, flatFile, TIMEOUT_SEC);
     if (!info) return; // error already shown
     if (info.pages < 1) { alert("Acrobat reported 0 pages."); return; }
+    if (info.stampsBaked && flatFile.exists) linkFile = flatFile;
+    else info.stampsBaked = false;
 
     // ---------- 2. Build Illustrator document ----------
     var oldUIL    = app.userInteractionLevel;
@@ -68,7 +71,7 @@
     var oldPage   = pdfOpts.pageToOpen;
     var oldBox    = pdfOpts.pDFCropToBox;
 
-    var drawn = 0, clipped = 0, failed = 0, rotatedSkipped = 0;
+    var drawn = 0, baked = 0, failed = 0, rotatedSkipped = 0;
 
     try {
         app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
@@ -90,7 +93,7 @@
             pdfOpts.pageToOpen = p;
 
             var item  = pagesLayer.placedItems.add();
-            item.file = src;                 // linked to the ORIGINAL (clean) PDF
+            item.file = linkFile;            // original PDF, or the stamps-baked copy
             item.name = "Page " + p;
 
             var w = item.width, h = item.height;
@@ -135,13 +138,17 @@
 
                 try {
                     var how = drawAnnot(grp, an, map, font);
-                    if (how === "clip") clipped++; else drawn++;
+                    if (how === "baked") baked++; else drawn++;
                 } catch (e) {
                     failed++;
                     $.writeln("[WARN] Could not draw " + an.type + " on page " + (an.page + 1) + ": " + e);
                 }
             }
+            for (var gk in pageGroups) {            // drop groups left empty by baked stamps
+                if (pageGroups[gk].pageItems.length === 0) pageGroups[gk].remove();
+            }
             notesLayer.printable = NOTES_PRINTABLE;
+            if (notesLayer.pageItems.length === 0) notesLayer.remove();
         }
 
         doc.selection = null;
@@ -158,12 +165,15 @@
     }
 
     // ---------- 4. Summary ----------
-    var msg = info.pages + " page(s) placed as links.\n";
+    var msg = info.pages + " page(s) placed as links to:\n" + decodeURI(linkFile.name) + "\n\n";
     if (info.annots.length === 0) {
         msg += "No comments found in this PDF.";
     } else {
         msg += drawn + " comment(s) redrawn on the \"" + NOTES_LAYER + "\" layer.";
-        if (clipped)        msg += "\n" + clipped + " stamp/other comment(s) clipped from the flattened copy.";
+        if (baked)          msg += "\n" + baked + " stamp(s)/other item(s) baked into the linked copy.";
+        if (info.stampCount && !info.stampsBaked) {
+            msg += "\n[WARN] " + info.stampCount + " stamp(s) could not be baked in - shown as dashed boxes.";
+        }
         if (rotatedSkipped) msg += "\n[WARN] " + rotatedSkipped + " comment(s) skipped on rotated pages.";
         if (failed)         msg += "\n[WARN] " + failed + " comment(s) could not be drawn (see ExtendScript console).";
     }
@@ -277,19 +287,9 @@
                 break;
 
             default: // Stamp, FileAttachment, Caret, etc.
-                if (info.flatMade) {
-                    item = grp.groupItems.add();
-                    pdfOpts.pageToOpen = an.page + 1;
-                    var fp = item.placedItems.add();
-                    fp.file = flatFile;
-                    var pc = info.pageInfo[an.page].crop;
-                    fp.position = [map.x(pc[0]), map.y(pc[1])];
-                    var mask = item.pathItems.rectangle(top, left, w, h); // topmost = clip path
-                    mask.clipping = true;
-                    item.clipped = true;
-                    item.name = label;
-                    return "clip";
-                }
+                // These are baked into the linked page copy by Acrobat, so
+                // nothing is drawn here unless that copy could not be made.
+                if (info.stampsBaked) return "baked";
                 item = grp.groupItems.add();
                 var db = item.pathItems.rectangle(top, left, w, h);
                 styleShape(db, stroke || colorFromArray(DEFAULT_COLOR), null, 1);
@@ -360,7 +360,7 @@
     // ACROBAT
     // Writes a small VBScript that drives Acrobat via COM, runs it, and
     // waits for its result file. Returns
-    //   { pages, flatMade, pageInfo{idx: {crop, rot}}, annots[...] } or null.
+    //   { pages, stampsBaked, stampCount, pageInfo{idx:{crop,rot}}, annots[] } or null.
     // =====================================================================
     function runAcrobat(srcFile, dstFile, timeoutSec) {
         var stamp   = new Date().getTime();
@@ -372,7 +372,7 @@
 
         var vbs = [
             'On Error Resume Next',
-            'Dim fso, app, pd, js, n, i, j, a, an, buf, needFlat, supported, fl',
+            'Dim fso, app, pd, js, n, i, j, a, an, buf, needFlat, supported, fl, stampCount, tries',
             'Dim t, pg, rc, sc, fc, tc, wd, ts, op, au, ct, ge, g',
             'Set fso = CreateObject("Scripting.FileSystemObject")',
             'supported = "|FreeText|Text|Square|Circle|Line|Polygon|PolyLine|Ink|Highlight|Underline|Squiggly|StrikeOut|"',
@@ -414,12 +414,31 @@
             '  Clean = Replace(s, vbTab, " ")',
             'End Function',
             '',
-            'Set app = CreateObject("AcroExch.App")',
-            'If Err.Number <> 0 Then Finish "ERR" & vbTab & "Could not start Acrobat (Pro/Standard required - Reader will not work)."',
+            '\' Acrobat can be busy (starting up, updating, or left running by an',
+            '\' earlier run), so try to attach to a running copy, then retry.',
+            'Err.Clear',
+            'Set app = GetObject(, "AcroExch.App")',
+            'If Err.Number <> 0 Then',
+            '  For tries = 1 To 3',
+            '    Err.Clear',
+            '    Set app = CreateObject("AcroExch.App")',
+            '    If Err.Number = 0 Then Exit For',
+            '    WScript.Sleep 3000',
+            '  Next',
+            'End If',
+            'If Err.Number <> 0 Then Finish "ERR" & vbTab & "Could not start Acrobat - error " & Hex(Err.Number) & ": " & Err.Description & vbCrLf & _',
+            '  "Acrobat Pro or Standard must be installed (Reader will not work). If Acrobat is already open, close it - including any leftover Acrobat processes in Task Manager - and run the script again."',
+            'Err.Clear',
             'Set pd = CreateObject("AcroExch.PDDoc")',
-            'If Not pd.Open(' + q(srcFile.fsName) + ') Then Finish "ERR" & vbTab & "Acrobat could not open the PDF."',
+            'If Err.Number <> 0 Then Finish "ERR" & vbTab & "Acrobat started but would not create a document object - error " & Hex(Err.Number) & ": " & Err.Description',
+            'If Not pd.Open(' + q(srcFile.fsName) + ') Then Finish "ERR" & vbTab & "Acrobat could not open the PDF (is it open in Acrobat already, or on a drive Acrobat cannot reach?)."',
             'n = pd.GetNumPages()',
             'Set js = pd.GetJSObject()',
+            'If Err.Number <> 0 Or Not IsObject(js) Then',
+            '  pd.Close',
+            '  Finish "ERR" & vbTab & "Acrobat would not hand over its scripting object - error " & Hex(Err.Number) & ": " & Err.Description',
+            'End If',
+            'Err.Clear',
             'buf = ""',
             'For i = 0 To n - 1',
             '  rc = "" : rc = Flat(js.getPageBox("Crop", i))',
@@ -432,6 +451,7 @@
             'a = Empty',
             'a = js.getAnnots()',
             'needFlat = False',
+            'stampCount = 0',
             'If IsArray(a) Then',
             '  For Each an In a',
             '    t = "" : t = an.type',
@@ -458,7 +478,10 @@
             '          Next',
             '        End If',
             '      End If',
-            '      If InStr(supported, "|" & t & "|") = 0 Then needFlat = True',
+            '      If InStr(supported, "|" & t & "|") = 0 Then',
+            '        needFlat = True',
+            '        stampCount = stampCount + 1',
+            '      End If',
             '      buf = buf & "A" & vbTab & pg & vbTab & t & vbTab & rc & vbTab & sc & vbTab & fc & vbTab & tc & vbTab & _',
             '            Flat(wd) & vbTab & Flat(ts) & vbTab & Flat(op) & vbTab & Clean(au) & vbTab & Clean(ct) & vbTab & ge & vbCrLf',
             '    End If',
@@ -466,18 +489,28 @@
             'End If',
             'Err.Clear',
             '',
+            '\' Stamps and anything else we cannot redraw get baked into a copy:',
+            '\' delete the redrawable comments, flatten what is left, save as a new file.',
             'If needFlat Then',
+            '  If IsArray(a) Then',
+            '    For i = UBound(a) To 0 Step -1',
+            '      t = "" : t = a(i).type',
+            '      If InStr(supported, "|" & t & "|") > 0 Or t = "Popup" Then a(i).destroy',
+            '      Err.Clear',
+            '    Next',
+            '  End If',
             '  js.flattenPages 0, n - 1, 2',
             '  If Err.Number = 0 Then',
             '    If Not pd.Save(1, ' + q(dstFile.fsName) + ') Then needFlat = False',
             '  Else',
             '    needFlat = False',
             '  End If',
+            '  Err.Clear',
             'End If',
             'pd.Close',
             'If app.GetNumAVDocs() = 0 Then app.Exit',
             'If needFlat Then fl = "1" Else fl = "0"',
-            'Finish "OK" & vbTab & n & vbTab & fl & vbCrLf & buf'
+            'Finish "OK" & vbTab & n & vbTab & fl & vbTab & stampCount & vbCrLf & buf'
         ].join("\r\n");
 
         vbsFile.lineFeed = "Windows";
@@ -511,11 +544,17 @@
         var lines = txt.split(/\r\n|\n/);
         var head  = lines[0].split("\t");
         if (head[0] !== "OK") {
-            alert("Acrobat step failed:\n" + (head[1] || txt));
+            alert("Acrobat step failed:\n\n" + txt.replace(/^ERR\t/, ""));
             return null;
         }
 
-        var res = { pages: parseInt(head[1], 10), flatMade: head[2] === "1", pageInfo: {}, annots: [] };
+        var res = {
+            pages: parseInt(head[1], 10),
+            stampsBaked: head[2] === "1",
+            stampCount: parseInt(head[3], 10) || 0,
+            pageInfo: {},
+            annots: []
+        };
 
         for (var li = 1; li < lines.length; li++) {
             var f = lines[li].split("\t");
