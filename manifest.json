@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-10-06T13:08:44.081461",
+  "last_updated": "2026-10-14T11:17:48.113019",
   "deployer_version": "3.0",
-  "total_scripts": 31,
+  "total_scripts": 32,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -692,6 +692,29 @@
       "last_modified": "2026-09-23T11:17:15.947370",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Offset%20Rectangle.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Offset%20Rectangle.js"
+    },
+    "Spell Check Selection.js": {
+      "filename": "Spell Check Selection.js",
+      "metadata": {
+        "name": "Spell Check Selection",
+        "version": "1.0",
+        "description": "Runs Illustrator's Check Spelling on the selected text only. Copies selected text into a temp document, spell checks it there, then writes only the corrected words back to the originals (formatting preserved).",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "text",
+          "spelling",
+          "spell check",
+          "selection",
+          "proof"
+        ]
+      },
+      "hash": "6070cc117642e161ba599d709f9ae2ac",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Spell Check Selection.js",
+      "file_size": 9838,
+      "last_modified": "2026-10-14T11:09:19.474794",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Spell%20Check%20Selection.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Spell%20Check%20Selection.js"
     }
   }
 }
