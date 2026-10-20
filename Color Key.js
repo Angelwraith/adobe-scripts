@@ -3,7 +3,7 @@
 {
   "name": "Color Key Creator",
   "description": "Create A Prepositioned Color Key On Proofs",
-  "version": "1.5",
+  "version": "1.6",
   "target": "illustrator",
   "tags": ["proof", "color", "key"]
 }
@@ -23,6 +23,16 @@ if (app.documents.length == 0) {
         
             // === COLOR ANALYSIS ===
             var usedColors = {};
+            var MAX_COLORS = 15;   // Warn the user above this many colors
+            var SCAN_CAP = 100;    // Stop scanning entirely past this many (art is not key-able)
+            var colorCount = 0;
+            var scanAborted = false;
+
+            function countUsedColors() {
+                var n = 0;
+                for (var key in usedColors) { n++; }
+                return n;
+            }
             
             // Function to add color to used colors list
             function addUsedColor(color) {
@@ -133,6 +143,7 @@ if (app.documents.length == 0) {
             // Function to recursively check page items for used colors
             function checkItemsForColors(items) {
                 for (var i = 0; i < items.length; i++) {
+                    if (scanAborted) return;
                     var item = items[i];
                     
                     try {
@@ -144,6 +155,13 @@ if (app.documents.length == 0) {
                         // Check stroke color
                         if (item.stroked && item.strokeColor) {
                             addUsedColor(item.strokeColor);
+                        }
+
+                        // Bail out early on art with an unreasonable number of colors
+                        colorCount = countUsedColors();
+                        if (colorCount > SCAN_CAP) {
+                            scanAborted = true;
+                            return;
                         }
                         
                         // Recursively process grouped items
@@ -193,7 +211,21 @@ if (app.documents.length == 0) {
             }
             colorNames.sort();
             
-            if (colorNames.length == 0) {
+            var proceed = true;
+            if (scanAborted) {
+                alert("The selection contains more than " + SCAN_CAP + " colors.\n\n" +
+                      "This art is too complex for a color key (gradients, raster traces, or photo-based art are common causes). " +
+                      "No key was created.", "Color Key - Too Many Colors");
+                proceed = false;
+            } else if (colorNames.length > MAX_COLORS) {
+                proceed = confirm("The selection contains " + colorNames.length + " colors (limit is " + MAX_COLORS + ").\n\n" +
+                                  "Building a key this large can take a long time or crash Illustrator.\n\n" +
+                                  "Continue anyway?", true, "Color Key - Too Many Colors");
+            }
+
+            if (!proceed) {
+                // User cancelled or art was too complex - do nothing
+            } else if (colorNames.length == 0) {
                 alert("No colors found in the selected objects.");
             } else {
                 
