@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "2.0",
+  "version": "2.1",
   "target": "illustrator",
   "tags": ["review", "check", "file"]
 }@END_METADATA*/
@@ -54,50 +54,100 @@
         // XMP not available -- dropdown will fall back to folder names
     }
 
-    // Build display names by reading proof file metadata from each folder's PRIME subfolder
-    function getDisplayNameForFolder(folder) {
-        var folderName = folder.name.replace(/%20/g, " ");
-        try {
-            // Look for PRIME subfolder
-            var sep = ($.os.indexOf("Windows") !== -1) ? "\\" : "/";
-            var primeFolder = new Folder(folder.fsName + sep + "PRIME");
-            if (!primeFolder.exists) return folderName;
-
-            // Find proof PDF/AI in PRIME folder (filename contains "Proof")
-            var primeFiles = primeFolder.getFiles();
-            var proofFile = null;
-            for (var j = 0; j < primeFiles.length; j++) {
-                if (primeFiles[j] instanceof File) {
-                    var fname = primeFiles[j].name.toUpperCase();
-                    if (fname.indexOf("PROOF") !== -1 && (fname.indexOf(".PDF") !== -1 || fname.indexOf(".AI") !== -1)) {
-                        proofFile = primeFiles[j];
-                        break;
-                    }
-                }
+    // Find the proof file in a folder's PRIME subfolder.
+    // "Prod Proof" wins over a plain "Proof" when both exist.
+    function findProofFile(folder) {
+        var sep = ($.os.indexOf("Windows") !== -1) ? "\\" : "/";
+        var primeFolder = new Folder(folder.fsName + sep + "PRIME");
+        if (!primeFolder.exists) return null;
+        var primeFiles = primeFolder.getFiles();
+        var proofFile = null;
+        for (var j = 0; j < primeFiles.length; j++) {
+            if (!(primeFiles[j] instanceof File)) continue;
+            if (/^[._~]/.test(primeFiles[j].name)) continue;
+            var fname = primeFiles[j].name.toUpperCase();
+            if (!/\.(PDF|AI)$/.test(fname)) continue;
+            if (fname.indexOf("PROOF") === -1) continue;
+            if (fname.replace(/[-_\s]+/g, "").indexOf("PRODPROOF") !== -1) {
+                return primeFiles[j]; // Prod Proof -- take it immediately
             }
-            if (!proofFile) return folderName;
-
-            // Read XMP metadata from the proof file without opening it in Illustrator
-            var xmpFile = new XMPFile(proofFile.fsName, XMPConst.FILE_PDF, XMPConst.OPEN_FOR_READ);
-            var xmp = xmpFile.getXMP();
-            xmpFile.closeFile();
-
-            if (!xmp.doesPropertyExist('http://extremecolor.net/packing/', 'data')) return folderName;
-
-            var packingJSON = xmp.getProperty('http://extremecolor.net/packing/', 'data').value;
-            var packingData = eval('(' + packingJSON + ')');
-
-            // Build label: Client - Property - Project (omit property if not available)
-            var parts = [];
-            if (packingData.client_name) parts.push(packingData.client_name);
-            if (packingData.property_name) parts.push(packingData.property_name);
-            if (packingData.project_name) parts.push(packingData.project_name);
-
-            if (parts.length > 0) return parts.join(" - ");
-        } catch (e) {
-            // Any error reading metadata -- fall back to folder name
+            if (!proofFile) proofFile = primeFiles[j];
         }
-        return folderName;
+        return proofFile;
+    }
+
+    // Parse an XMP/ISO 8601 date ("2026-10-14T15:22:10.123-04:00") to ms since epoch
+    function parseXmpDate(str) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?/.exec(str);
+        if (!m) return null;
+        var ms = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+        if (m[7] && m[7] !== "Z") {
+            var tz = m[7].replace(":", "");
+            var off = (+tz.substr(1, 2)) * 60 + (+tz.substr(3, 2));
+            ms -= (tz.charAt(0) === "-" ? -1 : 1) * off * 60000;
+        } else if (!m[7] && m[4]) {
+            // No zone given -- treat as local time
+            ms = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)).getTime();
+        }
+        return ms;
+    }
+
+    function pad2(n) { return (n < 10 ? "0" : "") + n; }
+    function formatStamp(ms) {
+        var d = new Date(ms);
+        var h = d.getHours(), ap = h >= 12 ? "p" : "a";
+        h = h % 12; if (h === 0) h = 12;
+        return pad2(d.getMonth() + 1) + "/" + pad2(d.getDate()) + " " + h + ":" + pad2(d.getMinutes()) + ap;
+    }
+
+    // Build dropdown info for a folder: display name (from proof packing metadata)
+    // and save timestamp (proof XMP ModifyDate -> proof file modified -> folder modified)
+    function getFolderInfo(folder) {
+        var info = { folder: folder, name: folder.name.replace(/%20/g, " "), time: null };
+        var proofFile = null;
+        try { proofFile = findProofFile(folder); } catch (e) {}
+
+        if (proofFile) {
+            try {
+                var xmpFile = new XMPFile(proofFile.fsName, XMPConst.FILE_PDF, XMPConst.OPEN_FOR_READ);
+                var xmp = xmpFile.getXMP();
+                xmpFile.closeFile();
+
+                if (xmp.doesPropertyExist(XMPConst.NS_XMP, 'ModifyDate')) {
+                    info.time = parseXmpDate(String(xmp.getProperty(XMPConst.NS_XMP, 'ModifyDate').value));
+                }
+
+                if (xmp.doesPropertyExist('http://extremecolor.net/packing/', 'data')) {
+                    var packingJSON = xmp.getProperty('http://extremecolor.net/packing/', 'data').value;
+                    var packingData = eval('(' + packingJSON + ')');
+
+                    // Build label: Client - Property - Project (omit property if not available)
+                    var parts = [];
+                    if (packingData.client_name) parts.push(packingData.client_name);
+                    if (packingData.property_name) parts.push(packingData.property_name);
+                    if (packingData.project_name) parts.push(packingData.project_name);
+                    if (parts.length > 0) info.name = parts.join(" - ");
+                }
+            } catch (e) {
+                // Any error reading metadata -- keep folder name / fall through to file dates
+            }
+            if (info.time === null && proofFile.modified) info.time = proofFile.modified.getTime();
+        }
+        if (info.time === null && folder.modified) info.time = folder.modified.getTime();
+        return info;
+    }
+
+    // Read info for every folder and sort newest first
+    var folderInfos = [];
+    for (var i = 0; i < subfolders.length; i++) {
+        folderInfos.push(getFolderInfo(subfolders[i]));
+    }
+    folderInfos.sort(function(a, b) {
+        return (b.time || 0) - (a.time || 0);
+    });
+    subfolders = [];
+    for (var i = 0; i < folderInfos.length; i++) {
+        subfolders.push(folderInfos[i].folder);
     }
 
     // Create dialog window
@@ -122,8 +172,9 @@
         folderDropdown = dropdownRow.add("dropdownlist", undefined, []);
         folderDropdown.preferredSize.width = 400;
 
-        for (var i = 0; i < subfolders.length; i++) {
-            var displayName = getDisplayNameForFolder(subfolders[i]);
+        for (var i = 0; i < folderInfos.length; i++) {
+            var fi = folderInfos[i];
+            var displayName = (fi.time ? formatStamp(fi.time) + "  |  " : "") + fi.name;
             folderDropdown.add("item", displayName);
         }
         folderDropdown.selection = 0;
