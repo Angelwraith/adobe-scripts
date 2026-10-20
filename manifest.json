@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-14T11:17:48.113019",
+  "last_updated": "2026-10-20T10:38:19.874024",
   "deployer_version": "3.0",
   "total_scripts": 32,
   "launcher_version": "4.0",
@@ -9,7 +9,7 @@
       "filename": "Color Key.js",
       "metadata": {
         "name": "Color Key Creator",
-        "version": "1.5",
+        "version": "1.6",
         "description": "Create A Prepositioned Color Key On Proofs",
         "author": "Unknown",
         "target": "illustrator",
@@ -19,10 +19,10 @@
           "key"
         ]
       },
-      "hash": "529d94950b748e52f9d4cbb4140411bc",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Color Key.js",
-      "file_size": 23822,
-      "last_modified": "2026-05-21T10:01:39.070267",
+      "hash": "7c4236b7184e32676a321647c2f128ac",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Color Key.js",
+      "file_size": 25481,
+      "last_modified": "2026-10-20T09:59:22.579009",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js"
     },
@@ -224,7 +224,7 @@
       "filename": "OpenProdFilesForReview.js",
       "metadata": {
         "name": "Open Production Files and organize for review",
-        "version": "2.0",
+        "version": "2.1",
         "description": "Open print and cut files, organize them together and tile the view to show them all",
         "author": "Unknown",
         "target": "illustrator",
@@ -234,10 +234,10 @@
           "file"
         ]
       },
-      "hash": "f53eb126ff26f5bb80093b93e3713149",
+      "hash": "d8e1ae163083ce8d1ceded886bf96ddc",
       "local_path": "C:\\Dev\\Illustrator Scripts\\OpenProdFilesForReview.js",
-      "file_size": 15627,
-      "last_modified": "2026-08-12T09:44:16.469959",
+      "file_size": 18009,
+      "last_modified": "2026-10-15T08:08:02.406185",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
     },
