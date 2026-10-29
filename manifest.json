@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-10-21T11:05:24.087132",
+  "last_updated": "2026-10-29T10:58:27.846199",
   "deployer_version": "3.0",
-  "total_scripts": 32,
+  "total_scripts": 33,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -715,6 +715,29 @@
       "last_modified": "2026-10-14T11:09:19.474794",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Spell%20Check%20Selection.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Spell%20Check%20Selection.js"
+    },
+    "Bit-Knife Cut Converter.js": {
+      "filename": "Bit-Knife Cut Converter.js",
+      "metadata": {
+        "name": "Bit-Knife Cut Converter",
+        "version": "1.1",
+        "description": "Converts selected bit (router) cut paths to knife cuts (split at sharp corners, 0.5in overshoots into waste only, colinear edges merged) or knife cuts back to closed bit paths",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "Cut",
+          "Knife",
+          "Router",
+          "Bit",
+          "processors"
+        ]
+      },
+      "hash": "29301ca7524decd851d64c332a3bf524",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Bit-Knife Cut Converter.js",
+      "file_size": 42795,
+      "last_modified": "2026-10-29T10:47:23.178789",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Bit-Knife%20Cut%20Converter.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Bit-Knife%20Cut%20Converter.js"
     }
   }
 }
