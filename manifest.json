@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-29T10:58:27.846199",
+  "last_updated": "2026-10-30T09:47:32.699897",
   "deployer_version": "3.0",
   "total_scripts": 33,
   "launcher_version": "4.0",
@@ -9,7 +9,7 @@
       "filename": "Color Key.js",
       "metadata": {
         "name": "Color Key Creator",
-        "version": "1.10.1",
+        "version": "1.11",
         "description": "Create A Prepositioned Color Key On Proofs",
         "author": "Unknown",
         "target": "illustrator",
@@ -19,10 +19,10 @@
           "key"
         ]
       },
-      "hash": "72ea11c7970eb767bf622874b0f76ae6",
+      "hash": "ea6f63a8069103b7d0deed1221a5d0ff",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Color Key.js",
-      "file_size": 43154,
-      "last_modified": "2026-10-21T10:58:37.564768",
+      "file_size": 48281,
+      "last_modified": "2026-10-30T09:46:47.995197",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Color%20Key.js"
     },
