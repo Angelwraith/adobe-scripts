@@ -3,7 +3,7 @@
 {
   "name": "Color Key Creator",
   "description": "Create A Prepositioned Color Key On Proofs",
-  "version": "1.10.1",
+  "version": "1.11",
   "target": "illustrator",
   "tags": ["proof", "color", "key"]
 }
@@ -303,20 +303,111 @@ if (app.documents.length == 0) {
             } else {
                 
                 // === PANTONE CHECK ===
-                var flagged = {};
-                var flaggedList = [];
-                for (var fi = 0; fi < colorNames.length; fi++) {
-                    if (needsPantone(colorNames[fi])) {
-                        flagged[colorNames[fi]] = true;
-                        flaggedList.push(colorNames[fi]);
+                // Near-black mixes (rich black, RGB black, dark gray) that can be converted to k100
+                function isBlackMix(name) {
+                    if (name === "CMYK Black") return false;
+                    var m = name.match(/^CMYK \(C:(\d+) M:(\d+) Y:(\d+) K:(\d+)\)$/);
+                    if (m) return parseInt(m[4], 10) >= 90;
+                    m = name.match(/^RGB Color \(R:(\d+) G:(\d+) B:(\d+)\)$/);
+                    if (m) return Math.max(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)) <= 30;
+                    m = name.match(/^Gray Color \((\d+)%\)$/);
+                    if (m) return parseInt(m[1], 10) >= 95;
+                    return false;
+                }
+
+                // Same test on a live color object (used when converting the art)
+                function isBlackColorObj(color) {
+                    if (!color || !color.typename) return false;
+                    if (color.typename == "CMYKColor") return Math.round(color.black) >= 90;
+                    if (color.typename == "RGBColor") return Math.max(Math.round(color.red), Math.round(color.green), Math.round(color.blue)) <= 30;
+                    if (color.typename == "GrayColor") return Math.round(color.gray) >= 95;
+                    return false;
+                }
+
+                function makeKBlack() {
+                    var kb = new CMYKColor();
+                    kb.cyan = 0; kb.magenta = 0; kb.yellow = 0; kb.black = 100;
+                    return kb;
+                }
+
+                // Recolor black mixes to k100 (same traversal as the color scan)
+                function convertBlacks(items) {
+                    for (var bi = 0; bi < items.length; bi++) {
+                        var bItem = items[bi];
+                        try {
+                            if (bItem.filled && isBlackColorObj(bItem.fillColor)) bItem.fillColor = makeKBlack();
+                            if (bItem.stroked && isBlackColorObj(bItem.strokeColor)) bItem.strokeColor = makeKBlack();
+                            if (bItem.typename == "GroupItem" && bItem.pageItems.length > 0) convertBlacks(bItem.pageItems);
+                            if (bItem.typename == "CompoundPathItem" && bItem.pathItems.length > 0) convertBlacks(bItem.pathItems);
+                        } catch (eB) {}
                     }
                 }
+
+                function buildFlagLists() {
+                    flagged = {};
+                    flaggedList = [];
+                    for (var fi = 0; fi < colorNames.length; fi++) {
+                        if (needsPantone(colorNames[fi])) {
+                            flagged[colorNames[fi]] = true;
+                            flaggedList.push(colorNames[fi]);
+                        }
+                    }
+                }
+
+                // Yes / No / Cancel dialog with optional black conversion
+                function pantoneDialog(list, blackCount) {
+                    var w = new Window("dialog", "Color Key - Pantone Check");
+                    w.orientation = "column";
+                    w.alignChildren = ["fill", "top"];
+                    w.add("statictext", undefined, list.length + " color(s) are not Pantone (PMS):");
+                    var shown = [];
+                    for (var li = 0; li < list.length; li++) {
+                        shown.push(list[li] + (isBlackMix(list[li]) ? "     <- black mix" : ""));
+                    }
+                    var lb = w.add("listbox", undefined, shown);
+                    lb.preferredSize = [380, Math.min(list.length, 8) * 20 + 8];
+                    var cb = null;
+                    if (blackCount > 0) {
+                        cb = w.add("checkbox", undefined, "Convert " + blackCount + " black mix(es) to CMYK Black (c0 m0 y0 k100)");
+                        cb.value = true;
+                    }
+                    w.add("statictext", undefined, "Flag them and add the \"Pantones needed\" disclaimer?");
+                    var bg = w.add("group");
+                    bg.alignment = "right";
+                    var result = "cancel";
+                    var bYes = bg.add("button", undefined, "Yes", { name: "ok" });
+                    var bNo = bg.add("button", undefined, "No");
+                    var bCancel = bg.add("button", undefined, "Cancel", { name: "cancel" });
+                    bYes.onClick = function () { result = "yes"; w.close(); };
+                    bNo.onClick = function () { result = "no"; w.close(); };
+                    bCancel.onClick = function () { result = "cancel"; w.close(); };
+                    w.show();
+                    return { action: result, convertBlack: cb ? cb.value : false };
+                }
+
+                var flagged = {};
+                var flaggedList = [];
+                buildFlagLists();
                 var flagPantone = false;
                 if (flaggedList.length > 0) {
-                    flagPantone = confirm(flaggedList.length + " color(s) are not Pantone (PMS):\n\n  " +
-                                          flaggedList.join("\n  ") +
-                                          "\n\nFlag them and add the \"Pantones needed\" disclaimer?",
-                                          false, "Color Key - Pantone Check");
+                    var blackCount = 0;
+                    for (var bc = 0; bc < flaggedList.length; bc++) {
+                        if (isBlackMix(flaggedList[bc])) blackCount++;
+                    }
+                    var answer = pantoneDialog(flaggedList, blackCount);
+                    if (answer.action === "cancel") throw "__COLORKEY_CANCEL__"; // nothing created yet
+
+                    if (answer.convertBlack) {
+                        convertBlacks(doc.selection);
+                        // Rescan so the key reflects the converted art
+                        usedColors = {};
+                        checkItemsForColors(doc.selection);
+                        colorNames = [];
+                        for (var cn in usedColors) colorNames.push(cn);
+                        colorNames.sort();
+                        buildFlagLists();
+                    }
+                    flagPantone = (answer.action === "yes") && flaggedList.length > 0;
                 }
                 if (flagPantone) {
                     // List flagged colors first so they read as a block
@@ -759,6 +850,8 @@ if (app.documents.length == 0) {
         } // End of selection.length > 0 check
         
     } catch (error) {
-        alert("Error creating color labels: " + error.toString());
+        if (error !== "__COLORKEY_CANCEL__") {
+            alert("Error creating color labels: " + error.toString());
+        }
     }
 }
