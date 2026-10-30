@@ -3,7 +3,7 @@
 {
   "name": "Color Key Creator",
   "description": "Create A Prepositioned Color Key On Proofs",
-  "version": "1.11",
+  "version": "1.11.1",
   "target": "illustrator",
   "tags": ["proof", "color", "key"]
 }
@@ -354,7 +354,8 @@ if (app.documents.length == 0) {
                     }
                 }
 
-                // Yes / No / Cancel dialog with optional black conversion
+                // Yes / No / Cancel dialog with optional black conversion.
+                // The question updates live: converted blacks drop out of what gets flagged.
                 function pantoneDialog(list, blackCount) {
                     var w = new Window("dialog", "Color Key - Pantone Check");
                     w.orientation = "column";
@@ -371,14 +372,33 @@ if (app.documents.length == 0) {
                         cb = w.add("checkbox", undefined, "Convert " + blackCount + " black mix(es) to CMYK Black (c0 m0 y0 k100)");
                         cb.value = true;
                     }
-                    w.add("statictext", undefined, "Flag them and add the \"Pantones needed\" disclaimer?");
+                    var question = w.add("statictext", undefined, "");
+                    question.preferredSize = [380, 20];
                     var bg = w.add("group");
                     bg.alignment = "right";
                     var result = "cancel";
                     var bYes = bg.add("button", undefined, "Yes", { name: "ok" });
                     var bNo = bg.add("button", undefined, "No");
                     var bCancel = bg.add("button", undefined, "Cancel", { name: "cancel" });
-                    bYes.onClick = function () { result = "yes"; w.close(); };
+
+                    var remaining = 0;
+                    function update() {
+                        var converting = cb ? cb.value : false;
+                        remaining = converting ? list.length - blackCount : list.length;
+                        if (remaining > 0) {
+                            question.text = "Flag " + remaining + " color(s) and add the \"Pantones needed\" disclaimer?";
+                            bYes.text = "Yes";
+                            bNo.visible = true;
+                        } else {
+                            question.text = "Nothing left to flag after converting blacks.";
+                            bYes.text = "Continue";
+                            bNo.visible = false;
+                        }
+                    }
+                    if (cb) cb.onClick = update;
+                    update();
+
+                    bYes.onClick = function () { result = (remaining > 0) ? "yes" : "no"; w.close(); };
                     bNo.onClick = function () { result = "no"; w.close(); };
                     bCancel.onClick = function () { result = "cancel"; w.close(); };
                     w.show();
