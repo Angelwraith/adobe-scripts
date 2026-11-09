@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "File Check",
   "description": "Production file readiness analysis with manifest comparison",
-  "version": "3.2",
+  "version": "4.3",
   "target": "illustrator",
   "tags": ["file", "check", "report", "manifest"]
 }@END_METADATA*/
@@ -40,6 +40,216 @@ if (typeof JSON === 'undefined') {
         }
     };
 }
+
+// ==== PROD NAME PARSER v1.0 ====
+// Shared production file/artboard name parser. Keep this block IDENTICAL in:
+//   File Check.js, OpenProdFilesForReview.js, Link Namer.js,
+//   Sort Linked Files By Pt Number.js, Optimal PRIME transformer.js
+// Standard:  {base}_{TYPE}_{Material}[_BlkBk][_FRONT|_BACK]_{Parts}[_x#].pdf
+//   TYPE  = PRINT | CUT | PnC | CutOnly
+//   Parts = Pt1 | Pt3-5 | Pt3-5and8 (CUT files may list several parts)
+//   x#    = number of times the sheet is run (always last)
+// Legacy names still parse: 3mmACMBLK, BlkBk_6mmACM, _Part2.
+var ProdName = (function () {
+    var TYPE_TOKENS = [
+        ['_CUTONLY_', 'CutOnly'],
+        ['_PRINT_', 'PRINT'],
+        ['_PNC_', 'PnC'],
+        ['_CUT_', 'CUT']
+    ];
+
+    function trim(s) {
+        return String(s).replace(/^\s+|\s+$/g, '');
+    }
+
+    function stripExt(name) {
+        var n = String(name).replace(/%20/g, ' ');
+        return n.replace(/\.(ai|pdf|eps|svg)$/i, '');
+    }
+
+    // "3-5and8" -> [3,4,5,8]; returns null when the text is not a valid part list
+    function expandParts(spec) {
+        var out = [];
+        var chunks = String(spec).split(/and/i);
+        for (var i = 0; i < chunks.length; i++) {
+            var m = trim(chunks[i]).match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+            if (!m) { return null; }
+            var a = parseInt(m[1], 10);
+            var b = m[2] ? parseInt(m[2], 10) : a;
+            if (b < a) { var t = a; a = b; b = t; }
+            if (b - a > 999) { return null; }
+            for (var n = a; n <= b; n++) { out.push(n); }
+        }
+        return out;
+    }
+
+    // [3,4,5,8,10,11] -> "3-5and8and10-11"
+    function formatParts(parts) {
+        var list = [];
+        var seen = {};
+        for (var i = 0; i < parts.length; i++) {
+            var v = parseInt(parts[i], 10);
+            if (!isNaN(v) && !seen[v]) { seen[v] = true; list.push(v); }
+        }
+        list.sort(function (x, y) { return x - y; });
+        var out = [];
+        var i2 = 0;
+        while (i2 < list.length) {
+            var start = list[i2];
+            var end = start;
+            while (i2 + 1 < list.length && list[i2 + 1] === end + 1) { i2++; end = list[i2]; }
+            out.push(start === end ? String(start) : (start + '-' + end));
+            i2++;
+        }
+        return out.join('and');
+    }
+
+    // Parse everything after TYPE (or a whole artboard / material name)
+    function parseTail(tail) {
+        var r = {
+            material: '', blkbk: false, legacyBlk: false, side: '',
+            parts: [], partsText: '', mult: 1, hasMult: false
+        };
+        var raw = String(tail).split('_');
+        var tk = [];
+        for (var i = 0; i < raw.length; i++) {
+            var s = trim(raw[i]);
+            if (s !== '') { tk.push(s); }
+        }
+        // Multiple: last token xN
+        if (tk.length > 1) {
+            var mm = tk[tk.length - 1].match(/^x(\d+)$/i);
+            if (mm) {
+                r.mult = Math.max(1, parseInt(mm[1], 10));
+                r.hasMult = true;
+                tk.pop();
+            }
+        }
+        // Parts: PtN / PtN-M / PtNandM (legacy PartN)
+        if (tk.length > 1) {
+            var pm = tk[tk.length - 1].match(/^(?:Pt|Part)\s*(\d[\d\s\-]*(?:and\s*\d[\d\s\-]*)*)$/i);
+            if (pm) {
+                var parts = expandParts(pm[1]);
+                if (parts) {
+                    r.parts = parts;
+                    r.partsText = formatParts(parts);
+                    tk.pop();
+                }
+            }
+        }
+        // Side and BlkBk tokens (any position after the first, BlkBk anywhere)
+        var mat = [];
+        for (var j = 0; j < tk.length; j++) {
+            var u = tk[j].toUpperCase();
+            if (u === 'BLKBK' || u === 'BLK') {
+                r.blkbk = true;
+                if (j === 0 || u === 'BLK') { r.legacyBlk = true; }
+            } else if ((u === 'FRONT' || u === 'BACK') && j > 0) {
+                r.side = u;
+            } else {
+                mat.push(tk[j]);
+            }
+        }
+        var material = trim(mat.join('_'));
+        // Legacy glued suffix: 3mmACMBLK / 3mmACM BlkBk / 3mmACM-BLK
+        var lg = material.match(/^(.*\S)[\s\-]*(?:BLKBK|BLK)$/i);
+        if (lg && !r.blkbk) {
+            material = trim(lg[1]);
+            r.blkbk = true;
+            r.legacyBlk = true;
+        }
+        r.material = material;
+        return r;
+    }
+
+    function copyInto(dst, src) {
+        for (var k in src) { if (src.hasOwnProperty(k)) { dst[k] = src[k]; } }
+        return dst;
+    }
+
+    // Full production file name
+    function parseFileName(fileName) {
+        var name = stripExt(fileName);
+        var upper = name.toUpperCase();
+        var r = { name: String(fileName), base: name, type: '', isPrime: false };
+        for (var t = 0; t < TYPE_TOKENS.length; t++) {
+            var idx = upper.indexOf(TYPE_TOKENS[t][0]);
+            if (idx !== -1) {
+                r.type = TYPE_TOKENS[t][1];
+                r.base = name.substring(0, idx);
+                copyInto(r, parseTail(name.substring(idx + TYPE_TOKENS[t][0].length)));
+                return r;
+            }
+        }
+        r.isPrime = /PRIME/i.test(name);
+        copyInto(r, parseTail(''));
+        return r;
+    }
+
+    // Artboard name (PRIME) or material name from packing data
+    function parseArtboardName(abName) {
+        return parseTail(abName);
+    }
+
+    // Normalized material key for comparisons ("3mm ACM" == "3mmACM" == "3MMACM")
+    function matKey(material) {
+        return String(material).toUpperCase().replace(/[\s_\-]+/g, '');
+    }
+
+    function baseKey(base) {
+        return String(base).toUpperCase().replace(/[\s_\-]+/g, '');
+    }
+
+    // Key used to pair a PRINT part with its CUT part. FRONT, BACK and no side are distinct.
+    function pairKey(p, part) {
+        var side = (p.side === 'BACK' || p.side === 'FRONT') ? p.side : '';
+        var pt = (part === undefined || part === null) ? (p.parts.length ? p.parts[0] : 0) : part;
+        return baseKey(p.base) + '|' + matKey(p.material) + '|' + (p.blkbk ? 'B' : '') + '|' + side + '|' + pt;
+    }
+
+    // Older files: a _FRONT print whose CUT has no side tag. Only used as a
+    // fallback when no _FRONT cut exists (a one-sided Pt1 must not grab it).
+    function pairKeyNoSide(p, part) {
+        var pt = (part === undefined || part === null) ? (p.parts.length ? p.parts[0] : 0) : part;
+        return baseKey(p.base) + '|' + matKey(p.material) + '|' + (p.blkbk ? 'B' : '') + '||' + pt;
+    }
+
+    // Readable short label, e.g. "PRINT 3mmACM BlkBk Pt8 x2"
+    function label(p) {
+        var s = [];
+        if (p.type) { s.push(p.type); }
+        if (p.material) { s.push(p.material); }
+        if (p.blkbk) { s.push('BlkBk'); }
+        if (p.side) { s.push(p.side); }
+        if (p.parts.length) { s.push('Pt' + p.partsText); }
+        if (p.hasMult) { s.push('x' + p.mult); }
+        return s.join(' ');
+    }
+
+    // Rebuild a standard artboard/file tail from parts
+    function buildTail(material, blkbk, side, parts, mult) {
+        var s = [material];
+        if (blkbk) { s.push('BlkBk'); }
+        if (side) { s.push(side); }
+        if (parts && parts.length) { s.push('Pt' + formatParts(parts)); }
+        if (mult && mult > 1) { s.push('x' + mult); }
+        return s.join('_');
+    }
+
+    return {
+        parseFileName: parseFileName,
+        parseArtboardName: parseArtboardName,
+        expandParts: expandParts,
+        formatParts: formatParts,
+        matKey: matKey,
+        baseKey: baseKey,
+        pairKey: pairKey,
+        pairKeyNoSide: pairKeyNoSide,
+        label: label,
+        buildTail: buildTail
+    };
+})();
+// ==== END PROD NAME PARSER ====
 
 // Main entry point with proper error checking
 try {
@@ -192,29 +402,10 @@ function showDocumentSelectionDialog() {
 }
 
 function extractMaterialFromFilename(filename) {
-    // Production file naming convention (from Optimal PRIME transformer):
-    //   {baseName}_{type}_{artboardName}.pdf
-    // type = PRINT, CUT, PnC, or CutOnly
-    // artboardName = material name, optionally suffixed with _Pt# for multi-part
-    var upperName = filename.toUpperCase();
-    // Check longest keywords first to avoid partial matches (e.g. _CUT_ inside _CUTONLY_)
-    var keywords = ['_CUTONLY_', '_PRINT_', '_PNC_', '_CUT_'];
-
-    for (var k = 0; k < keywords.length; k++) {
-        var idx = upperName.indexOf(keywords[k]);
-        if (idx !== -1) {
-            var afterKeyword = filename.substring(idx + keywords[k].length);
-            // Remove file extension
-            var extensionMatch = afterKeyword.match(/\.(ai|eps|pdf)$/i);
-            if (extensionMatch) {
-                afterKeyword = afterKeyword.substring(0, afterKeyword.length - extensionMatch[0].length);
-            }
-            // Strip _Pt# suffix (multi-part artboards) to group all parts under same material
-            afterKeyword = afterKeyword.replace(/_Pt\d+$/i, '');
-            return afterKeyword;
-        }
-    }
-    return '';
+    // Base material from a production file name (see PROD NAME PARSER).
+    // BlkBk, FRONT/BACK, parts and _x# are separate tokens, so
+    // "..._PRINT_3mmACM_BlkBk_Pt8_x2.pdf" -> "3mmACM".
+    return ProdName.parseFileName(filename).material;
 }
 
 function extractMaterialFromArtboards(doc) {
@@ -233,9 +424,7 @@ function extractMaterialFromArtboards(doc) {
             if (!abName) { continue; }
             // Strip trailing _Pt# (and _Part#) multi-part suffix to match the
             // normalization used by extractMaterialFromFilename
-            var base = abName.replace(/_Pt\d+$/i, '').replace(/_Part\d+$/i, '');
-            // Trim surrounding whitespace
-            base = base.replace(/^\s+|\s+$/g, '');
+            var base = ProdName.parseArtboardName(abName).material;
             if (base.length === 0) { continue; }
             if (firstMat === null) {
                 firstMat = base;
@@ -252,12 +441,7 @@ function extractMaterialFromArtboards(doc) {
 
 function extractFileType(filename) {
     // Returns the production file type: PRINT, CUT, CutOnly, PnC, or empty
-    var upperName = filename.toUpperCase();
-    if (upperName.indexOf('_CUTONLY_') !== -1) { return 'CutOnly'; }
-    if (upperName.indexOf('_PNC_') !== -1) { return 'PnC'; }
-    if (upperName.indexOf('_PRINT_') !== -1) { return 'PRINT'; }
-    if (upperName.indexOf('_CUT_') !== -1) { return 'CUT'; }
-    return '';
+    return ProdName.parseFileName(filename).type;
 }
 
 function normalizeDimension(width, height) {
@@ -390,14 +574,231 @@ function findAndReadProofManifest(documents) {
     }
 }
 
+function collectNearbyProductionNames(documents) {
+    // File names of production files that sit near the analyzed documents, so a
+    // CUT file can learn its PRINT file's _x# even when that PRINT isn't open.
+    // Scans: each document's folder, its PRINT/CUT subfolders, and - when the
+    // document lives in a PRINT or CUT subfolder - the parent and its siblings.
+    var names = [];
+    var seen = {};
+    function addFolder(f) {
+        try {
+            if (!f || !f.exists) { return; }
+            if (seen[f.fsName]) { return; }
+            seen[f.fsName] = true;
+            var files = f.getFiles();
+            for (var i = 0; i < files.length; i++) {
+                if (files[i] instanceof File) {
+                    var nm = String(files[i].name);
+                    try { nm = decodeURI(nm); } catch (eDec) {}
+                    if (/^[._~]/.test(nm)) { continue; }
+                    if (!/\.(ai|pdf|eps)$/i.test(nm)) { continue; }
+                    names.push(nm);
+                }
+            }
+        } catch (e) {}
+    }
+    function addProdSubfolders(f) {
+        try {
+            var subs = f.getFiles();
+            for (var s = 0; s < subs.length; s++) {
+                if (subs[s] instanceof Folder && /^(PRINT|CUT)$/i.test(String(subs[s].name))) {
+                    addFolder(subs[s]);
+                }
+            }
+        } catch (e) {}
+    }
+    for (var d = 0; d < documents.length; d++) {
+        try {
+            var folder = new File(documents[d].fullName).parent;
+            if (!folder) { continue; }
+            addFolder(folder);
+            addProdSubfolders(folder);
+            if (/^(PRINT|CUT)$/i.test(String(folder.name)) && folder.parent) {
+                addFolder(folder.parent);
+                addProdSubfolders(folder.parent);
+            }
+        } catch (e) {}
+    }
+    return names;
+}
+
+function isPrintType(t) {
+    return t === 'PRINT' || t === 'PnC' || t === 'CutOnly';
+}
+
+function computeRunMultipliers(individualResults, nearbyNames) {
+    // Sets on each result:
+    //   runMult   - how many times this file's cut paths are produced
+    //   countMode - 'normal' | 'back' (printed back, not counted) | 'skip'
+    //   runNote   - human readable explanation for the report
+    //   runWarnings - [] of strings
+    var printRuns = {};     // pairKey -> times the PRINT sheet runs
+    var printSrc = {};      // pairKey -> file name the run count came from
+    var printHasCuts = {};  // pairKey -> PRINT file already holds the cut paths
+    var i, j, p, parts, k;
+    var frontAlias = {};    // no-side key -> FRONT print key (used only if no one-sided print has it)
+
+    function partsOf(pp) { return pp.parts.length ? pp.parts : [0]; }
+
+    for (i = 0; i < individualResults.length; i++) {
+        p = individualResults[i].parsed;
+        if (!p || !isPrintType(p.type)) { continue; }
+        parts = partsOf(p);
+        for (j = 0; j < parts.length; j++) {
+            k = ProdName.pairKey(p, parts[j]);
+            printRuns[k] = p.mult;
+            printSrc[k] = individualResults[i].name;
+            if (individualResults[i].totalCutThroughPaths > 0 && p.side !== 'BACK') {
+                printHasCuts[k] = individualResults[i].name;
+            }
+            // 2-sided sheets: PRINT_..._FRONT_Pt14 pairs with CUT_..._Pt14
+            if (p.side === 'FRONT') {
+                var nk = ProdName.pairKeyNoSide(p, parts[j]);
+                if (!frontAlias.hasOwnProperty(nk)) { frontAlias[nk] = k; }
+            }
+        }
+    }
+    for (i = 0; i < nearbyNames.length; i++) {
+        p = ProdName.parseFileName(nearbyNames[i]);
+        if (!isPrintType(p.type)) { continue; }
+        parts = partsOf(p);
+        for (j = 0; j < parts.length; j++) {
+            k = ProdName.pairKey(p, parts[j]);
+            if (!printRuns.hasOwnProperty(k)) {
+                printRuns[k] = p.mult;
+                printSrc[k] = nearbyNames[i];
+            }
+        }
+    }
+
+    for (i = 0; i < individualResults.length; i++) {
+        var ir = individualResults[i];
+        p = ir.parsed;
+        ir.runMult = 1;
+        ir.countMode = 'normal';
+        ir.runNote = '';
+        ir.runWarnings = [];
+        if (!p) { continue; }
+
+        if (isPrintType(p.type)) {
+            if (p.side === 'BACK') {
+                ir.countMode = 'back';
+                ir.runMult = 0;
+                ir.runNote = 'Printed back - checked for presence only, cuts not counted';
+                if (ir.totalCutThroughPaths > 0) {
+                    ir.runWarnings.push('BACK file has ' + ir.totalCutThroughPaths + ' cut path(s) - backs should not carry cuts');
+                }
+            } else {
+                ir.runMult = p.mult;
+                if (p.mult > 1) { ir.runNote = 'Sheet runs x' + p.mult + ' - cut counts multiplied'; }
+            }
+        } else if (p.type === 'CUT') {
+            parts = partsOf(p);
+            var total = 0;
+            var used = [];
+            var skipped = [];
+            for (j = 0; j < parts.length; j++) {
+                k = ProdName.pairKey(p, parts[j]);
+                if (!p.side && !printRuns.hasOwnProperty(k) && frontAlias.hasOwnProperty(k)) { k = frontAlias[k]; }
+                var ptLabel = parts[j] ? ('Pt' + parts[j]) : 'single part';
+                if (printHasCuts[k]) {
+                    skipped.push(ptLabel);
+                    continue;
+                }
+                var runs = p.mult;
+                if (printRuns.hasOwnProperty(k)) {
+                    runs = printRuns[k];
+                    if (p.hasMult && p.mult !== runs) {
+                        ir.runWarnings.push('CUT says x' + p.mult + ' but ' + printSrc[k] + ' says x' + runs + ' - using x' + runs);
+                    }
+                }
+                total += runs;
+                used.push(ptLabel + ' x' + runs);
+            }
+            if (used.length === 0 && skipped.length > 0) {
+                ir.countMode = 'skip';
+                ir.runMult = 0;
+                ir.runNote = 'Not counted - these cuts are already counted inside their PRINT file (' + skipped.join(', ') + ')';
+            } else {
+                ir.runMult = total;
+                if (used.length > 1 || total !== 1) {
+                    ir.runNote = 'Cut runs: ' + used.join(' + ') + ' = x' + total;
+                }
+                if (skipped.length > 0) {
+                    ir.runNote += (ir.runNote ? '; ' : '') + 'already counted in PRINT: ' + skipped.join(', ');
+                }
+            }
+        }
+    }
+}
+
+function parseSizeKey(sizeKey) {
+    var m = String(sizeKey).match(/([\d.]+)"x([\d.]+)"/);
+    if (!m) { return null; }
+    return { w: parseFloat(m[1]), h: parseFloat(m[2]) };
+}
+
 function buildManifestComparison(packingData, individualResults) {
     // Returns structured data for building the UI, not a text string
     var result = {
         hasData: false,
         expectedText: '',
         foundText: '',
-        mismatches: []
+        mismatches: [],
+        notes: []
     };
+
+    // Display names per normalized material key ("3mm ACM" and "3mmACM" are one material)
+    var display = {};
+    function mk(name) {
+        var key = ProdName.matKey(name);
+        if (!display[key]) { display[key] = name; }
+        return key;
+    }
+
+    // ---- Notes that apply with or without proof data ----
+    var blkFiles = {};   // key -> [labels]
+    var backFiles = {};  // key -> [labels]
+    if (individualResults) {
+        for (var n = 0; n < individualResults.length; n++) {
+            var nr = individualResults[n];
+            var np = nr.parsed;
+            if (np && np.type) {
+                if (np.blkbk && np.type !== 'CUT') {
+                    var bk = mk(np.material);
+                    if (!blkFiles[bk]) { blkFiles[bk] = []; }
+                    blkFiles[bk].push(ProdName.label(np) + (np.legacyBlk ? ' (old name)' : ''));
+                }
+                if (nr.countMode === 'back') {
+                    var bb = mk(np.material);
+                    if (!backFiles[bb]) { backFiles[bb] = []; }
+                    backFiles[bb].push(ProdName.label(np));
+                }
+            }
+            if (nr.runWarnings) {
+                for (var w = 0; w < nr.runWarnings.length; w++) {
+                    result.mismatches.push(nr.name + ': ' + nr.runWarnings[w]);
+                }
+            }
+            if (nr.artboardNotes) {
+                for (var an = 0; an < nr.artboardNotes.length; an++) {
+                    result.notes.push(nr.artboardNotes[an]);
+                }
+            }
+        }
+    }
+    var nk;
+    for (nk in blkFiles) {
+        if (blkFiles.hasOwnProperty(nk)) {
+            result.notes.push('Black-back stock (counted as ' + display[nk] + '): ' + blkFiles[nk].join(', '));
+        }
+    }
+    for (nk in backFiles) {
+        if (backFiles.hasOwnProperty(nk)) {
+            result.notes.push('Printed back files (' + display[nk] + '): ' + backFiles[nk].join(', '));
+        }
+    }
 
     if (!packingData) {
         return result;
@@ -409,7 +810,8 @@ function buildManifestComparison(packingData, individualResults) {
     if (packingData.materials) {
         for (var m = 0; m < packingData.materials.length; m++) {
             var material = packingData.materials[m];
-            var materialName = material.material_name || 'Unknown';
+            var expParsed = ProdName.parseArtboardName(material.material_name || 'Unknown');
+            var materialName = mk(expParsed.material || 'Unknown');
             if (!expectedSizes[materialName]) { expectedSizes[materialName] = {}; }
             if (material.sheets) {
                 for (var s = 0; s < material.sheets.length; s++) {
@@ -430,48 +832,79 @@ function buildManifestComparison(packingData, individualResults) {
         }
     }
 
-    // Build found sizes by material from file check results
+    // Signs the Editor could not nest (e.g. a 48" diamond that only fits turned
+    // square) are saved separately in the proof data; they are still expected.
+    var unpackedCount = 0;
+    if (packingData.unpacked) {
+        for (var up = 0; up < packingData.unpacked.length; up++) {
+            var us = packingData.unpacked[up];
+            var uw = us.width || 0;
+            var uh = us.height || 0;
+            if (uw <= 0 || uh <= 0) { continue; }
+            var uParsed = ProdName.parseArtboardName(us.material_name || 'Unknown');
+            var uKey = mk(uParsed.material || 'Unknown');
+            if (!expectedSizes[uKey]) { expectedSizes[uKey] = {}; }
+            var uSize = normalizeDimension(uw, uh);
+            expectedSizes[uKey][uSize] = (expectedSizes[uKey][uSize] || 0) + 1;
+            unpackedCount++;
+        }
+    }
+    if (unpackedCount > 0) {
+        result.notes.push(unpackedCount + ' sign(s) were not nested by the Editor but are still expected');
+    }
+
+    // Build found sizes by material from file check results, with run multiples.
     // Also track which materials use CutOnly/PnC (uncountable via spot color)
     var foundSizes = {};
     var uncountableMaterials = {};
     if (individualResults) {
         for (var d = 0; d < individualResults.length; d++) {
             var ir = individualResults[d];
-            var fileMat = ir.materialName || '';
+            var ip = ir.parsed || { type: '', material: '' };
+            if (ir.countMode === 'back' || ir.countMode === 'skip') { continue; }
+            var mult = (ir.runMult === undefined) ? 1 : ir.runMult;
 
-            // Does this result carry per-artboard material buckets? (mixed PRIME files)
+            // Does this result carry per-artboard material buckets? (PRIME files)
             var byMat = ir.cutThroughSizesByMaterial;
             var hasByMat = false;
             if (byMat) { for (var bmk in byMat) { if (byMat.hasOwnProperty(bmk)) { hasByMat = true; break; } } }
 
-            if (fileMat.length > 0) {
-                // Single material known for the whole file (split files, or a PRIME
-                // file whose artboards all share one material). Unchanged behavior.
+            if (ip.type && ip.material) {
+                // Production file: material from the file name
+                var fileMat = mk(ip.material);
                 if (!foundSizes[fileMat]) { foundSizes[fileMat] = {}; }
-                if (ir.fileType === 'CutOnly' || ir.fileType === 'PnC') {
+                if (ip.type === 'CutOnly' || ip.type === 'PnC') {
                     uncountableMaterials[fileMat] = true;
                 }
                 if (ir.cutThroughSizes) {
-                    for (var size in ir.cutThroughSizes) {
-                        foundSizes[fileMat][size] = (foundSizes[fileMat][size] || 0) + ir.cutThroughSizes[size];
+                    for (var fsize in ir.cutThroughSizes) {
+                        if (ir.cutThroughSizes.hasOwnProperty(fsize)) {
+                            foundSizes[fileMat][fsize] = (foundSizes[fileMat][fsize] || 0) + ir.cutThroughSizes[fsize] * mult;
+                        }
                     }
                 }
             } else if (hasByMat) {
-                // Mixed-material PRIME file: file name gave no material, so bucket
-                // each cut path under the material of the artboard it sits on.
+                // PRIME / combined file: each cut path bucketed under the material of the
+                // artboard it sits on, already multiplied by that artboard's _x#.
                 for (var pm in byMat) {
                     if (!byMat.hasOwnProperty(pm)) { continue; }
-                    if (!foundSizes[pm]) { foundSizes[pm] = {}; }
+                    var pk = mk(pm);
+                    if (!foundSizes[pk]) { foundSizes[pk] = {}; }
                     for (var psize in byMat[pm]) {
-                        foundSizes[pm][psize] = (foundSizes[pm][psize] || 0) + byMat[pm][psize];
+                        if (byMat[pm].hasOwnProperty(psize)) {
+                            foundSizes[pk][psize] = (foundSizes[pk][psize] || 0) + byMat[pm][psize];
+                        }
                     }
                 }
             } else {
                 // No material info at all -> fall back to the old Unknown bucket.
-                if (!foundSizes['Unknown']) { foundSizes['Unknown'] = {}; }
+                var uk = mk('Unknown');
+                if (!foundSizes[uk]) { foundSizes[uk] = {}; }
                 if (ir.cutThroughSizes) {
                     for (var usize in ir.cutThroughSizes) {
-                        foundSizes['Unknown'][usize] = (foundSizes['Unknown'][usize] || 0) + ir.cutThroughSizes[usize];
+                        if (ir.cutThroughSizes.hasOwnProperty(usize)) {
+                            foundSizes[uk][usize] = (foundSizes[uk][usize] || 0) + ir.cutThroughSizes[usize] * mult;
+                        }
                     }
                 }
             }
@@ -487,24 +920,61 @@ function buildManifestComparison(packingData, individualResults) {
     for (mat in allMaterials) { materialList.push(mat); }
     materialList.sort();
 
+    // Diamonds: a square line (W = H, measured point to point) nested turned
+    // square is cut as a smaller square. Match leftover square cuts whose
+    // side x 1.414 is within 6% of the expected size (covers rounded corners).
+    var diamondSizes = {}; // matKey -> { expectedSize: foundSquareSize }
+    for (var dm = 0; dm < materialList.length; dm++) {
+        var dKey = materialList[dm];
+        if (uncountableMaterials[dKey]) { continue; }
+        var dExp = expectedSizes[dKey];
+        var dFnd = foundSizes[dKey];
+        if (!dExp || !dFnd) { continue; }
+        for (var eSize in dExp) {
+            if (!dExp.hasOwnProperty(eSize)) { continue; }
+            var ed = parseSizeKey(eSize);
+            if (!ed || ed.w !== ed.h) { continue; }
+            var deficit = dExp[eSize] - (dFnd[eSize] || 0);
+            if (deficit <= 0) { continue; }
+            for (var fSize in dFnd) {
+                if (!dFnd.hasOwnProperty(fSize) || deficit <= 0) { continue; }
+                var fd = parseSizeKey(fSize);
+                if (!fd || fd.w !== fd.h || fSize === eSize) { continue; }
+                var surplus = dFnd[fSize] - (dExp[fSize] || 0);
+                if (surplus <= 0) { continue; }
+                if (Math.abs(fd.w * Math.SQRT2 - ed.w) > ed.w * 0.06) { continue; }
+                var take = Math.min(deficit, surplus);
+                dFnd[fSize] -= take;
+                if (dFnd[fSize] === 0) { delete dFnd[fSize]; }
+                dFnd[eSize] = (dFnd[eSize] || 0) + take;
+                deficit -= take;
+                if (!diamondSizes[dKey]) { diamondSizes[dKey] = {}; }
+                diamondSizes[dKey][eSize] = fSize;
+                result.notes.push('Diamond: ' + take + 'x ' + eSize + ' ' + display[dKey] + ' matched by ' + fSize + ' square cuts');
+            }
+        }
+    }
+
     var expectedLines = [];
     var foundLines = [];
 
-    for (var m = 0; m < materialList.length; m++) {
-        var matName = materialList[m];
-        var expectedByMat = expectedSizes[matName] || {};
-        var foundByMat = foundSizes[matName] || {};
+    for (var m2 = 0; m2 < materialList.length; m2++) {
+        var matKeyName = materialList[m2];
+        var matName = display[matKeyName] || matKeyName;
+        var expectedByMat = expectedSizes[matKeyName] || {};
+        var foundByMat = foundSizes[matKeyName] || {};
+        var diamonds = diamondSizes[matKeyName] || {};
 
         // Material header
         expectedLines.push(matName);
         foundLines.push(matName);
 
         // If this material uses CutOnly/PnC, skip counting -- show note instead
-        if (uncountableMaterials[matName]) {
-            var expCount = 0;
-            for (var sz in expectedByMat) { expCount += expectedByMat[sz]; }
-            if (expCount > 0) {
-                expectedLines.push('  ' + expCount + ' sign(s) expected');
+        if (uncountableMaterials[matKeyName]) {
+            var expCount0 = 0;
+            for (var sz0 in expectedByMat) { expCount0 += expectedByMat[sz0]; }
+            if (expCount0 > 0) {
+                expectedLines.push('  ' + expCount0 + ' sign(s) expected');
             }
             foundLines.push('  (CutContour - not counted)');
             expectedLines.push('');
@@ -522,35 +992,35 @@ function buildManifestComparison(packingData, individualResults) {
         sizeList.sort();
 
         // Matched items first
-        for (var s = 0; s < sizeList.length; s++) {
-            var size = sizeList[s];
-            var expCount = expectedByMat[size] || 0;
-            var fndCount = foundByMat[size] || 0;
-            if (expCount > 0 && fndCount > 0 && expCount === fndCount) {
-                expectedLines.push('  ' + expCount + 'x  ' + size);
-                foundLines.push('  ' + fndCount + 'x  ' + size);
+        for (var s1 = 0; s1 < sizeList.length; s1++) {
+            var size1 = sizeList[s1];
+            var expCount1 = expectedByMat[size1] || 0;
+            var fndCount1 = foundByMat[size1] || 0;
+            if (expCount1 > 0 && fndCount1 > 0 && expCount1 === fndCount1) {
+                expectedLines.push('  ' + expCount1 + 'x  ' + size1);
+                foundLines.push('  ' + fndCount1 + 'x  ' + size1 + (diamonds[size1] ? '  (diamond, cut ' + diamonds[size1] + ' sq)' : ''));
             }
         }
 
         // Mismatched items second
-        for (var s = 0; s < sizeList.length; s++) {
-            var size = sizeList[s];
-            var expCount = expectedByMat[size] || 0;
-            var fndCount = foundByMat[size] || 0;
-            if (expCount === fndCount && expCount > 0) { continue; }
+        for (var s2 = 0; s2 < sizeList.length; s2++) {
+            var size2 = sizeList[s2];
+            var expCount2 = expectedByMat[size2] || 0;
+            var fndCount2 = foundByMat[size2] || 0;
+            if (expCount2 === fndCount2 && expCount2 > 0) { continue; }
 
-            if (expCount > 0 && fndCount > 0 && expCount !== fndCount) {
-                expectedLines.push('  ' + expCount + 'x  ' + size + '  <<<');
-                foundLines.push('  ' + fndCount + 'x  ' + size + '  <<<');
-                result.mismatches.push(matName + ' ' + size + ': expected ' + expCount + ', found ' + fndCount);
-            } else if (expCount > 0 && fndCount === 0) {
-                expectedLines.push('  ' + expCount + 'x  ' + size + '  <<<');
+            if (expCount2 > 0 && fndCount2 > 0 && expCount2 !== fndCount2) {
+                expectedLines.push('  ' + expCount2 + 'x  ' + size2 + '  <<<');
+                foundLines.push('  ' + fndCount2 + 'x  ' + size2 + '  <<<');
+                result.mismatches.push(matName + ' ' + size2 + ': expected ' + expCount2 + ', found ' + fndCount2);
+            } else if (expCount2 > 0 && fndCount2 === 0) {
+                expectedLines.push('  ' + expCount2 + 'x  ' + size2 + '  <<<');
                 foundLines.push('  --missing--');
-                result.mismatches.push('MISSING: ' + expCount + 'x ' + size + ' ' + matName);
-            } else if (expCount === 0 && fndCount > 0) {
+                result.mismatches.push('MISSING: ' + expCount2 + 'x ' + size2 + ' ' + matName);
+            } else if (expCount2 === 0 && fndCount2 > 0) {
                 expectedLines.push('  --not expected--');
-                foundLines.push('  ' + fndCount + 'x  ' + size + '  <<<');
-                result.mismatches.push('UNEXPECTED: ' + fndCount + 'x ' + size + ' ' + matName);
+                foundLines.push('  ' + fndCount2 + 'x  ' + size2 + '  <<<');
+                result.mismatches.push('UNEXPECTED: ' + fndCount2 + 'x ' + size2 + ' ' + matName);
             }
         }
 
@@ -636,6 +1106,7 @@ function runAnalysis(documents, includePPI) {
             // Store individual document results
             var individualResult = {
                 name: doc.name,
+                parsed: ProdName.parseFileName(doc.name),
                 materialName: detectedMaterial,
                 fileType: extractFileType(doc.name),
                 analysisTime: analysisTime,
@@ -644,6 +1115,8 @@ function runAnalysis(documents, includePPI) {
                 allImageDetails: docResult.allImageDetails || [],
                 cutThroughSizes: docResult.cutThroughSizes || {},
                 cutThroughSizesByMaterial: docResult.cutThroughSizesByMaterial || {},
+                artboardNotes: docResult.artboardNotes || [],
+                artboardRuns: docResult.artboardRuns || [],
                 totalCutThroughPaths: docResult.totalCutThroughPaths || 0,
                 compoundPathWarnings: docResult.compoundPathWarnings || [],
                 totalCompoundPaths: docResult.totalCompoundPaths || 0,
@@ -719,14 +1192,19 @@ function runAnalysis(documents, includePPI) {
 
         var totalTime = new Date().getTime() - overallStartTime;
 
+        // Work out how many times each file's cuts are produced (_x# multiples,
+        // shared CUT files, cuts already merged into PRINT files, printed backs)
+        var nearbyNames = collectNearbyProductionNames(documents);
+        computeRunMultipliers(individualDocumentResults, nearbyNames);
+
+        // Build manifest comparison if available
+        var manifestComparison = buildManifestComparison(proofManifest, individualDocumentResults);
+
         // Build report text
         var reportText = buildReport(documents.length, documentNames, totalTime, timingReport,
                                    totalImageCount, allLowResImages, allImageDetails, allCutThroughSizes,
                                    totalCutThroughPaths, totalCompoundPaths, allCompoundPathWarnings,
-                                   includePPI, individualDocumentResults);
-
-        // Build manifest comparison if available
-        var manifestComparison = buildManifestComparison(proofManifest, individualDocumentResults);
+                                   includePPI, individualDocumentResults, manifestComparison, manifestStatus);
 
         // Store analysis data
         var analysisData = {
@@ -792,30 +1270,43 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
         var compoundPathWarnings = [];
         var totalCompoundPaths = 0;
 
-        // Precompute each artboard's rectangle + material name (name minus _Pt#/_Part#).
+        // Precompute each artboard's rectangle + parsed name. Artboards follow the
+        // production naming standard (e.g. "3mmACM_BlkBk_Pt7_x3"): material is the
+        // base material, _x# multiplies that board's cuts, BACK boards aren't counted.
         var abInfo = [];
+        var artboardNotes = [];
+        var artboardRuns = [];
         try {
             for (var ab = 0; ab < doc.artboards.length; ab++) {
                 var abName = doc.artboards[ab].name || '';
-                var abMat = abName.replace(/_Pt\d+$/i, '').replace(/_Part\d+$/i, '').replace(/^\s+|\s+$/g, '');
+                var abParsed = ProdName.parseArtboardName(abName);
+                var abMat = abParsed.material;
                 if (abMat.length === 0) { abMat = 'Unknown'; }
-                abInfo.push({ rect: doc.artboards[ab].artboardRect, material: abMat });
+                abInfo.push({
+                    rect: doc.artboards[ab].artboardRect,
+                    name: abName,
+                    material: abMat,
+                    mult: abParsed.mult,
+                    isBack: abParsed.side === 'BACK',
+                    blkbk: abParsed.blkbk,
+                    cuts: 0
+                });
             }
         } catch (eAB) {}
 
-        // Which artboard (material) contains a path, by its center point.
+        // Which artboard contains a path, by its center point.
         // artboardRect and geometricBounds are both [L, T, R, B] in the same
         // point space, so scaleFactor is irrelevant to this containment test.
-        function materialForBounds(b) {
+        function artboardForBounds(b) {
             var cx = (b[0] + b[2]) / 2;
             var cy = (b[1] + b[3]) / 2;
             for (var q = 0; q < abInfo.length; q++) {
                 var r = abInfo[q].rect;
                 if (cx >= r[0] && cx <= r[2] && cy <= r[1] && cy >= r[3]) {
-                    return abInfo[q].material;
+                    return abInfo[q];
                 }
             }
-            return 'Unknown';
+            return null;
         }
 
         try {
@@ -832,6 +1323,8 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                 return {
                     cutThroughSizes: cutThroughSizes,
                     cutThroughSizesByMaterial: cutThroughSizesByMaterial,
+                    artboardNotes: artboardNotes,
+                    artboardRuns: artboardRuns,
                     totalCutThroughPaths: 0,
                     compoundPathWarnings: compoundPathWarnings,
                     totalCompoundPaths: 0
@@ -915,10 +1408,30 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
                 } else {
                     cutThroughSizes[size] = 1;
                 }
-                var mat = materialForBounds(allPaths[i].geometricBounds);
-                if (!cutThroughSizesByMaterial[mat]) { cutThroughSizesByMaterial[mat] = {}; }
-                cutThroughSizesByMaterial[mat][size] = (cutThroughSizesByMaterial[mat][size] || 0) + 1;
+                var abHit = artboardForBounds(allPaths[i].geometricBounds);
                 totalPaths++;
+                if (abHit) {
+                    abHit.cuts++;
+                    if (abHit.isBack) { continue; } // printed back: not counted
+                }
+                var mat = abHit ? abHit.material : 'Unknown';
+                var abMult = abHit ? abHit.mult : 1;
+                if (!cutThroughSizesByMaterial[mat]) { cutThroughSizesByMaterial[mat] = {}; }
+                cutThroughSizesByMaterial[mat][size] = (cutThroughSizesByMaterial[mat][size] || 0) + abMult;
+            }
+
+            // Artboard notes for the report (multiples, black backs, printed backs)
+            for (var an = 0; an < abInfo.length; an++) {
+                var ai = abInfo[an];
+                if (ai.mult > 1 || ai.isBack || ai.blkbk) {
+                    artboardRuns.push(ai.name + ': ' + ai.cuts + ' cut(s)' +
+                        (ai.mult > 1 ? ' x' + ai.mult + ' runs = ' + (ai.cuts * ai.mult) : '') +
+                        (ai.blkbk ? ' [black-back stock, counted as ' + ai.material + ']' : '') +
+                        (ai.isBack ? ' [printed back, not counted]' : ''));
+                }
+                if (ai.isBack && ai.cuts > 0) {
+                    artboardNotes.push('Artboard ' + ai.name + ' is a BACK but has ' + ai.cuts + ' cut path(s)');
+                }
             }
 
         } catch (e) {}
@@ -926,6 +1439,8 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
         return {
             cutThroughSizes: cutThroughSizes,
             cutThroughSizesByMaterial: cutThroughSizesByMaterial,
+            artboardNotes: artboardNotes,
+            artboardRuns: artboardRuns,
             totalCutThroughPaths: totalPaths,
             compoundPathWarnings: compoundPathWarnings,
             totalCompoundPaths: totalCompoundPaths
@@ -1127,6 +1642,8 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
     var cutThroughResults = findPathsWithCutThroughColor(doc);
     var cutThroughSizes = cutThroughResults.cutThroughSizes;
     var cutThroughSizesByMaterial = cutThroughResults.cutThroughSizesByMaterial || {};
+    var artboardNotes = cutThroughResults.artboardNotes || [];
+    var artboardRuns = cutThroughResults.artboardRuns || [];
     var totalCutThroughPaths = cutThroughResults.totalCutThroughPaths;
     var compoundPathWarnings = cutThroughResults.compoundPathWarnings;
     var totalCompoundPaths = cutThroughResults.totalCompoundPaths;
@@ -1137,10 +1654,27 @@ function analyzeDocument(doc, includePPI, scaleFactor) {
         allImageDetails: allImageDetails,
         cutThroughSizes: cutThroughSizes,
         cutThroughSizesByMaterial: cutThroughSizesByMaterial,
+        artboardNotes: artboardNotes,
+        artboardRuns: artboardRuns,
         totalCutThroughPaths: totalCutThroughPaths,
         compoundPathWarnings: compoundPathWarnings,
         totalCompoundPaths: totalCompoundPaths
     };
+}
+
+function addNotesPanel(dialog, notes) {
+    var notesPanel = dialog.add("panel", undefined, "NOTES");
+    notesPanel.orientation = "column";
+    notesPanel.alignChildren = "left";
+    notesPanel.margins = [10, 15, 10, 8];
+    var maxShow = 12;
+    for (var i = 0; i < notes.length && i < maxShow; i++) {
+        var line = notesPanel.add("statictext", undefined, notes[i]);
+        line.graphics.foregroundColor = line.graphics.newPen(line.graphics.PenType.SOLID_COLOR, [0.2, 0.55, 0.9], 1);
+    }
+    if (notes.length > maxShow) {
+        notesPanel.add("statictext", undefined, "(" + (notes.length - maxShow) + " more in the Full Report)");
+    }
 }
 
 function showResultsDialog(analysisData) {
@@ -1201,6 +1735,11 @@ function showResultsDialog(analysisData) {
             okText.graphics.font = ScriptUI.newFont("dialog", "Bold", 12);
         }
 
+        // Notes (multiples, diamonds, black backs) - informational, not errors
+        if (comparison.notes && comparison.notes.length > 0) {
+            addNotesPanel(dialog, comparison.notes);
+        }
+
         // Side by side panels
         var compGroup = dialog.add("group");
         compGroup.orientation = "row";
@@ -1229,6 +1768,9 @@ function showResultsDialog(analysisData) {
         noDataGroup.alignment = "left";
         var noDataText = noDataGroup.add("statictext", undefined, "Manifest: " + (analysisData.manifestStatus || 'No proof data found'));
         noDataText.graphics.font = ScriptUI.newFont("dialog", "Regular", 10);
+        if (comparison && comparison.notes && comparison.notes.length > 0) {
+            addNotesPanel(dialog, comparison.notes);
+        }
     }
 
     // -- ROW 3: Document details (sidebar + content) --
@@ -1255,7 +1797,8 @@ function showResultsDialog(analysisData) {
     if (analysisData.individualResults) {
         for (var d = 0; d < analysisData.individualResults.length; d++) {
             var result = analysisData.individualResults[d];
-            var displayName = result.materialName && result.materialName.length > 0 ? result.materialName : result.name;
+            var displayName = (result.parsed && result.parsed.type) ? ProdName.label(result.parsed) :
+                (result.materialName && result.materialName.length > 0 ? result.materialName : result.name);
             listItems.push(displayName);
         }
     }
@@ -1288,6 +1831,23 @@ function showResultsDialog(analysisData) {
             var docReport = [];
             docReport.push("DOCUMENT: " + docResult.name);
             docReport.push("Material: " + (docResult.materialName && docResult.materialName.length > 0 ? docResult.materialName : "Unknown"));
+            if (docResult.parsed && docResult.parsed.type) {
+                docReport.push("Read as: " + ProdName.label(docResult.parsed));
+            }
+            if (docResult.runNote) {
+                docReport.push("Counting: " + docResult.runNote);
+            }
+            if (docResult.runWarnings && docResult.runWarnings.length > 0) {
+                for (var rw = 0; rw < docResult.runWarnings.length; rw++) {
+                    docReport.push("WARNING: " + docResult.runWarnings[rw]);
+                }
+            }
+            if (docResult.artboardRuns && docResult.artboardRuns.length > 0) {
+                docReport.push("Artboards:");
+                for (var ar = 0; ar < docResult.artboardRuns.length; ar++) {
+                    docReport.push("  " + docResult.artboardRuns[ar]);
+                }
+            }
             docReport.push("Processing: " + docResult.analysisTime + "ms");
             docReport.push("Images: " + docResult.rasterCount);
             docReport.push("Cut Paths: " + docResult.totalCutThroughPaths);
@@ -1383,10 +1943,45 @@ function showResultsDialog(analysisData) {
 function buildReport(docCount, documentNames, totalTime, timingReport,
                     totalImageCount, allLowResImages, allImageDetails, allCutThroughSizes,
                     totalCutThroughPaths, totalCompoundPaths, allCompoundPathWarnings,
-                    includePPI, individualDocumentResults) {
+                    includePPI, individualDocumentResults, comparison, manifestStatus) {
     var report = [];
     report.push("=== MULTI-DOCUMENT ANALYSIS SUMMARY ===");
     report.push("");
+
+    // Proof comparison first - it is what the check is for
+    if (comparison && comparison.hasData) {
+        report.push("=== PROOF COMPARISON ===");
+        if (comparison.mismatches.length > 0) {
+            report.push("MISMATCHES:");
+            for (var cm = 0; cm < comparison.mismatches.length; cm++) {
+                report.push("  " + comparison.mismatches[cm]);
+            }
+        } else {
+            report.push("All expected items found - quantities match");
+        }
+        report.push("");
+    } else {
+        report.push("Proof data: " + (manifestStatus || "No proof data found"));
+        if (comparison && comparison.mismatches.length > 0) {
+            for (var cw = 0; cw < comparison.mismatches.length; cw++) {
+                report.push("  " + comparison.mismatches[cw]);
+            }
+        }
+        report.push("");
+    }
+    if (comparison && comparison.notes && comparison.notes.length > 0) {
+        report.push("NOTES:");
+        for (var cn = 0; cn < comparison.notes.length; cn++) {
+            report.push("  " + comparison.notes[cn]);
+        }
+        report.push("");
+    }
+    if (comparison && comparison.hasData) {
+        report.push("EXPECTED (from proof):");
+        report.push(comparison.expectedText);
+        report.push("FOUND (in files, with multiples):");
+        report.push(comparison.foundText);
+    }
 
     var hasLargeCanvas = false;
     for (var i = 0; i < individualDocumentResults.length; i++) {
@@ -1460,6 +2055,22 @@ function buildReport(docCount, documentNames, totalTime, timingReport,
         report.push("Document: " + docResult.name);
         if (docResult.scaleFactor && docResult.scaleFactor !== 1) {
             report.push("  ** Large Canvas (Scale Factor: " + docResult.scaleFactor + ") **");
+        }
+        if (docResult.parsed && docResult.parsed.type) {
+            report.push("  Read as: " + ProdName.label(docResult.parsed));
+        }
+        if (docResult.runNote) {
+            report.push("  Counting: " + docResult.runNote);
+        }
+        if (docResult.runWarnings) {
+            for (var rw2 = 0; rw2 < docResult.runWarnings.length; rw2++) {
+                report.push("  WARNING: " + docResult.runWarnings[rw2]);
+            }
+        }
+        if (docResult.artboardRuns && docResult.artboardRuns.length > 0) {
+            for (var ar2 = 0; ar2 < docResult.artboardRuns.length; ar2++) {
+                report.push("  Artboard " + docResult.artboardRuns[ar2]);
+            }
         }
 
         if (docResult.compoundPathWarnings && docResult.compoundPathWarnings.length > 0) {
