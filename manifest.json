@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-10-30T09:50:32.770996",
+  "last_updated": "2026-11-09T15:58:25.583324",
   "deployer_version": "3.0",
   "total_scripts": 33,
   "launcher_version": "4.0",
@@ -96,7 +96,7 @@
       "filename": "File Check.js",
       "metadata": {
         "name": "File Check",
-        "version": "3.2",
+        "version": "4.3",
         "description": "Production file readiness analysis with manifest comparison",
         "author": "Unknown",
         "target": "illustrator",
@@ -107,10 +107,10 @@
           "manifest"
         ]
       },
-      "hash": "c3d81ccff6aa02a33b92f81c2f18c885",
+      "hash": "8a5e5457d5a9828f7f8762aaabe768ad",
       "local_path": "C:\\Dev\\Illustrator Scripts\\File Check.js",
-      "file_size": 62704,
-      "last_modified": "2026-08-04T11:26:18.598892",
+      "file_size": 87942,
+      "last_modified": "2026-11-09T14:35:58.822129",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/File%20Check.js"
     },
@@ -161,7 +161,7 @@
       "filename": "Link Namer.js",
       "metadata": {
         "name": "Link Namer",
-        "version": "1.3",
+        "version": "1.5",
         "description": "Name Linked Files for ProdProof Layout",
         "author": "Unknown",
         "target": "illustrator",
@@ -171,10 +171,10 @@
           "namer"
         ]
       },
-      "hash": "460b1dfe81705f96bc358f2af94df385",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\Link Namer.js",
-      "file_size": 12311,
-      "last_modified": "2026-05-21T11:10:27.686191",
+      "hash": "7726e9bb5087d576f5f3bd1ae60d9c0a",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\Link Namer.js",
+      "file_size": 21164,
+      "last_modified": "2026-11-09T14:17:27.007934",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link%20Namer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Link%20Namer.js"
     },
@@ -224,7 +224,7 @@
       "filename": "OpenProdFilesForReview.js",
       "metadata": {
         "name": "Open Production Files and organize for review",
-        "version": "2.1",
+        "version": "2.3",
         "description": "Open print and cut files, organize them together and tile the view to show them all",
         "author": "Unknown",
         "target": "illustrator",
@@ -234,10 +234,10 @@
           "file"
         ]
       },
-      "hash": "d8e1ae163083ce8d1ceded886bf96ddc",
+      "hash": "1d5dbf15a5f1d2378356dae413cb629b",
       "local_path": "C:\\Dev\\Illustrator Scripts\\OpenProdFilesForReview.js",
-      "file_size": 18009,
-      "last_modified": "2026-10-15T08:08:02.406185",
+      "file_size": 27570,
+      "last_modified": "2026-11-09T14:17:27.013462",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/OpenProdFilesForReview.js"
     },
@@ -245,7 +245,7 @@
       "filename": "Optimal PRIME transformer.js",
       "metadata": {
         "name": "Optimal PRIME Transformer",
-        "version": "1.9.5",
+        "version": "2.1",
         "description": "Generate Production Files From a PRIME",
         "author": "Unknown",
         "target": "illustrator",
@@ -256,10 +256,10 @@
           "scaleFactor"
         ]
       },
-      "hash": "92ce5e1462e3ad8c1427f7b672f6193d",
+      "hash": "eb0ee4e40b12bf7c22140d80533c8edb",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Optimal PRIME transformer.js",
-      "file_size": 56303,
-      "last_modified": "2026-09-14T09:19:14.759751",
+      "file_size": 73240,
+      "last_modified": "2026-11-09T14:35:58.805455",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
@@ -267,7 +267,7 @@
       "filename": "PRIME Flex Template.js",
       "metadata": {
         "name": "PRIME Flex Template",
-        "version": "4.4",
+        "version": "5.0",
         "description": "Create artboards with reg dots for flexible materials",
         "author": "Unknown",
         "target": "illustrator",
@@ -277,10 +277,10 @@
           "setup"
         ]
       },
-      "hash": "2650f2c4b07afe06df33cf4f74223d7a",
+      "hash": "700a85de8798531cd6d43a492113e1bc",
       "local_path": "C:\\Dev\\Illustrator Scripts\\PRIME Flex Template.js",
-      "file_size": 77834,
-      "last_modified": "2026-10-06T13:06:10.795154",
+      "file_size": 99149,
+      "last_modified": "2026-11-09T14:35:58.794883",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/PRIME%20Flex%20Template.js"
     },
@@ -553,7 +553,7 @@
       "filename": "Sort Linked Files By Pt Number.js",
       "metadata": {
         "name": "Sort Linked Files By Pt Number",
-        "version": "1.2",
+        "version": "1.4",
         "description": "Sort selected linked files. If the files are wrap sides (driver/front/passenger/rear/top in the name, matching Wrap Processor's naming), they're grouped by side and stacked top-to-bottom in the order Driver, Front, Passenger, Rear, Top (missing sides omitted), each row sorted left-to-right by panel number. Otherwise falls back to the original Pt# left-to-right sort. 0.25\" spacing; the leftmost/topmost of the selection is the starting position.",
         "author": "Unknown",
         "target": "illustrator",
@@ -566,10 +566,10 @@
           "processor"
         ]
       },
-      "hash": "159350f11a50b1fe17cb062d2bc2522d",
+      "hash": "6f323b6693a18b24428cef050bb9813b",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Sort Linked Files By Pt Number.js",
-      "file_size": 10485,
-      "last_modified": "2026-08-04T11:39:04.009470",
+      "file_size": 19308,
+      "last_modified": "2026-11-09T14:17:27.017975",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort%20Linked%20Files%20By%20Pt%20Number.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Sort%20Linked%20Files%20By%20Pt%20Number.js"
     },
