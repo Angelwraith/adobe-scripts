@@ -3,10 +3,220 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "4.4",
+  "version": "5.0",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
+
+// ==== PROD NAME PARSER v1.0 ====
+// Shared production file/artboard name parser. Keep this block IDENTICAL in:
+//   File Check.js, OpenProdFilesForReview.js, Link Namer.js,
+//   Sort Linked Files By Pt Number.js, Optimal PRIME transformer.js
+// Standard:  {base}_{TYPE}_{Material}[_BlkBk][_FRONT|_BACK]_{Parts}[_x#].pdf
+//   TYPE  = PRINT | CUT | PnC | CutOnly
+//   Parts = Pt1 | Pt3-5 | Pt3-5and8 (CUT files may list several parts)
+//   x#    = number of times the sheet is run (always last)
+// Legacy names still parse: 3mmACMBLK, BlkBk_6mmACM, _Part2.
+var ProdName = (function () {
+    var TYPE_TOKENS = [
+        ['_CUTONLY_', 'CutOnly'],
+        ['_PRINT_', 'PRINT'],
+        ['_PNC_', 'PnC'],
+        ['_CUT_', 'CUT']
+    ];
+
+    function trim(s) {
+        return String(s).replace(/^\s+|\s+$/g, '');
+    }
+
+    function stripExt(name) {
+        var n = String(name).replace(/%20/g, ' ');
+        return n.replace(/\.(ai|pdf|eps|svg)$/i, '');
+    }
+
+    // "3-5and8" -> [3,4,5,8]; returns null when the text is not a valid part list
+    function expandParts(spec) {
+        var out = [];
+        var chunks = String(spec).split(/and/i);
+        for (var i = 0; i < chunks.length; i++) {
+            var m = trim(chunks[i]).match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+            if (!m) { return null; }
+            var a = parseInt(m[1], 10);
+            var b = m[2] ? parseInt(m[2], 10) : a;
+            if (b < a) { var t = a; a = b; b = t; }
+            if (b - a > 999) { return null; }
+            for (var n = a; n <= b; n++) { out.push(n); }
+        }
+        return out;
+    }
+
+    // [3,4,5,8,10,11] -> "3-5and8and10-11"
+    function formatParts(parts) {
+        var list = [];
+        var seen = {};
+        for (var i = 0; i < parts.length; i++) {
+            var v = parseInt(parts[i], 10);
+            if (!isNaN(v) && !seen[v]) { seen[v] = true; list.push(v); }
+        }
+        list.sort(function (x, y) { return x - y; });
+        var out = [];
+        var i2 = 0;
+        while (i2 < list.length) {
+            var start = list[i2];
+            var end = start;
+            while (i2 + 1 < list.length && list[i2 + 1] === end + 1) { i2++; end = list[i2]; }
+            out.push(start === end ? String(start) : (start + '-' + end));
+            i2++;
+        }
+        return out.join('and');
+    }
+
+    // Parse everything after TYPE (or a whole artboard / material name)
+    function parseTail(tail) {
+        var r = {
+            material: '', blkbk: false, legacyBlk: false, side: '',
+            parts: [], partsText: '', mult: 1, hasMult: false
+        };
+        var raw = String(tail).split('_');
+        var tk = [];
+        for (var i = 0; i < raw.length; i++) {
+            var s = trim(raw[i]);
+            if (s !== '') { tk.push(s); }
+        }
+        // Multiple: last token xN
+        if (tk.length > 1) {
+            var mm = tk[tk.length - 1].match(/^x(\d+)$/i);
+            if (mm) {
+                r.mult = Math.max(1, parseInt(mm[1], 10));
+                r.hasMult = true;
+                tk.pop();
+            }
+        }
+        // Parts: PtN / PtN-M / PtNandM (legacy PartN)
+        if (tk.length > 1) {
+            var pm = tk[tk.length - 1].match(/^(?:Pt|Part)\s*(\d[\d\s\-]*(?:and\s*\d[\d\s\-]*)*)$/i);
+            if (pm) {
+                var parts = expandParts(pm[1]);
+                if (parts) {
+                    r.parts = parts;
+                    r.partsText = formatParts(parts);
+                    tk.pop();
+                }
+            }
+        }
+        // Side and BlkBk tokens (any position after the first, BlkBk anywhere)
+        var mat = [];
+        for (var j = 0; j < tk.length; j++) {
+            var u = tk[j].toUpperCase();
+            if (u === 'BLKBK' || u === 'BLK') {
+                r.blkbk = true;
+                if (j === 0 || u === 'BLK') { r.legacyBlk = true; }
+            } else if ((u === 'FRONT' || u === 'BACK') && j > 0) {
+                r.side = u;
+            } else {
+                mat.push(tk[j]);
+            }
+        }
+        var material = trim(mat.join('_'));
+        // Legacy glued suffix: 3mmACMBLK / 3mmACM BlkBk / 3mmACM-BLK
+        var lg = material.match(/^(.*\S)[\s\-]*(?:BLKBK|BLK)$/i);
+        if (lg && !r.blkbk) {
+            material = trim(lg[1]);
+            r.blkbk = true;
+            r.legacyBlk = true;
+        }
+        r.material = material;
+        return r;
+    }
+
+    function copyInto(dst, src) {
+        for (var k in src) { if (src.hasOwnProperty(k)) { dst[k] = src[k]; } }
+        return dst;
+    }
+
+    // Full production file name
+    function parseFileName(fileName) {
+        var name = stripExt(fileName);
+        var upper = name.toUpperCase();
+        var r = { name: String(fileName), base: name, type: '', isPrime: false };
+        for (var t = 0; t < TYPE_TOKENS.length; t++) {
+            var idx = upper.indexOf(TYPE_TOKENS[t][0]);
+            if (idx !== -1) {
+                r.type = TYPE_TOKENS[t][1];
+                r.base = name.substring(0, idx);
+                copyInto(r, parseTail(name.substring(idx + TYPE_TOKENS[t][0].length)));
+                return r;
+            }
+        }
+        r.isPrime = /PRIME/i.test(name);
+        copyInto(r, parseTail(''));
+        return r;
+    }
+
+    // Artboard name (PRIME) or material name from packing data
+    function parseArtboardName(abName) {
+        return parseTail(abName);
+    }
+
+    // Normalized material key for comparisons ("3mm ACM" == "3mmACM" == "3MMACM")
+    function matKey(material) {
+        return String(material).toUpperCase().replace(/[\s_\-]+/g, '');
+    }
+
+    function baseKey(base) {
+        return String(base).toUpperCase().replace(/[\s_\-]+/g, '');
+    }
+
+    // Key used to pair a PRINT part with its CUT part. FRONT, BACK and no side are distinct.
+    function pairKey(p, part) {
+        var side = (p.side === 'BACK' || p.side === 'FRONT') ? p.side : '';
+        var pt = (part === undefined || part === null) ? (p.parts.length ? p.parts[0] : 0) : part;
+        return baseKey(p.base) + '|' + matKey(p.material) + '|' + (p.blkbk ? 'B' : '') + '|' + side + '|' + pt;
+    }
+
+    // Older files: a _FRONT print whose CUT has no side tag. Only used as a
+    // fallback when no _FRONT cut exists (a one-sided Pt1 must not grab it).
+    function pairKeyNoSide(p, part) {
+        var pt = (part === undefined || part === null) ? (p.parts.length ? p.parts[0] : 0) : part;
+        return baseKey(p.base) + '|' + matKey(p.material) + '|' + (p.blkbk ? 'B' : '') + '||' + pt;
+    }
+
+    // Readable short label, e.g. "PRINT 3mmACM BlkBk Pt8 x2"
+    function label(p) {
+        var s = [];
+        if (p.type) { s.push(p.type); }
+        if (p.material) { s.push(p.material); }
+        if (p.blkbk) { s.push('BlkBk'); }
+        if (p.side) { s.push(p.side); }
+        if (p.parts.length) { s.push('Pt' + p.partsText); }
+        if (p.hasMult) { s.push('x' + p.mult); }
+        return s.join(' ');
+    }
+
+    // Rebuild a standard artboard/file tail from parts
+    function buildTail(material, blkbk, side, parts, mult) {
+        var s = [material];
+        if (blkbk) { s.push('BlkBk'); }
+        if (side) { s.push(side); }
+        if (parts && parts.length) { s.push('Pt' + formatParts(parts)); }
+        if (mult && mult > 1) { s.push('x' + mult); }
+        return s.join('_');
+    }
+
+    return {
+        parseFileName: parseFileName,
+        parseArtboardName: parseArtboardName,
+        expandParts: expandParts,
+        formatParts: formatParts,
+        matKey: matKey,
+        baseKey: baseKey,
+        pairKey: pairKey,
+        pairKeyNoSide: pairKeyNoSide,
+        label: label,
+        buildTail: buildTail
+    };
+})();
+// ==== END PROD NAME PARSER ====
 
 // Global variable to hold packing data
 var globalPackingData = null;
@@ -70,6 +280,28 @@ function getTotalSheetCount(packingData) {
     return count;
 }
 
+// Back of a two-sided sheet: same signs, mirrored left-to-right
+function mirrorSheetsForBack(sheets) {
+    var out = [];
+    for (var i = 0; i < sheets.length; i++) {
+        var s = sheets[i];
+        var m = {};
+        for (var k in s) { if (s.hasOwnProperty(k)) { m[k] = s[k]; } }
+        m.signs = [];
+        if (s.signs) {
+            for (var j = 0; j < s.signs.length; j++) {
+                var g = s.signs[j];
+                var c = {};
+                for (var gk in g) { if (g.hasOwnProperty(gk)) { c[gk] = g[gk]; } }
+                c.x = (s.width || 0) - (g.x || 0) - (g.width || 0);
+                m.signs.push(c);
+            }
+        }
+        out.push(m);
+    }
+    return out;
+}
+
 // Convert packing data to material specs format
 function convertPackingDataToSpecs(packingData) {
     var specs = [];
@@ -112,6 +344,19 @@ function convertPackingDataToSpecs(packingData) {
                     startingPartNumber: 1,
                     packingSheets: group.sheets // Keep reference to original sheet data
                 });
+                // Two-sided signs nest as "{Mat}_FRONT". Add a matching "{Mat}_BACK"
+                // row (its own editable qty) whose placeholders are mirrored left-to-right,
+                // since the back is printed with the sheet flipped over.
+                if (/_FRONT$/i.test(material.material_name)) {
+                    specs.push({
+                        material: material.material_name.replace(/_FRONT$/i, '_BACK'),
+                        width: group.width,
+                        height: group.height,
+                        quantity: group.count,
+                        startingPartNumber: 1,
+                        packingSheets: mirrorSheetsForBack(group.sheets)
+                    });
+                }
             }
         }
     }
@@ -300,7 +545,7 @@ function showDocumentChoiceDialog() {
     var addDocBtn = null;
     
     if (primeDocuments.length > 0) {
-        var addLabel = dialog.add("statictext", undefined, "Add to existing PRIME document:");
+        var addLabel = dialog.add("statictext", undefined, "Edit existing PRIME document:");
         addLabel.graphics.font = ScriptUI.newFont("dialog", "Bold", 11);
         
         var docListGroup = dialog.add("group");
@@ -315,7 +560,7 @@ function showDocumentChoiceDialog() {
         }
         docList.selection = 0;
         
-        addDocBtn = docListGroup.add("button", undefined, "Add");
+        addDocBtn = docListGroup.add("button", undefined, "Edit");
         addDocBtn.preferredSize.width = 80;
         
         dialog.add("panel");
@@ -384,10 +629,17 @@ function showDocumentChoiceDialog() {
     if (primeDocuments.length > 0) {
         addDocBtn.onClick = function() {
             var selectedIndex = docList.selection.index;
+            // An open proof's nesting can add the rows this PRIME doesn't have yet
+            // (e.g. two-sided {Mat}_FRONT / {Mat}_BACK after the Editor changed).
+            globalPackingData = null;
+            if (proofList && proofList.selection) {
+                try { globalPackingData = readPackingDataFromProof(proofDocuments[proofList.selection.index].document); } catch (eP) { globalPackingData = null; }
+            }
             result = {
                 mode: "add",
                 document: primeDocuments[selectedIndex].doc,
-                primeFolder: primeFolderField.text
+                primeFolder: primeFolderField.text,
+                hasPackingData: (globalPackingData !== null)
             };
             dialog.close();
         };
@@ -453,12 +705,14 @@ function parseExistingArtboards(doc) {
         var artboard = doc.artboards[i];
         var artboardName = artboard.name;
         
-        // Parse names like "3mmACM_Pt1", "3mmACM_Pt2" or "3mmACM" (single)
-        var match = artboardName.match(/^(.+?)(?:_Pt(\d+))?$/);
+        // Parse names like "3mmACM_Pt1", "3mmACM_BlkBk_Pt2_x2" or "3mmACM" (single)
+        // with the shared PROD NAME PARSER (_x# and side tokens are not part of the material)
+        var abParsed = ProdName.parseArtboardName(artboardName);
+        var match = abParsed.material ? true : null;
         
         if (match) {
-            var materialName = match[1];
-            var partNum = match[2] ? parseInt(match[2]) : 1;
+            var materialName = ProdName.buildTail(abParsed.material, abParsed.blkbk, abParsed.side, [], 1);
+            var partNum = abParsed.parts.length ? abParsed.parts[0] : 1;
             
             // Get artboard dimensions - apply scale factor correction
             var bounds = artboard.artboardRect;
@@ -477,9 +731,11 @@ function parseExistingArtboards(doc) {
                     width: width,
                     height: height,
                     maxPart: partNum,
+                    count: 1,
                     sizeKey: sizeKey
                 };
             } else {
+                materials[materialName].count++;
                 if (partNum > materials[materialName].maxPart) {
                     materials[materialName].maxPart = partNum;
                 }
@@ -493,6 +749,39 @@ function parseExistingArtboards(doc) {
     }
     
     return result;
+}
+
+// Merge "{Mat}_FRONT" + "{Mat}_BACK" rows of the same size into one "{Mat}" row
+// flagged twoSided (qty = sheets; each sheet gets a FRONT and a BACK). Unpaired sides stay.
+function pairSideRows(list) {
+    var out = [];
+    var used = {};
+    for (var i = 0; i < list.length; i++) {
+        if (used[i]) { continue; }
+        var m = list[i];
+        var fm = /^(.*)_FRONT$/i.exec(m.name || "");
+        if (fm) {
+            for (var j = 0; j < list.length; j++) {
+                if (j === i || used[j]) { continue; }
+                var b = list[j];
+                var bm = /^(.*)_BACK$/i.exec(b.name || "");
+                if (bm && bm[1].toUpperCase() === fm[1].toUpperCase() && b.width === m.width && b.height === m.height) {
+                    var r = {};
+                    for (var k in m) { if (m.hasOwnProperty(k)) { r[k] = m[k]; } }
+                    r.name = fm[1];
+                    r.twoSided = true;
+                    r.maxPart = Math.max(m.count || m.maxPart || 1, b.count || b.maxPart || 1);
+                    used[i] = true;
+                    used[j] = true;
+                    out.push(r);
+                    break;
+                }
+            }
+            if (used[i]) { continue; }
+        }
+        out.push(m);
+    }
+    return out;
 }
 
 function showSetupDialog(docChoice) {
@@ -577,6 +866,11 @@ function showSetupDialog(docChoice) {
     var regHeader = headerGroup.add("statictext", undefined, "Reg Dots");
     regHeader.preferredSize.width = 120;
     regHeader.graphics.font = ScriptUI.newFont("dialog", "Bold", 10);
+
+    var fbHeader = headerGroup.add("statictext", undefined, "2-Sided");
+    fbHeader.preferredSize.width = 56;
+    fbHeader.graphics.font = ScriptUI.newFont("dialog", "Bold", 10);
+    fbHeader.helpTip = "Front + back: makes {Material}_FRONT and {Material}_BACK artboards (same qty)";
 
     tablePanel.add("panel");
     
@@ -695,8 +989,20 @@ function showSetupDialog(docChoice) {
         regDropdown.__userSet = false;
         regDropdown.onChange = function() { regDropdown.__userSet = true; };
 
+        // 2-Sided: this row becomes {Mat}_FRONT + {Mat}_BACK artboards. Not offered
+        // on rows already named _FRONT / _BACK (those are one side already).
+        var fbCheck = rowGroup.add("checkbox", undefined, "");
+        fbCheck.preferredSize.width = 56;
+        fbCheck.helpTip = "Front + back: makes _FRONT and _BACK artboards (same qty)";
+        function hasSide(name) { return /_(FRONT|BACK)\s*$/i.test(name || ""); }
+        fbCheck.enabled = !hasSide(materialField.text);
+        fbCheck.value = !!(material && material.twoSided);
+        fbCheck.__loadedTwoSided = fbCheck.value; // loaded as an existing FRONT/BACK pair
+
         // Re-apply the vinyl default as the material name is typed, unless the user picked a Reg option manually
         materialField.onChanging = function() {
+            fbCheck.enabled = !hasSide(materialField.text);
+            if (!fbCheck.enabled) { fbCheck.value = false; }
             if (regDropdown.__userSet) return;
             var target = isVinyl(materialField.text) ? 3 : defaultRegIndex;
             if (!regDropdown.selection || regDropdown.selection.index !== target) {
@@ -715,7 +1021,8 @@ function showSetupDialog(docChoice) {
             customGroup: customGroup,
             qty: qtyDropdown,
             customQty: customQtyField,
-            regDropdown: regDropdown
+            regDropdown: regDropdown,
+            fbCheck: fbCheck
         };
         
         rows.push(rowData);
@@ -728,12 +1035,14 @@ function showSetupDialog(docChoice) {
         }
     }
     
-    // Pre-populate from packing data if available
-    if (docChoice.hasPackingData && globalPackingData) {
+    // Pre-populate from packing data if available. {Mat}_FRONT + {Mat}_BACK of the
+    // same size show as ONE "{Mat}" row with 2-Sided ticked (Back qty underneath).
+    var initialRows = [];
+    if (docChoice.mode !== "add" && docChoice.hasPackingData && globalPackingData) {
         var packingSpecs = convertPackingDataToSpecs(globalPackingData);
         for (var i = 0; i < packingSpecs.length; i++) {
             var spec = packingSpecs[i];
-            createRow({
+            initialRows.push({
                 name: spec.material,
                 width: spec.width,
                 height: spec.height,
@@ -743,9 +1052,31 @@ function showSetupDialog(docChoice) {
             });
         }
     } else if (existingMaterials.length > 0) {
+        var haveMat = {};
         for (var i = 0; i < existingMaterials.length; i++) {
-            createRow(existingMaterials[i]);
+            initialRows.push(existingMaterials[i]);
+            haveMat[existingMaterials[i].name.toUpperCase()] = true;
         }
+        // Edit mode + open proof: add the proof's material groups this PRIME doesn't
+        // have yet (e.g. 3mmACM_FRONT / 3mmACM_BACK), sized from the nesting.
+        if (docChoice.hasPackingData && globalPackingData) {
+            var addSpecs = convertPackingDataToSpecs(globalPackingData);
+            for (var as = 0; as < addSpecs.length; as++) {
+                if (haveMat[String(addSpecs[as].material).toUpperCase()]) { continue; }
+                initialRows.push({
+                    name: addSpecs[as].material,
+                    width: addSpecs[as].width,
+                    height: addSpecs[as].height,
+                    maxPart: addSpecs[as].quantity,
+                    fromPackingData: true,
+                    packingSheets: addSpecs[as].packingSheets
+                });
+            }
+        }
+    }
+    initialRows = pairSideRows(initialRows);
+    if (initialRows.length > 0) {
+        for (var ir = 0; ir < initialRows.length; ir++) { createRow(initialRows[ir]); }
     } else {
         createRow(); // Start with just 1 row
     }
@@ -793,6 +1124,32 @@ function showSetupDialog(docChoice) {
         var specs = [];
         var hasData = false;
         var usedCombos = {};
+        var renameToFront = []; // Edit mode: {Mat} artboards that become {Mat}_FRONT
+        // One Pt # per physical sheet: 2-sided sheets carry on the material's
+        // numbering (3mmACM_Pt1-13 one-sided, 3mmACM_FRONT/BACK_Pt14...), so a
+        // CUT_3mmACM_Pt14 can only belong to one sheet.
+        var existingParts = {};   // "MATKEY|SIDE" -> [part numbers]
+        var usedByBase = {};      // "MATKEY" -> { n: true }
+        var sidedRows = [];
+        function markUsed(mk, n) { if (!usedByBase[mk]) { usedByBase[mk] = {}; } usedByBase[mk][n] = true; }
+        function maxUsed(mk) { var m = 0; for (var u in usedByBase[mk] || {}) { if ((usedByBase[mk]).hasOwnProperty(u) && +u > m) { m = +u; } } return m; }
+        if (docChoice.mode === "add") {
+            try {
+                var eDoc = docChoice.document;
+                for (var ea0 = 0; ea0 < eDoc.artboards.length; ea0++) {
+                    var ep = ProdName.parseArtboardName(eDoc.artboards[ea0].name);
+                    if (!ep.material) { continue; }
+                    var emk = ProdName.matKey(ProdName.buildTail(ep.material, ep.blkbk, '', [], 1));
+                    var eparts = ep.parts.length ? ep.parts : [1];
+                    var ekey = emk + '|' + (ep.side || '');
+                    if (!existingParts[ekey]) { existingParts[ekey] = []; }
+                    for (var en0 = 0; en0 < eparts.length; en0++) {
+                        existingParts[ekey].push(eparts[en0]);
+                        markUsed(emk, eparts[en0]);
+                    }
+                }
+            } catch (eEx) {}
+        }
         
         for (var i = 0; i < rows.length; i++) {
             var row = rows[i];
@@ -844,7 +1201,7 @@ function showSetupDialog(docChoice) {
                 sizeKey = "custom_" + w + "x" + h;
             }
             
-            var comboKey = mat + "|||" + sizeKey;
+            var comboKey = mat + "|||" + sizeKey + ((row.fbCheck && row.fbCheck.value) ? "|||2S" : "");
             if (usedCombos[comboKey]) {
                 alert("Duplicate material and size combination:\n" + mat + " at " + width + "x" + height + "\n\nPlease use unique material+size combinations.");
                 return;
@@ -880,12 +1237,45 @@ function showSetupDialog(docChoice) {
                     }
                 }
                 
-                if (qtyToCreate <= 0) {
+                if (qtyToCreate <= 0 && !(row.fbCheck && row.fbCheck.value)) {
                     continue; // Skip this material - nothing new to add
                 }
             }
             
             var regIndex = row.regDropdown.selection ? row.regDropdown.selection.index : 3;
+
+            // 2-Sided row: {Mat}_FRONT + {Mat}_BACK, each requestedQty. In Edit mode the
+            // existing {Mat} artboards are renamed to _FRONT (createArtboards) and count
+            // toward the FRONT qty; BACK placeholders are mirrored.
+            if (row.fbCheck && row.fbCheck.value && !/_(FRONT|BACK)\s*$/i.test(mat)) {
+                var backWanted = requestedQty; // every front sheet has a back
+                // Newly ticked in Edit mode: the existing one-sided {Mat} artboards become _FRONT
+                var newlyTicked = (docChoice.mode === "add" && !row.fbCheck.__loadedTwoSided);
+                if (newlyTicked) {
+                    for (var j3 = 0; j3 < existingMaterials.length; j3++) {
+                        if (existingMaterials[j3].name === mat + "_FRONT") {
+                            alert(mat + " already has _FRONT artboards.\n\nUntick 2-Sided on the one-sided " + mat +
+                                  " row - the 2-sided " + mat + " row covers the front/back sheets.");
+                            return;
+                        }
+                    }
+                }
+                var smk = ProdName.matKey(mat);
+                sidedRows.push({
+                    mat: mat,
+                    mk: smk,
+                    width: width,
+                    height: height,
+                    qty: requestedQty,
+                    front: (existingParts[smk + '|FRONT'] || []).concat(newlyTicked ? (existingParts[smk + '|'] || []) : []),
+                    back: existingParts[smk + '|BACK'] || [],
+                    packingSheets: packingSheets,
+                    regDots: regValues[regIndex]
+                });
+                // FRONT may need no new artboards but its existing ones still get renamed
+                if (newlyTicked) { renameToFront.push(mat); }
+                continue;
+            }
 
             specs.push({
                 material: mat,
@@ -898,12 +1288,58 @@ function showSetupDialog(docChoice) {
             });
         }
         
+        // One-sided specs first: keep their numbers unless a 2-sided sheet already
+        // uses them, then mark them used.
+        for (var os = 0; os < specs.length; os++) {
+            var osk = ProdName.matKey(specs[os].material);
+            var st = specs[os].startingPartNumber || 1;
+            var clash = false;
+            for (var oq = 0; oq < specs[os].quantity; oq++) {
+                if (usedByBase[osk] && usedByBase[osk][st + oq] && (existingParts[osk + '|FRONT'] || existingParts[osk + '|BACK'])) { clash = true; }
+            }
+            if (clash) {
+                var ostart = maxUsed(osk) + 1;
+                var oparts = [];
+                for (var oq2 = 0; oq2 < specs[os].quantity; oq2++) { oparts.push(ostart + oq2); }
+                specs[os].parts = oparts;
+            }
+            var used0 = specs[os].parts || [];
+            if (!specs[os].parts) { for (var oq3 = 0; oq3 < specs[os].quantity; oq3++) { used0.push(st + oq3); } }
+            for (var oq4 = 0; oq4 < used0.length; oq4++) { markUsed(osk, used0[oq4]); }
+        }
+        // 2-sided rows: new FRONT sheets take the next free numbers after every
+        // sheet of that material; every FRONT gets a BACK with the same Pt #.
+        for (var sr = 0; sr < sidedRows.length; sr++) {
+            var R = sidedRows[sr];
+            var frontAll = R.front.slice(0);
+            var newFront = [];
+            var nextN = maxUsed(R.mk);
+            for (var nf = frontAll.length; nf < R.qty; nf++) {
+                nextN++;
+                newFront.push(nextN);
+                frontAll.push(nextN);
+                markUsed(R.mk, nextN);
+            }
+            var haveBack = {};
+            for (var hb = 0; hb < R.back.length; hb++) { haveBack[R.back[hb]] = true; }
+            var backMake = [];
+            for (var bm = 0; bm < frontAll.length; bm++) { if (!haveBack[frontAll[bm]]) { backMake.push(frontAll[bm]); } }
+            if (newFront.length) {
+                specs.push({ material: R.mat + "_FRONT", width: R.width, height: R.height, quantity: newFront.length,
+                             parts: newFront, packingSheets: R.packingSheets, regDots: R.regDots });
+            }
+            if (backMake.length) {
+                specs.push({ material: R.mat + "_BACK", width: R.width, height: R.height, quantity: backMake.length,
+                             parts: backMake, packingSheets: R.packingSheets ? mirrorSheetsForBack(R.packingSheets) : null, regDots: R.regDots });
+            }
+        }
+
         if (!hasData) {
             alert("Please enter at least one material specification.");
             return;
         }
         
-        if (docChoice.mode === "add" && specs.length === 0) {
+        if (docChoice.mode === "add" && specs.length === 0 && renameToFront.length === 0) {
             alert("No new artboards to add. All materials are already at the requested quantity.");
             return;
         }
@@ -913,7 +1349,8 @@ function showSetupDialog(docChoice) {
             canvasType: canvasRadios ? (getCanvasIndex() === 0 ? "Large" : "Standard") : null,
             createPlaceholders: placeholderCheckbox.value,
             packingData: globalPackingData,
-            specs: specs
+            specs: specs,
+            renameToFront: renameToFront
         };
         
         dialog.close();
@@ -1004,6 +1441,20 @@ function createArtboards(config) {
         $.writeln("Canvas type: " + (scale !== 1 ? "Large Canvas" : "Standard Canvas"));
         $.writeln("Initial artboards count: " + doc.artboards.length);
         
+        // 2-Sided rows in Edit mode: existing {Mat}[_PtN][_xN] -> {Mat}_FRONT[_PtN][_xN]
+        if (config.renameToFront && config.renameToFront.length) {
+            for (var rf = 0; rf < config.renameToFront.length; rf++) {
+                var want = ProdName.matKey(config.renameToFront[rf]);
+                for (var ra = 0; ra < doc.artboards.length; ra++) {
+                    var rp = ProdName.parseArtboardName(doc.artboards[ra].name);
+                    if (!rp.material || rp.side) { continue; }
+                    if (ProdName.matKey(ProdName.buildTail(rp.material, rp.blkbk, '', [], 1)) !== want) { continue; }
+                    doc.artboards[ra].name = ProdName.buildTail(rp.material, rp.blkbk, 'FRONT', rp.parts.length ? rp.parts : [1], rp.mult);
+                }
+            }
+        }
+        if (!config.specs.length) { alert("Renamed to _FRONT. No new artboards needed."); return; }
+
         var hadInitialArtboard = (doc.artboards.length > 0 && config.docChoice.mode === "new");
         $.writeln("Had initial artboard: " + hadInitialArtboard);
         
@@ -1212,10 +1663,10 @@ function createArtboards(config) {
                 var abName = ab.name;
                 var bounds = ab.artboardRect;
                 
-                // Extract material name from artboard name
-                var match = abName.match(/^(.+?)(?:_Pt(\d+))?$/);
-                if (match) {
-                    var matName = match[1];
+                // Extract material name from artboard name (shared parser)
+                var abP = ProdName.parseArtboardName(abName);
+                if (abP.material) {
+                    var matName = ProdName.buildTail(abP.material, abP.blkbk, abP.side, [], 1);
                     var rightEdge = bounds[2];
                     var bottomEdge = bounds[3];
                     
@@ -1336,12 +1787,14 @@ function createArtboards(config) {
                 }
                 
                 var artboardName;
-                var partNumber = spec.startingPartNumber ? spec.startingPartNumber + q : q + 1;
+                var partNumber = spec.parts ? spec.parts[q] : (spec.startingPartNumber ? spec.startingPartNumber + q : q + 1);
                 
                 // Determine if this is a single artboard or part of a series
                 var totalParts = spec.startingPartNumber ? spec.startingPartNumber + spec.quantity - 1 : spec.quantity;
                 
-                if (totalParts === 1) {
+                if (spec.parts) {
+                    artboardName = spec.material + "_Pt" + partNumber; // shared numbering: always numbered
+                } else if (totalParts === 1) {
                     artboardName = spec.material;
                 } else {
                     artboardName = spec.material + "_Pt" + partNumber;
@@ -1352,12 +1805,17 @@ function createArtboards(config) {
                 
                 var ab = doc.artboards.add([artboardLeft, artboardTop, artboardRight, artboardBottom]);
                 ab.name = artboardName;
+                // Add mode: the next NEW material row goes below everything placed so far
+                // (without this, every new material landed on the same row, stacked).
+                if (artboardBottom < lowestY) { lowestY = artboardBottom; }
                 
                 $.writeln("Artboard created successfully!");
                 $.writeln("Actual bounds: " + ab.artboardRect);
                 
                 // Determine reg dot placement for THIS material line
                 var regPlacement = spec.regDots || "None";
+                // Backs never get reg dots (registration is on the front/cut side)
+                if (/_BACK(_|$)/i.test(spec.material)) { regPlacement = "None"; }
                 if (regPlacement === "Auto" && spec.packingSheets && spec.packingSheets[q]) {
                     // Use metadata from packing data
                     var sheet = spec.packingSheets[q];
