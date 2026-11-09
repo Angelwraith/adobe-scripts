@@ -3,12 +3,222 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "1.9.5",
+  "version": "2.1",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
 @END_METADATA
 */
+
+// ==== PROD NAME PARSER v1.0 ====
+// Shared production file/artboard name parser. Keep this block IDENTICAL in:
+//   File Check.js, OpenProdFilesForReview.js, Link Namer.js,
+//   Sort Linked Files By Pt Number.js, Optimal PRIME transformer.js
+// Standard:  {base}_{TYPE}_{Material}[_BlkBk][_FRONT|_BACK]_{Parts}[_x#].pdf
+//   TYPE  = PRINT | CUT | PnC | CutOnly
+//   Parts = Pt1 | Pt3-5 | Pt3-5and8 (CUT files may list several parts)
+//   x#    = number of times the sheet is run (always last)
+// Legacy names still parse: 3mmACMBLK, BlkBk_6mmACM, _Part2.
+var ProdName = (function () {
+    var TYPE_TOKENS = [
+        ['_CUTONLY_', 'CutOnly'],
+        ['_PRINT_', 'PRINT'],
+        ['_PNC_', 'PnC'],
+        ['_CUT_', 'CUT']
+    ];
+
+    function trim(s) {
+        return String(s).replace(/^\s+|\s+$/g, '');
+    }
+
+    function stripExt(name) {
+        var n = String(name).replace(/%20/g, ' ');
+        return n.replace(/\.(ai|pdf|eps|svg)$/i, '');
+    }
+
+    // "3-5and8" -> [3,4,5,8]; returns null when the text is not a valid part list
+    function expandParts(spec) {
+        var out = [];
+        var chunks = String(spec).split(/and/i);
+        for (var i = 0; i < chunks.length; i++) {
+            var m = trim(chunks[i]).match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+            if (!m) { return null; }
+            var a = parseInt(m[1], 10);
+            var b = m[2] ? parseInt(m[2], 10) : a;
+            if (b < a) { var t = a; a = b; b = t; }
+            if (b - a > 999) { return null; }
+            for (var n = a; n <= b; n++) { out.push(n); }
+        }
+        return out;
+    }
+
+    // [3,4,5,8,10,11] -> "3-5and8and10-11"
+    function formatParts(parts) {
+        var list = [];
+        var seen = {};
+        for (var i = 0; i < parts.length; i++) {
+            var v = parseInt(parts[i], 10);
+            if (!isNaN(v) && !seen[v]) { seen[v] = true; list.push(v); }
+        }
+        list.sort(function (x, y) { return x - y; });
+        var out = [];
+        var i2 = 0;
+        while (i2 < list.length) {
+            var start = list[i2];
+            var end = start;
+            while (i2 + 1 < list.length && list[i2 + 1] === end + 1) { i2++; end = list[i2]; }
+            out.push(start === end ? String(start) : (start + '-' + end));
+            i2++;
+        }
+        return out.join('and');
+    }
+
+    // Parse everything after TYPE (or a whole artboard / material name)
+    function parseTail(tail) {
+        var r = {
+            material: '', blkbk: false, legacyBlk: false, side: '',
+            parts: [], partsText: '', mult: 1, hasMult: false
+        };
+        var raw = String(tail).split('_');
+        var tk = [];
+        for (var i = 0; i < raw.length; i++) {
+            var s = trim(raw[i]);
+            if (s !== '') { tk.push(s); }
+        }
+        // Multiple: last token xN
+        if (tk.length > 1) {
+            var mm = tk[tk.length - 1].match(/^x(\d+)$/i);
+            if (mm) {
+                r.mult = Math.max(1, parseInt(mm[1], 10));
+                r.hasMult = true;
+                tk.pop();
+            }
+        }
+        // Parts: PtN / PtN-M / PtNandM (legacy PartN)
+        if (tk.length > 1) {
+            var pm = tk[tk.length - 1].match(/^(?:Pt|Part)\s*(\d[\d\s\-]*(?:and\s*\d[\d\s\-]*)*)$/i);
+            if (pm) {
+                var parts = expandParts(pm[1]);
+                if (parts) {
+                    r.parts = parts;
+                    r.partsText = formatParts(parts);
+                    tk.pop();
+                }
+            }
+        }
+        // Side and BlkBk tokens (any position after the first, BlkBk anywhere)
+        var mat = [];
+        for (var j = 0; j < tk.length; j++) {
+            var u = tk[j].toUpperCase();
+            if (u === 'BLKBK' || u === 'BLK') {
+                r.blkbk = true;
+                if (j === 0 || u === 'BLK') { r.legacyBlk = true; }
+            } else if ((u === 'FRONT' || u === 'BACK') && j > 0) {
+                r.side = u;
+            } else {
+                mat.push(tk[j]);
+            }
+        }
+        var material = trim(mat.join('_'));
+        // Legacy glued suffix: 3mmACMBLK / 3mmACM BlkBk / 3mmACM-BLK
+        var lg = material.match(/^(.*\S)[\s\-]*(?:BLKBK|BLK)$/i);
+        if (lg && !r.blkbk) {
+            material = trim(lg[1]);
+            r.blkbk = true;
+            r.legacyBlk = true;
+        }
+        r.material = material;
+        return r;
+    }
+
+    function copyInto(dst, src) {
+        for (var k in src) { if (src.hasOwnProperty(k)) { dst[k] = src[k]; } }
+        return dst;
+    }
+
+    // Full production file name
+    function parseFileName(fileName) {
+        var name = stripExt(fileName);
+        var upper = name.toUpperCase();
+        var r = { name: String(fileName), base: name, type: '', isPrime: false };
+        for (var t = 0; t < TYPE_TOKENS.length; t++) {
+            var idx = upper.indexOf(TYPE_TOKENS[t][0]);
+            if (idx !== -1) {
+                r.type = TYPE_TOKENS[t][1];
+                r.base = name.substring(0, idx);
+                copyInto(r, parseTail(name.substring(idx + TYPE_TOKENS[t][0].length)));
+                return r;
+            }
+        }
+        r.isPrime = /PRIME/i.test(name);
+        copyInto(r, parseTail(''));
+        return r;
+    }
+
+    // Artboard name (PRIME) or material name from packing data
+    function parseArtboardName(abName) {
+        return parseTail(abName);
+    }
+
+    // Normalized material key for comparisons ("3mm ACM" == "3mmACM" == "3MMACM")
+    function matKey(material) {
+        return String(material).toUpperCase().replace(/[\s_\-]+/g, '');
+    }
+
+    function baseKey(base) {
+        return String(base).toUpperCase().replace(/[\s_\-]+/g, '');
+    }
+
+    // Key used to pair a PRINT part with its CUT part. FRONT, BACK and no side are distinct.
+    function pairKey(p, part) {
+        var side = (p.side === 'BACK' || p.side === 'FRONT') ? p.side : '';
+        var pt = (part === undefined || part === null) ? (p.parts.length ? p.parts[0] : 0) : part;
+        return baseKey(p.base) + '|' + matKey(p.material) + '|' + (p.blkbk ? 'B' : '') + '|' + side + '|' + pt;
+    }
+
+    // Older files: a _FRONT print whose CUT has no side tag. Only used as a
+    // fallback when no _FRONT cut exists (a one-sided Pt1 must not grab it).
+    function pairKeyNoSide(p, part) {
+        var pt = (part === undefined || part === null) ? (p.parts.length ? p.parts[0] : 0) : part;
+        return baseKey(p.base) + '|' + matKey(p.material) + '|' + (p.blkbk ? 'B' : '') + '||' + pt;
+    }
+
+    // Readable short label, e.g. "PRINT 3mmACM BlkBk Pt8 x2"
+    function label(p) {
+        var s = [];
+        if (p.type) { s.push(p.type); }
+        if (p.material) { s.push(p.material); }
+        if (p.blkbk) { s.push('BlkBk'); }
+        if (p.side) { s.push(p.side); }
+        if (p.parts.length) { s.push('Pt' + p.partsText); }
+        if (p.hasMult) { s.push('x' + p.mult); }
+        return s.join(' ');
+    }
+
+    // Rebuild a standard artboard/file tail from parts
+    function buildTail(material, blkbk, side, parts, mult) {
+        var s = [material];
+        if (blkbk) { s.push('BlkBk'); }
+        if (side) { s.push(side); }
+        if (parts && parts.length) { s.push('Pt' + formatParts(parts)); }
+        if (mult && mult > 1) { s.push('x' + mult); }
+        return s.join('_');
+    }
+
+    return {
+        parseFileName: parseFileName,
+        parseArtboardName: parseArtboardName,
+        expandParts: expandParts,
+        formatParts: formatParts,
+        matKey: matKey,
+        baseKey: baseKey,
+        pairKey: pairKey,
+        pairKeyNoSide: pairKeyNoSide,
+        label: label,
+        buildTail: buildTail
+    };
+})();
+// ==== END PROD NAME PARSER ====
 
 (function() {
     // Global variables
@@ -20,6 +230,7 @@
     var scaleFactor = 1; // Add scale factor tracking
     var useFolderOrganization = false; // Track if we should organize into folders
     var materialData = {}; // Store material information for folder organization
+    var sharedCuts = { skip: {}, tail: {} }; // Shared CUT files (see detectSharedCuts)
     
     // Main execution
     try {
@@ -97,9 +308,11 @@
             if (!materialValidation.isValid) {
                 var errorMessage = "*** ARTBOARD NAMING ISSUES DETECTED:\n\n";
                 errorMessage += materialValidation.errors.join("\n") + "\n\n";
-                errorMessage += "Correct format: 'Material_PtX' where:\n";
-                errorMessage += "- Material can contain letters, numbers, spaces, and underscores\n";
+                errorMessage += "Correct format: 'Material[_BlkBk][_FRONT|_BACK]_PtX[_xN]' where:\n";
+                errorMessage += "- Material can contain letters, numbers, spaces, and dashes\n";
                 errorMessage += "- _PtX is optional for single parts (X can be any number)\n";
+                errorMessage += "- _xN (optional, last) = sheet is run N times, e.g. 3mmACM_Pt7_x3\n";
+                errorMessage += "- _BlkBk = black-back stock, e.g. 3mmACM_BlkBk_Pt1\n";
                 errorMessage += "- Part numbers must be unique for each material\n\n";
                 errorMessage += "Please fix the artboard names before running the script again.";
                 
@@ -126,6 +339,10 @@
         if (selectedArtboards === null) {
             return; // User cancelled
         }
+
+        // Offer to combine identical cut layouts into shared CUT files (one dialog,
+        // only shown when matches are found)
+        sharedCuts = detectSharedCuts(selectedArtboards);
 
         // Persist Cut Path Separator's layer changes to the original file BEFORE processing.
         // The artboard loop reopens originalDocPath from disk between artboards, so the on-disk
@@ -389,81 +606,60 @@
         };
     }
     
-    // Validate material naming format for folder organization
+    // Validate material naming format for folder organization.
+    // Artboard names follow the production naming standard (PROD NAME PARSER):
+    //   Material[_BlkBk][_FRONT|_BACK][_Pt#][_x#]   e.g. 3mmACM_Pt7_x3, 3mmACM_BlkBk_Pt1
     function validateMaterialNaming() {
         var materialData = {};
         var errors = [];
         var isValid = true;
-        
+        var seenParts = {}; // group|side -> { partNumber: true }
+
         for (var i = 0; i < doc.artboards.length; i++) {
             var artboardName = doc.artboards[i].name;
             if (typeof artboardName === 'string') {
                 artboardName = artboardName.replace(/^\s+|\s+$/g, ''); // Manual trim for compatibility
             }
-            
-            // Check for illegal characters using improved method
-            var allowedPattern = /^[a-zA-Z0-9\s_]+(_Pt\d+)?$/i;
-            if (!allowedPattern.test(artboardName)) {
-                // Create a more robust illegal character detection
-                var illegalChars = "";
-                var charAllowedPattern = /[a-zA-Z0-9\s_]/;
-                
+
+            // Allowed characters: letters, numbers, spaces, underscore, dash
+            if (!/^[a-zA-Z0-9\s_\-]+$/.test(artboardName)) {
+                var uniqueChars = [];
                 for (var charIndex = 0; charIndex < artboardName.length; charIndex++) {
                     var currentChar = artboardName.charAt(charIndex);
-                    if (!charAllowedPattern.test(currentChar)) {
-                        illegalChars += currentChar;
-                    }
-                }
-                
-                // Handle _Pt part separately
-                if (artboardName.indexOf('_Pt') !== -1) {
-                    var parts = artboardName.split('_Pt');
-                    if (parts.length === 2 && !/^\d+$/.test(parts[1])) {
-                        errors.push("Artboard " + (i + 1) + " '" + artboardName + "': Part number after '_Pt' must be numeric");
-                        isValid = false;
-                        continue;
-                    }
-                }
-                
-                if (illegalChars.length > 0) {
-                    var uniqueChars = [];
-                    for (var c = 0; c < illegalChars.length; c++) {
+                    if (!/[a-zA-Z0-9\s_\-]/.test(currentChar)) {
                         var found = false;
                         for (var u = 0; u < uniqueChars.length; u++) {
-                            if (uniqueChars[u] === illegalChars.charAt(c)) {
-                                found = true;
-                                break;
-                            }
+                            if (uniqueChars[u] === currentChar) { found = true; break; }
                         }
-                        if (!found) {
-                            uniqueChars.push(illegalChars.charAt(c));
-                        }
+                        if (!found) { uniqueChars.push(currentChar); }
                     }
-                    errors.push("Artboard " + (i + 1) + " '" + artboardName + "': Contains illegal characters: " + uniqueChars.join(" "));
-                    isValid = false;
-                    continue;
                 }
+                errors.push("Artboard " + (i + 1) + " '" + artboardName + "': Contains illegal characters: " + uniqueChars.join(" "));
+                isValid = false;
+                continue;
             }
-            
-            // Parse material name and part number
-            var materialName, partNumber;
-            var ptIndex = artboardName.toLowerCase().indexOf('_pt');
-            
-            if (ptIndex !== -1) {
-                materialName = artboardName.substring(0, ptIndex);
-                partNumber = artboardName.substring(ptIndex + 3);
-                
-                // Validate part number is numeric
-                if (!/^\d+$/.test(partNumber)) {
-                    errors.push("Artboard " + (i + 1) + " '" + artboardName + "': Part number must be numeric");
-                    isValid = false;
-                    continue;
-                }
-            } else {
-                materialName = artboardName;
-                partNumber = null; // No part number means single part
+
+            var parsed = ProdName.parseArtboardName(artboardName);
+            if (!parsed.material) {
+                errors.push("Artboard " + (i + 1) + " '" + artboardName + "': No material name found");
+                isValid = false;
+                continue;
             }
-            
+            // A Pt/x token the parser could not read ends up inside the material name
+            if (/(^|_)(Pt|Part)\s*\d/i.test(parsed.material) || /(^|_)x\d+(_|$)/i.test(parsed.material)) {
+                errors.push("Artboard " + (i + 1) + " '" + artboardName + "': Part or multiple not in standard form (e.g. 3mmACM_Pt1, 3mmACM_Pt1_x2)");
+                isValid = false;
+                continue;
+            }
+            if (parsed.parts.length > 1) {
+                errors.push("Artboard " + (i + 1) + " '" + artboardName + "': An artboard is one part - use a single Pt number");
+                isValid = false;
+                continue;
+            }
+
+            var materialName = getMaterialNameFromArtboardName(artboardName);
+            var partNumber = parsed.parts.length ? String(parsed.parts[0]) : null;
+
             // Initialize material data if first occurrence
             if (!materialData[materialName]) {
                 materialData[materialName] = {
@@ -472,25 +668,20 @@
                     originalCase: materialName // Store first occurrence case
                 };
             }
-            
-            // Check for duplicate part numbers within the same material
+
+            // Check for duplicate part numbers within the same material (and side)
             if (partNumber !== null) {
-                var partNumbers = materialData[materialName].partNumbers;
-                var isDuplicate = false;
-                for (var p = 0; p < partNumbers.length; p++) {
-                    if (partNumbers[p] === partNumber) {
-                        isDuplicate = true;
-                        break;
-                    }
-                }
-                if (isDuplicate) {
-                    errors.push("Material '" + materialName + "': Duplicate part number " + partNumber);
+                var dupKey = materialName + "|" + parsed.side;
+                if (!seenParts[dupKey]) { seenParts[dupKey] = {}; }
+                if (seenParts[dupKey][partNumber]) {
+                    errors.push("Material '" + materialName + (parsed.side ? " " + parsed.side : "") + "': Duplicate part number " + partNumber);
                     isValid = false;
                     continue;
                 }
+                seenParts[dupKey][partNumber] = true;
                 materialData[materialName].partNumbers.push(partNumber);
             }
-            
+
             // Add artboard to material data
             materialData[materialName].artboards.push({
                 index: i,
@@ -498,13 +689,181 @@
                 partNumber: partNumber
             });
         }
-        
+
         return {
             isValid: isValid,
             errors: errors,
             materialData: materialData
         };
     }
+
+    // ---------------------------------------------------------------
+    // SHARED CUT DETECTION
+    // Artboards of the same material whose cut layers are identical (same
+    // artboard size, same paths in the same spots) can share ONE cut file,
+    // named with all their parts: CUT_3mmACM_Pt3-5and8. The user confirms
+    // which groups to combine in a single dialog.
+    // ---------------------------------------------------------------
+    function isCutLayerForSharing(layerName) {
+        if (layerName === "CutContour" || layerName === "CutContour_PRF") { return false; }
+        if (isPinHoleLayerName(layerName)) { return true; }
+        return String(layerName).toLowerCase().indexOf("cut") !== -1;
+    }
+
+    function collectCutBounds() {
+        var out = [];
+        function walk(container, layerName) {
+            var items;
+            try { items = container.pageItems; } catch (e) { return; }
+            for (var i = 0; i < items.length; i++) {
+                var it = items[i];
+                try {
+                    if (it.typename === "GroupItem") {
+                        walk(it, layerName);
+                    } else if (it.typename === "PathItem" || it.typename === "CompoundPathItem") {
+                        out.push({ layer: layerName, b: it.geometricBounds });
+                    }
+                } catch (e2) {}
+            }
+        }
+        function walkLayer(layer, topName) {
+            walk(layer, topName);
+            try {
+                for (var s = 0; s < layer.layers.length; s++) { walkLayer(layer.layers[s], topName); }
+            } catch (e3) {}
+        }
+        for (var l = 0; l < doc.layers.length; l++) {
+            if (isCutLayerForSharing(doc.layers[l].name)) {
+                walkLayer(doc.layers[l], doc.layers[l].name);
+            }
+        }
+        return out;
+    }
+
+    function detectSharedCuts(selectedIndices) {
+        var result = { skip: {}, tail: {} };
+        if (!selectedIndices || selectedIndices.length < 2) { return result; }
+
+        var cuts = collectCutBounds();
+        if (cuts.length === 0) { return result; }
+        var TOL = 0.5; // points in the document (x scale factor in real size)
+
+        // Per-artboard cut layout relative to the artboard's top-left corner
+        var boards = [];
+        for (var s = 0; s < selectedIndices.length; s++) {
+            var idx = selectedIndices[s];
+            var ab = doc.artboards[idx];
+            var r = ab.artboardRect;
+            var parsed = ProdName.parseArtboardName(ab.name);
+            if (!parsed.material || parsed.parts.length !== 1) { continue; }
+            var entries = [];
+            for (var c = 0; c < cuts.length; c++) {
+                var b = cuts[c].b;
+                var cx = (b[0] + b[2]) / 2;
+                var cy = (b[1] + b[3]) / 2;
+                if (cx >= r[0] && cx <= r[2] && cy <= r[1] && cy >= r[3]) {
+                    entries.push({ layer: cuts[c].layer, l: b[0] - r[0], t: r[1] - b[1], w: b[2] - b[0], h: b[1] - b[3] });
+                }
+            }
+            if (entries.length === 0) { continue; }
+            entries.sort(function (p, q) {
+                var dt = Math.round(p.t) - Math.round(q.t);
+                if (dt !== 0) { return dt; }
+                return p.l - q.l;
+            });
+            boards.push({
+                index: idx,
+                parsed: parsed,
+                w: r[2] - r[0],
+                h: r[1] - r[3],
+                entries: entries,
+                key: getMaterialNameFromArtboardName(ab.name) + "|" + parsed.side + "|" + entries.length +
+                     "|" + Math.round(r[2] - r[0]) + "x" + Math.round(r[1] - r[3])
+            });
+        }
+
+        function sameLayout(a, b) {
+            if (Math.abs(a.w - b.w) > TOL || Math.abs(a.h - b.h) > TOL) { return false; }
+            if (a.entries.length !== b.entries.length) { return false; }
+            for (var i = 0; i < a.entries.length; i++) {
+                var x = a.entries[i];
+                var y = b.entries[i];
+                if (x.layer !== y.layer) { return false; }
+                if (Math.abs(x.l - y.l) > TOL || Math.abs(x.t - y.t) > TOL ||
+                    Math.abs(x.w - y.w) > TOL || Math.abs(x.h - y.h) > TOL) { return false; }
+            }
+            return true;
+        }
+
+        // Cluster boards with identical layouts
+        var groups = [];
+        var used = {};
+        for (var i = 0; i < boards.length; i++) {
+            if (used[i]) { continue; }
+            var g = [boards[i]];
+            for (var j = i + 1; j < boards.length; j++) {
+                if (used[j] || boards[j].key !== boards[i].key) { continue; }
+                if (sameLayout(boards[i], boards[j])) { g.push(boards[j]); used[j] = true; }
+            }
+            if (g.length > 1) { groups.push(g); }
+        }
+        if (groups.length === 0) { return result; }
+
+        // Describe each group
+        var baseName = originalDocPath.name.replace(/\.(ai|pdf|eps|svg)$/i, "").replace("_PRIME", "");
+        for (var gi = 0; gi < groups.length; gi++) {
+            var parts = [];
+            for (var k = 0; k < groups[gi].length; k++) { parts.push(groups[gi][k].parsed.parts[0]); }
+            var p0 = groups[gi][0].parsed;
+            groups[gi].tail = ProdName.buildTail(p0.material, p0.blkbk, p0.side, parts, 1);
+            var ptLabels = [];
+            var sortedParts = parts.slice(0).sort(function (x, y) { return x - y; });
+            for (var pl = 0; pl < sortedParts.length; pl++) { ptLabels.push("Pt" + sortedParts[pl]); }
+            groups[gi].label = getMaterialNameFromArtboardName(doc.artboards[groups[gi][0].index].name) +
+                (p0.side ? " " + p0.side : "") + ": " + ptLabels.join(", ") + "  ->  CUT_" + groups[gi].tail;
+        }
+
+        // One dialog for all groups
+        var dlg = new Window("dialog", "Shared Cut Files");
+        dlg.orientation = "column";
+        dlg.alignChildren = "fill";
+        dlg.margins = 20;
+        dlg.spacing = 10;
+        var head = dlg.add("statictext", undefined, "These artboards have identical cut layouts. Combine into one CUT file?");
+        head.graphics.font = ScriptUI.newFont("dialog", "bold", 12);
+        var boxes = [];
+        for (var bi = 0; bi < groups.length; bi++) {
+            var cb = dlg.add("checkbox", undefined, groups[bi].label);
+            cb.value = true;
+            boxes.push(cb);
+        }
+        dlg.add("statictext", undefined, "Unchecked groups keep a separate CUT file per artboard.");
+        var btns = dlg.add("group");
+        btns.alignment = "center";
+        var combineBtn = btns.add("button", undefined, "Combine checked");
+        var separateBtn = btns.add("button", undefined, "Keep all separate");
+        var combine = false;
+        combineBtn.onClick = function () { combine = true; dlg.close(); };
+        separateBtn.onClick = function () { combine = false; dlg.close(); };
+        dlg.show();
+        if (!combine) { return result; }
+
+        for (var gj = 0; gj < groups.length; gj++) {
+            if (!boxes[gj].value) { continue; }
+            // Lowest artboard index writes the shared CUT; the rest write none
+            var first = groups[gj][0].index;
+            for (var m = 1; m < groups[gj].length; m++) {
+                if (groups[gj][m].index < first) { first = groups[gj][m].index; }
+            }
+            for (var m2 = 0; m2 < groups[gj].length; m2++) {
+                var ix = groups[gj][m2].index;
+                if (ix === first) { result.tail[ix] = groups[gj].tail; }
+                else { result.skip[ix] = true; }
+            }
+        }
+        return result;
+    }
+
  
 	// Check if a specific material uses CutContour by examining its artboards
 	function checkMaterialUsesCutContour(materialName) {
@@ -708,7 +1067,10 @@
                     currentStep = "createPrintFileFromTemp";
                     createPrintFileFromTemp(tempFile, artboardName);
                     currentStep = "createCutFileFromTemp";
-                    createCutFileFromTemp(tempFile, artboardName);
+                    // Shared cut layouts: one artboard writes CUT_..._Pt3-5, the rest write none
+                    if (!sharedCuts.skip[i]) {
+                        createCutFileFromTemp(tempFile, sharedCuts.tail[i] || artboardName);
+                    }
                 }
 
                 // Delete temp file
@@ -1352,13 +1714,39 @@ function isolateArtboard(artboardIndex) {
     
     // Extract material name from artboard name for folder organization
     function getMaterialNameFromArtboardName(artboardName) {
-        // Extract material name (everything before _Pt if present)
-        var ptIndex = artboardName.toLowerCase().indexOf('_pt');
-        if (ptIndex !== -1) {
-            return artboardName.substring(0, ptIndex);
-        } else {
-            return artboardName;
-        }
+        // Material group used for folders: material plus _BlkBk when on black-back
+        // stock (parts, side and _x# stripped). "3mmACM_BlkBk_Pt2_x2" -> "3mmACM_BlkBk"
+        var p = ProdName.parseArtboardName(String(artboardName).replace(/^\s+|\s+$/g, ''));
+        if (!p.material) { return artboardName; }
+        return ProdName.buildTail(p.material, p.blkbk, '', [], 1);
+    }
+
+    // Standard file tail for an artboard name (legacy names normalized):
+    // "3mmACMBLK_Pt1" -> "3mmACM_BlkBk_Pt1", "3mmACM_Pt7_x3" unchanged
+    function standardTail(artboardName, forCut) {
+        var p = ProdName.parseArtboardName(String(artboardName).replace(/^\s+|\s+$/g, ''));
+        if (!p.material) { return artboardName; }
+        var side = p.side;
+        // CUTs only come from FRONT sheets, so CUT_3mmACM_Pt14 is enough - unless an
+        // older PRIME also has a one-sided 3mmACM_Pt14 (then keep _FRONT so the
+        // two CUT files can't overwrite each other).
+        if (forCut && side === 'FRONT' && !oneSidedPartExists(p)) { side = ''; }
+        return ProdName.buildTail(p.material, p.blkbk, side, p.parts, p.mult);
+    }
+
+    function oneSidedPartExists(fp) {
+        try {
+            var want = ProdName.matKey(ProdName.buildTail(fp.material, fp.blkbk, '', [], 1));
+            var wantPt = fp.parts.length ? fp.parts[0] : 1;
+            for (var i = 0; i < doc.artboards.length; i++) {
+                var q = ProdName.parseArtboardName(doc.artboards[i].name);
+                if (!q.material || q.side) { continue; }
+                if (ProdName.matKey(ProdName.buildTail(q.material, q.blkbk, '', [], 1)) !== want) { continue; }
+                var qp = q.parts.length ? q.parts : [1];
+                for (var k = 0; k < qp.length; k++) { if (qp[k] === wantPt) { return true; } }
+            }
+        } catch (e) { return true; } // unsure: keep FRONT (never risk a name clash)
+        return false;
     }
     
     // Create material folder and return path
@@ -1401,7 +1789,7 @@ function isolateArtboard(artboardIndex) {
         var baseName = originalName.replace(/\.(ai|pdf|eps|svg)$/i, "");
         baseName = baseName.replace("_PRIME", "");
         
-        return baseName + "_" + type + "_" + artboardName + ".pdf";
+        return baseName + "_" + type + "_" + standardTail(artboardName, type === "CUT") + ".pdf";
     }
     
 })();
