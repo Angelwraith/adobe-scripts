@@ -1,10 +1,220 @@
 /*@METADATA{
   "name": "Open Production Files and organize for review",
   "description": "Open print and cut files, organize them together and tile the view to show them all",
-  "version": "2.1",
+  "version": "2.3",
   "target": "illustrator",
   "tags": ["review", "check", "file"]
 }@END_METADATA*/
+
+// ==== PROD NAME PARSER v1.0 ====
+// Shared production file/artboard name parser. Keep this block IDENTICAL in:
+//   File Check.js, OpenProdFilesForReview.js, Link Namer.js,
+//   Sort Linked Files By Pt Number.js, Optimal PRIME transformer.js
+// Standard:  {base}_{TYPE}_{Material}[_BlkBk][_FRONT|_BACK]_{Parts}[_x#].pdf
+//   TYPE  = PRINT | CUT | PnC | CutOnly
+//   Parts = Pt1 | Pt3-5 | Pt3-5and8 (CUT files may list several parts)
+//   x#    = number of times the sheet is run (always last)
+// Legacy names still parse: 3mmACMBLK, BlkBk_6mmACM, _Part2.
+var ProdName = (function () {
+    var TYPE_TOKENS = [
+        ['_CUTONLY_', 'CutOnly'],
+        ['_PRINT_', 'PRINT'],
+        ['_PNC_', 'PnC'],
+        ['_CUT_', 'CUT']
+    ];
+
+    function trim(s) {
+        return String(s).replace(/^\s+|\s+$/g, '');
+    }
+
+    function stripExt(name) {
+        var n = String(name).replace(/%20/g, ' ');
+        return n.replace(/\.(ai|pdf|eps|svg)$/i, '');
+    }
+
+    // "3-5and8" -> [3,4,5,8]; returns null when the text is not a valid part list
+    function expandParts(spec) {
+        var out = [];
+        var chunks = String(spec).split(/and/i);
+        for (var i = 0; i < chunks.length; i++) {
+            var m = trim(chunks[i]).match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+            if (!m) { return null; }
+            var a = parseInt(m[1], 10);
+            var b = m[2] ? parseInt(m[2], 10) : a;
+            if (b < a) { var t = a; a = b; b = t; }
+            if (b - a > 999) { return null; }
+            for (var n = a; n <= b; n++) { out.push(n); }
+        }
+        return out;
+    }
+
+    // [3,4,5,8,10,11] -> "3-5and8and10-11"
+    function formatParts(parts) {
+        var list = [];
+        var seen = {};
+        for (var i = 0; i < parts.length; i++) {
+            var v = parseInt(parts[i], 10);
+            if (!isNaN(v) && !seen[v]) { seen[v] = true; list.push(v); }
+        }
+        list.sort(function (x, y) { return x - y; });
+        var out = [];
+        var i2 = 0;
+        while (i2 < list.length) {
+            var start = list[i2];
+            var end = start;
+            while (i2 + 1 < list.length && list[i2 + 1] === end + 1) { i2++; end = list[i2]; }
+            out.push(start === end ? String(start) : (start + '-' + end));
+            i2++;
+        }
+        return out.join('and');
+    }
+
+    // Parse everything after TYPE (or a whole artboard / material name)
+    function parseTail(tail) {
+        var r = {
+            material: '', blkbk: false, legacyBlk: false, side: '',
+            parts: [], partsText: '', mult: 1, hasMult: false
+        };
+        var raw = String(tail).split('_');
+        var tk = [];
+        for (var i = 0; i < raw.length; i++) {
+            var s = trim(raw[i]);
+            if (s !== '') { tk.push(s); }
+        }
+        // Multiple: last token xN
+        if (tk.length > 1) {
+            var mm = tk[tk.length - 1].match(/^x(\d+)$/i);
+            if (mm) {
+                r.mult = Math.max(1, parseInt(mm[1], 10));
+                r.hasMult = true;
+                tk.pop();
+            }
+        }
+        // Parts: PtN / PtN-M / PtNandM (legacy PartN)
+        if (tk.length > 1) {
+            var pm = tk[tk.length - 1].match(/^(?:Pt|Part)\s*(\d[\d\s\-]*(?:and\s*\d[\d\s\-]*)*)$/i);
+            if (pm) {
+                var parts = expandParts(pm[1]);
+                if (parts) {
+                    r.parts = parts;
+                    r.partsText = formatParts(parts);
+                    tk.pop();
+                }
+            }
+        }
+        // Side and BlkBk tokens (any position after the first, BlkBk anywhere)
+        var mat = [];
+        for (var j = 0; j < tk.length; j++) {
+            var u = tk[j].toUpperCase();
+            if (u === 'BLKBK' || u === 'BLK') {
+                r.blkbk = true;
+                if (j === 0 || u === 'BLK') { r.legacyBlk = true; }
+            } else if ((u === 'FRONT' || u === 'BACK') && j > 0) {
+                r.side = u;
+            } else {
+                mat.push(tk[j]);
+            }
+        }
+        var material = trim(mat.join('_'));
+        // Legacy glued suffix: 3mmACMBLK / 3mmACM BlkBk / 3mmACM-BLK
+        var lg = material.match(/^(.*\S)[\s\-]*(?:BLKBK|BLK)$/i);
+        if (lg && !r.blkbk) {
+            material = trim(lg[1]);
+            r.blkbk = true;
+            r.legacyBlk = true;
+        }
+        r.material = material;
+        return r;
+    }
+
+    function copyInto(dst, src) {
+        for (var k in src) { if (src.hasOwnProperty(k)) { dst[k] = src[k]; } }
+        return dst;
+    }
+
+    // Full production file name
+    function parseFileName(fileName) {
+        var name = stripExt(fileName);
+        var upper = name.toUpperCase();
+        var r = { name: String(fileName), base: name, type: '', isPrime: false };
+        for (var t = 0; t < TYPE_TOKENS.length; t++) {
+            var idx = upper.indexOf(TYPE_TOKENS[t][0]);
+            if (idx !== -1) {
+                r.type = TYPE_TOKENS[t][1];
+                r.base = name.substring(0, idx);
+                copyInto(r, parseTail(name.substring(idx + TYPE_TOKENS[t][0].length)));
+                return r;
+            }
+        }
+        r.isPrime = /PRIME/i.test(name);
+        copyInto(r, parseTail(''));
+        return r;
+    }
+
+    // Artboard name (PRIME) or material name from packing data
+    function parseArtboardName(abName) {
+        return parseTail(abName);
+    }
+
+    // Normalized material key for comparisons ("3mm ACM" == "3mmACM" == "3MMACM")
+    function matKey(material) {
+        return String(material).toUpperCase().replace(/[\s_\-]+/g, '');
+    }
+
+    function baseKey(base) {
+        return String(base).toUpperCase().replace(/[\s_\-]+/g, '');
+    }
+
+    // Key used to pair a PRINT part with its CUT part. FRONT, BACK and no side are distinct.
+    function pairKey(p, part) {
+        var side = (p.side === 'BACK' || p.side === 'FRONT') ? p.side : '';
+        var pt = (part === undefined || part === null) ? (p.parts.length ? p.parts[0] : 0) : part;
+        return baseKey(p.base) + '|' + matKey(p.material) + '|' + (p.blkbk ? 'B' : '') + '|' + side + '|' + pt;
+    }
+
+    // Older files: a _FRONT print whose CUT has no side tag. Only used as a
+    // fallback when no _FRONT cut exists (a one-sided Pt1 must not grab it).
+    function pairKeyNoSide(p, part) {
+        var pt = (part === undefined || part === null) ? (p.parts.length ? p.parts[0] : 0) : part;
+        return baseKey(p.base) + '|' + matKey(p.material) + '|' + (p.blkbk ? 'B' : '') + '||' + pt;
+    }
+
+    // Readable short label, e.g. "PRINT 3mmACM BlkBk Pt8 x2"
+    function label(p) {
+        var s = [];
+        if (p.type) { s.push(p.type); }
+        if (p.material) { s.push(p.material); }
+        if (p.blkbk) { s.push('BlkBk'); }
+        if (p.side) { s.push(p.side); }
+        if (p.parts.length) { s.push('Pt' + p.partsText); }
+        if (p.hasMult) { s.push('x' + p.mult); }
+        return s.join(' ');
+    }
+
+    // Rebuild a standard artboard/file tail from parts
+    function buildTail(material, blkbk, side, parts, mult) {
+        var s = [material];
+        if (blkbk) { s.push('BlkBk'); }
+        if (side) { s.push(side); }
+        if (parts && parts.length) { s.push('Pt' + formatParts(parts)); }
+        if (mult && mult > 1) { s.push('x' + mult); }
+        return s.join('_');
+    }
+
+    return {
+        parseFileName: parseFileName,
+        parseArtboardName: parseArtboardName,
+        expandParts: expandParts,
+        formatParts: formatParts,
+        matKey: matKey,
+        baseKey: baseKey,
+        pairKey: pairKey,
+        pairKeyNoSide: pairKeyNoSide,
+        label: label,
+        buildTail: buildTail
+    };
+})();
+// ==== END PROD NAME PARSER ====
 
 (function() {
     // Detect OS and set Downloads path
@@ -271,6 +481,8 @@
     function processFiles(folder) {
         try {
             // Step 1: Find and open all PRINT, PnC, and CutOnly files
+            // (file type read with the shared name parser, so "CUT" inside a
+            // project name can't be mistaken for a cut file)
             var printFiles = findFiles(folder, ["PRINT", "PnC", "CutOnly"]);
 
             // Open all print files
@@ -278,12 +490,12 @@
             for (var i = 0; i < printFiles.length; i++) {
                 try {
                     var doc = app.open(printFiles[i]);
-                    var isCutOnly = printFiles[i].name.toUpperCase().indexOf("CUTONLY") != -1;
+                    var printParsed = ProdName.parseFileName(safeFileName(printFiles[i]));
                     openDocs.push({
                         doc: doc,
                         file: printFiles[i],
-                        baseName: getBaseName(printFiles[i].name),
-                        isCutOnly: isCutOnly
+                        parsed: printParsed,
+                        isCutOnly: printParsed.type === "CutOnly"
                     });
                 } catch (e) {
                     alert("Error opening file: " + printFiles[i].name + "\n" + e.message);
@@ -308,25 +520,48 @@
                 }
             }
 
-            // Step 3: Match CUT files to PRINT docs, place matched ones, open unmatched ones standalone
+            // Step 3: Match CUT files to PRINT docs, place matched ones, open unmatched ones standalone.
+            // Pairing ignores _x# (PRINT_..._Pt8_x2 pairs with CUT_..._Pt8 or CUT_..._Pt8_x2)
+            // and a shared CUT (CUT_..._Pt3-5and8) is placed into every PRINT it serves.
+            // BACK print files never receive cuts.
+            var printCount = openDocs.length;
+            // Every exact cut key, so a _FRONT print only falls back to an untagged
+            // CUT when no _FRONT cut exists for it.
+            var allCutKeys = {};
+            for (var ak = 0; ak < cutFiles.length; ak++) {
+                var akP = ProdName.parseFileName(safeFileName(cutFiles[ak]));
+                var akParts = akP.parts.length ? akP.parts : [0];
+                for (var akq = 0; akq < akParts.length; akq++) { allCutKeys[ProdName.pairKey(akP, akParts[akq])] = true; }
+            }
             for (var i = 0; i < cutFiles.length; i++) {
                 var cutFile = cutFiles[i];
-                var cutBaseName = getBaseName(cutFile.name);
+                var cutParsed = ProdName.parseFileName(safeFileName(cutFile));
+                var cutParts = cutParsed.parts.length ? cutParsed.parts : [0];
+                var cutKeys = {};
+                for (var ck = 0; ck < cutParts.length; ck++) {
+                    cutKeys[ProdName.pairKey(cutParsed, cutParts[ck])] = true;
+                }
 
-                // Find matching PRINT/PnC file (skip CutOnly files - they don't need a separate CUT file placed)
-                var matchedDoc = null;
+                // Find matching PRINT/PnC files (skip CutOnly files - they don't need a separate CUT file placed)
+                var matchedDocs = [];
                 if (hasNonCutOnly) {
-                    for (var j = 0; j < openDocs.length; j++) {
-                        if (openDocs[j].baseName == cutBaseName && !openDocs[j].isCutOnly) {
-                            matchedDoc = openDocs[j].doc;
-                            break;
+                    for (var j = 0; j < printCount; j++) {
+                        if (openDocs[j].isCutOnly) { continue; }
+                        var dp = openDocs[j].parsed;
+                        if (cutKeys[ProdName.pairKey(dp)]) {
+                            matchedDocs.push(openDocs[j].doc);
+                        } else if (dp.side === 'FRONT' && !cutParsed.side &&
+                                   !allCutKeys[ProdName.pairKey(dp)] && cutKeys[ProdName.pairKeyNoSide(dp)]) {
+                            matchedDocs.push(openDocs[j].doc);
                         }
                     }
                 }
 
-                if (matchedDoc != null) {
-                    // Place CUT into matching PRINT doc
-                    placeCutFile(matchedDoc, cutFile);
+                if (matchedDocs.length > 0) {
+                    // Place CUT into each matching PRINT doc
+                    for (var md = 0; md < matchedDocs.length; md++) {
+                        placeCutFile(matchedDocs[md], cutFile);
+                    }
                 } else {
                     // No matching PRINT file - open the CUT file as a standalone document
                     try {
@@ -334,7 +569,7 @@
                         openDocs.push({
                             doc: cutDoc,
                             file: cutFile,
-                            baseName: cutBaseName,
+                            parsed: cutParsed,
                             isCutOnly: false
                         });
                     } catch (e) {
@@ -381,9 +616,10 @@
                     continue;
                 }
 
-                // Check if file contains any of the keywords
+                // Match on the file TYPE token (_PRINT_, _CUT_, _PnC_, _CutOnly_)
+                var fileType = ProdName.parseFileName(safeFileName(files[i])).type.toUpperCase();
                 for (var k = 0; k < keywords.length; k++) {
-                    if (fileName.indexOf(keywords[k].toUpperCase()) != -1) {
+                    if (fileType !== "" && fileType === keywords[k].toUpperCase()) {
                         foundFiles.push(files[i]);
                         break;
                     }
@@ -394,6 +630,10 @@
         return foundFiles;
     }
     
+    function safeFileName(f) {
+        try { return decodeURI(f.name); } catch (e) { return String(f.name); }
+    }
+
     function getBaseName(fileName) {
         // Remove keywords and file extension to get base name for matching
         var baseName = fileName.toUpperCase();
