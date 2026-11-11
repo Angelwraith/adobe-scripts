@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "PRIME Flex Template",
   "description": "Create artboards with reg dots for flexible materials",
-  "version": "5.0",
+  "version": "5.1",
   "target": "illustrator",
   "tags": ["artboard", "template", "setup"]
 }@END_METADATA*/
@@ -220,6 +220,12 @@ var ProdName = (function () {
 
 // Global variable to hold packing data
 var globalPackingData = null;
+
+// Vinyl roll pinch margin: the artboard is this many inches narrower than the roll
+// (54" roll -> 50" artboard). Sizes in the dialog are ROLL sizes for vinyl rows.
+var VINYL_PINCH_MARGIN = 4;
+function isVinylMaterial(name) { return /vinyl/i.test(name || ""); }
+function rollToArtboardWidth(mat, w) { return isVinylMaterial(mat) ? w - VINYL_PINCH_MARGIN : w; }
 
 // Read packing data from proof document XMP metadata
 function readPackingDataFromProof(doc) {
@@ -722,6 +728,8 @@ function parseExistingArtboards(doc) {
             // Convert to inches with scale factor correction
             var width = Math.round((widthPoints * scale) / 72);
             var height = Math.round((heightPoints * scale) / 72);
+            // Vinyl artboards are pinch-margin narrower than the roll; report roll width
+            if (isVinylMaterial(materialName)) { width += VINYL_PINCH_MARGIN; }
             
             var sizeKey = width + "x" + height;
             
@@ -1264,7 +1272,7 @@ function showSetupDialog(docChoice) {
                 sidedRows.push({
                     mat: mat,
                     mk: smk,
-                    width: width,
+                    width: rollToArtboardWidth(mat, width),
                     height: height,
                     qty: requestedQty,
                     front: (existingParts[smk + '|FRONT'] || []).concat(newlyTicked ? (existingParts[smk + '|'] || []) : []),
@@ -1279,7 +1287,7 @@ function showSetupDialog(docChoice) {
 
             specs.push({
                 material: mat,
-                width: width,
+                width: rollToArtboardWidth(mat, width), // vinyl: roll width minus pinch margin
                 height: height,
                 quantity: qtyToCreate,
                 startingPartNumber: startingPartNumber,
