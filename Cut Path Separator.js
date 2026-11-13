@@ -3,7 +3,7 @@
 {
   "name": "Cut Path Separator",
   "description": "Organize Cut/Print Data Into Respective Layers",
-  "version": "1.6",
+  "version": "1.7",
   "target": "illustrator",
   "tags": ["Cut", "Path", "Separator", "processors"]
 }
@@ -90,7 +90,8 @@
         }
     }
     
-    // Function to check for duplicate paths in a layer
+    // Function to find duplicate paths in a layer. Returns every path that has a
+    // duplicate (both copies), so they can be selected for review.
     function checkForDuplicatePaths(layer) {
         var allPaths = [];
         
@@ -119,15 +120,21 @@
         collectPaths(layer);
 
         // Compare paths for duplicates (colors don't need to match)
+        var isDup = [];
         for (var i = 0; i < allPaths.length - 1; i++) {
             for (var j = i + 1; j < allPaths.length; j++) {
                 if (pathsAreDuplicates(allPaths[i], allPaths[j])) {
-                    return true; // Found duplicates
+                    isDup[i] = true;
+                    isDup[j] = true;
                 }
             }
         }
-        
-        return false; // No duplicates found
+
+        var dups = [];
+        for (var k = 0; k < allPaths.length; k++) {
+            if (isDup[k]) dups.push(allPaths[k]);
+        }
+        return dups;
     }
     
     // Function to enable overprint fill for all items in Spot1 layer
@@ -988,7 +995,7 @@
         
         // Check appearance consistency in all processed layers
         var inconsistentLayers = [];
-        var duplicateFound = false;
+        var duplicatePaths = [];
         
         for (var i = 0; i < processedLayers.length; i++) {
             if (!checkLayerAppearanceConsistency(processedLayers[i])) {
@@ -996,15 +1003,19 @@
             }
             
             // Check for duplicate paths in newly processed layers
-            if (checkForDuplicatePaths(processedLayers[i])) {
-                duplicateFound = true;
-            }
+            duplicatePaths = duplicatePaths.concat(checkForDuplicatePaths(processedLayers[i]));
         }
         
         // Show duplicate warning first with warning sound
-        if (duplicateFound) {
+        if (duplicatePaths.length > 0) {
+            // Select the duplicate cuts so they can be inspected/deleted right away
+            try { doc.selection = null; } catch (e) {}
+            for (var d = 0; d < duplicatePaths.length; d++) {
+                try { duplicatePaths[d].selected = true; } catch (e) {}
+            }
             app.beep(); // Warning sound
-            alert("!!!!!! CHECK FOR DUPLICATE CUTS !!!!!!");
+            alert("!!!!!! CHECK FOR DUPLICATE CUTS !!!!!!\n\n" +
+                  duplicatePaths.length + " overlapping paths have been selected.");
         }
         
         // Show appearance warning if there are inconsistent layers
