@@ -1,7 +1,7 @@
 {
-  "last_updated": "2026-11-13T16:03:58.964097",
+  "last_updated": "2026-11-24T11:49:22.140205",
   "deployer_version": "3.0",
-  "total_scripts": 34,
+  "total_scripts": 35,
   "launcher_version": "4.0",
   "repository": "Angelwraith/adobe-scripts",
   "scripts": {
@@ -650,7 +650,7 @@
       "filename": "Open PDF with Comments.js",
       "metadata": {
         "name": "Open PDF with Comments",
-        "version": "3.1",
+        "version": "3.2",
         "description": "Pick a PDF, place every page as a linked file on its own artboard, and redraw its Acrobat comments as editable art on a top 'Acrobat Notes' layer.",
         "author": "Unknown",
         "target": "illustrator",
@@ -663,10 +663,10 @@
           "notes"
         ]
       },
-      "hash": "421e52b6c9c8af301fcd40566b66dcb8",
+      "hash": "be95a642fd07638f00bbfa96b334cd77",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Open PDF with Comments.js",
-      "file_size": 25362,
-      "last_modified": "2026-09-29T11:22:49.246531",
+      "file_size": 28055,
+      "last_modified": "2026-11-23T11:39:03.085067",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Open%20PDF%20with%20Comments.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Open%20PDF%20with%20Comments.js"
     },
@@ -760,6 +760,29 @@
       "last_modified": "2026-11-13T15:49:16.049704",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Round%20Up%20Artboard%20Sizes.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Round%20Up%20Artboard%20Sizes.js"
+    },
+    "ProdProof Layout.js": {
+      "filename": "ProdProof Layout.js",
+      "metadata": {
+        "name": "ProdProof Layout",
+        "version": "1.3",
+        "description": "Finds the production files the PRIME exporter made, places them on the ProdProof production pages at a reduced scale, grouped by material in generated frames, with size labels, CUT overlays and multiples badges",
+        "author": "Unknown",
+        "target": "illustrator",
+        "tags": [
+          "ProdProof",
+          "production",
+          "layout",
+          "frames",
+          "linked"
+        ]
+      },
+      "hash": "8c334470b56dce45cb22853ca45eaccb",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\ProdProof Layout.js",
+      "file_size": 54171,
+      "last_modified": "2026-11-24T11:43:06.377408",
+      "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/ProdProof%20Layout.js",
+      "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/ProdProof%20Layout.js"
     }
   }
 }
