@@ -1,7 +1,7 @@
 /*@METADATA{
   "name": "Open PDF with Comments",
   "description": "Pick a PDF, place every page as a linked file on its own artboard, and redraw its Acrobat comments as editable art on a top 'Acrobat Notes' layer.",
-  "version": "3.1",
+  "version": "3.2",
   "target": "illustrator",
   "tags": ["pdf", "acrobat", "comments", "import", "artboard", "notes"]
 }@END_METADATA*/
@@ -43,7 +43,10 @@
     var NOTES_PRINTABLE = false;      // false = notes layer will not print
     var NOTE_FONTS      = ["Helvetica", "ArialMT", "MyriadPro-Regular"]; // first one found is used
     var DEFAULT_COLOR   = [255, 0, 0]; // used when a comment has no color
+    var MAX_CANVAS      = 16000;      // points - Illustrator's canvas is 227 in (16344 pt)
     // ------------------------------------------
+
+    var UP = 1;   // set once the document exists: adding UP * d moves visually UP by d
 
     if ($.os.toLowerCase().indexOf("windows") === -1) {
         alert("This script is Windows-only (it drives Acrobat through Windows scripting).");
@@ -83,11 +86,38 @@
         pagesLayer.name = PAGES_LAYER;
 
         var r0      = doc.artboards[0].artboardRect; // [L, T, R, B]
-        var originX = r0[0];
-        var originY = r0[1];
+        // Illustrator's canvas is 227 x 227 inches and the first artboard sits
+        // in the middle of it, so work out the whole grid first and center it -
+        // walking right and down from the middle runs off the canvas ("AOoC").
+        var sizes = [];
+        for (var si = 0; si < info.pages; si++) {
+            var pi = info.pageInfo[si];
+            var pw = 612, ph = 792;
+            if (pi) {
+                pw = Math.abs(pi.crop[2] - pi.crop[0]);
+                ph = Math.abs(pi.crop[1] - pi.crop[3]);
+                if (pi.rot === 90 || pi.rot === 270) { var sw0 = pw; pw = ph; ph = sw0; }
+            }
+            sizes.push([pw, ph]);
+        }
+
+        var plan = planGrid(sizes, COLUMNS, GAP, MAX_CANVAS);
+        if (!plan) {
+            alert("These pages are too big to lay out on one Illustrator canvas.\n" +
+                  "The canvas tops out at 227 x 227 inches.\n\n" +
+                  "Open the PDF in smaller batches of pages.");
+            return;
+        }
+
+        // Which way is down? Document coordinates can run either way.
+        UP = (r0[1] < r0[3]) ? -1 : 1;   // adding UP * d moves visually UP by d
+
+        var cx     = (r0[0] + r0[2]) / 2;
+        var cy     = (r0[1] + r0[3]) / 2;
+        var startL = cx - plan.w / 2;
+        var startT = cy + UP * (plan.h / 2);
 
         var pagePos = {}; // page index (0-based) -> [L, T]
-        var x = 0, y = 0, rowH = 0, col = 0;
 
         for (var p = 1; p <= info.pages; p++) {
             pdfOpts.pageToOpen = p;
@@ -96,12 +126,9 @@
             item.file = linkFile;            // original PDF, or the stamps-baked copy
             item.name = "Page " + p;
 
-            var w = item.width, h = item.height;
-
-            if (col === COLUMNS) { col = 0; x = 0; y += rowH + GAP; rowH = 0; }
-
-            var L = originX + x;
-            var T = originY - y;
+            var off = plan.pos[p - 1];
+            var L   = startL + off[0];
+            var T   = startT - UP * off[1];
             item.position = [L, T];
             pagePos[p - 1] = [L, T];
 
@@ -110,10 +137,6 @@
             if (p === 1) { ab = doc.artboards[0]; ab.artboardRect = [gb[0], gb[1], gb[2], gb[3]]; }
             else         { ab = doc.artboards.add([gb[0], gb[1], gb[2], gb[3]]); }
             ab.name = "Page " + p;
-
-            x    += w + GAP;
-            rowH  = Math.max(rowH, h);
-            col++;
         }
 
         // ---------- 3. Notes layer ----------
@@ -181,6 +204,41 @@
 
 
     // =====================================================================
+    // LAYOUT
+    // =====================================================================
+
+    // Tries the preferred column count first, then others closest to square,
+    // and returns the first grid that fits the canvas. null if none do.
+    function planGrid(sizes, preferred, gap, max) {
+        var square = Math.ceil(Math.sqrt(sizes.length));
+        var tries  = [];
+        for (var c = 1; c <= sizes.length; c++) tries.push(c);
+        tries.sort(function (a, b) { return Math.abs(a - square) - Math.abs(b - square); });
+        tries.unshift(preferred);
+
+        for (var t = 0; t < tries.length; t++) {
+            var g = layoutGrid(sizes, tries[t], gap);
+            if (g && g.w <= max && g.h <= max) return g;
+        }
+        return null;
+    }
+
+    function layoutGrid(sizes, cols, gap) {
+        if (cols < 1) return null;
+        var pos = [], x = 0, y = 0, rowH = 0, col = 0, maxW = 0;
+        for (var i = 0; i < sizes.length; i++) {
+            if (col === cols) { col = 0; x = 0; y += rowH + gap; rowH = 0; }
+            pos.push([x, y]);
+            x += sizes[i][0] + gap;
+            if (x - gap > maxW) maxW = x - gap;
+            if (sizes[i][1] > rowH) rowH = sizes[i][1];
+            col++;
+        }
+        return { cols: cols, w: maxW, h: y + rowH, pos: pos };
+    }
+
+
+    // =====================================================================
     // DRAWING
     // =====================================================================
 
@@ -189,7 +247,7 @@
         // crop = [left, top, right, bottom] in PDF space (y up)
         return {
             x: function (px) { return pos[0] + (px - crop[0]); },
-            y: function (py) { return pos[1] - (crop[1] - py); }
+            y: function (py) { return pos[1] + UP * (py - crop[1]); }
         };
     }
 
@@ -197,8 +255,8 @@
     function drawAnnot(grp, an, map, font) {
         var r = normRect(an.rect);                  // [x1, y1, x2, y2] PDF, y up
         var left = map.x(r[0]), right = map.x(r[2]);
-        var top  = map.y(r[3]), bottom = map.y(r[1]);
-        var w = right - left, h = top - bottom;
+        var top  = map.y(r[3]), bottom = map.y(r[1]); // top/bottom are visual
+        var w = right - left, h = Math.abs(top - bottom);
         var sw = an.width > 0 ? an.width : 0;
         var stroke = makeColor(an.stroke);
         var fill   = makeColor(an.fill);
@@ -211,8 +269,8 @@
             case "Circle":
                 var inset = sw / 2;
                 item = (an.type === "Square")
-                    ? grp.pathItems.rectangle(top - inset, left + inset, w - sw, h - sw)
-                    : grp.pathItems.ellipse(top - inset, left + inset, w - sw, h - sw);
+                    ? grp.pathItems.rectangle(top - UP * inset, left + inset, w - sw, h - sw)
+                    : grp.pathItems.ellipse(top - UP * inset, left + inset, w - sw, h - sw);
                 styleShape(item, stroke, fill, sw || 1);
                 break;
 
@@ -249,7 +307,7 @@
             case "Underline":
             case "Squiggly":
             case "StrikeOut":
-                var ly = (an.type === "StrikeOut") ? (top + bottom) / 2 : bottom + 1;
+                var ly = (an.type === "StrikeOut") ? (top + bottom) / 2 : bottom + UP;
                 item = grp.pathItems.add();
                 item.setEntirePath([[left, ly], [right, ly]]);
                 styleShape(item, stroke, null, 1);
@@ -258,7 +316,7 @@
             case "FreeText":
                 item = grp.groupItems.add();
                 if (sw > 0 && stroke) {
-                    var box = item.pathItems.rectangle(top - sw / 2, left + sw / 2, w - sw, h - sw);
+                    var box = item.pathItems.rectangle(top - UP * (sw / 2), left + sw / 2, w - sw, h - sw);
                     styleShape(box, stroke, fill, sw);
                 } else if (fill) {
                     var bg = item.pathItems.rectangle(top, left, w, h);
@@ -270,7 +328,7 @@
                 ca.size = an.textSize > 0 ? an.textSize : 12;
                 ca.fillColor = makeColor(an.textColor) || stroke || colorFromArray(DEFAULT_COLOR);
                 if (font) ca.textFont = font;
-                tf.position = [left + 2 + sw, top - 2 - sw];
+                tf.position = [left + 2 + sw, top - UP * (2 + sw)];
                 break;
 
             case "Text": // sticky note: colored square + its text beside it
@@ -297,7 +355,7 @@
                 var lt = item.textFrames.add();
                 lt.contents = "[" + an.type + "]";
                 lt.textRange.characterAttributes.size = 9;
-                lt.position = [left, top + 12];
+                lt.position = [left, top + UP * 12];
                 break;
         }
 
