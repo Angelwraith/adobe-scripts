@@ -3,7 +3,7 @@
 {
   "name": "Optimal PRIME Transformer",
   "description": "Generate Production Files From a PRIME",
-  "version": "2.1",
+  "version": "2.2",
   "target": "illustrator",
   "tags": ["Optimal", "Prime", "processors", "scaleFactor"]
 }
@@ -651,8 +651,10 @@ var ProdName = (function () {
                 isValid = false;
                 continue;
             }
-            if (parsed.parts.length > 1) {
-                errors.push("Artboard " + (i + 1) + " '" + artboardName + "': An artboard is one part - use a single Pt number");
+            // One sheet = one Pt #. Exception: a shared BACK (same back printed for
+            // several sheets), e.g. "125 Aluminum_BACK_Pt1-3" -> PRINT_..._BACK_Pt1-3
+            if (parsed.parts.length > 1 && parsed.side !== 'BACK') {
+                errors.push("Artboard " + (i + 1) + " '" + artboardName + "': An artboard is one part - use a single Pt number (only a shared _BACK can cover several, e.g. Mat_BACK_Pt1-3)");
                 isValid = false;
                 continue;
             }
@@ -673,12 +675,16 @@ var ProdName = (function () {
             if (partNumber !== null) {
                 var dupKey = materialName + "|" + parsed.side;
                 if (!seenParts[dupKey]) { seenParts[dupKey] = {}; }
-                if (seenParts[dupKey][partNumber]) {
-                    errors.push("Material '" + materialName + (parsed.side ? " " + parsed.side : "") + "': Duplicate part number " + partNumber);
+                var dupHit = null;
+                for (var dp = 0; dp < parsed.parts.length; dp++) {
+                    if (seenParts[dupKey][String(parsed.parts[dp])]) { dupHit = parsed.parts[dp]; break; }
+                }
+                if (dupHit !== null) {
+                    errors.push("Material '" + materialName + (parsed.side ? " " + parsed.side : "") + "': Duplicate part number " + dupHit);
                     isValid = false;
                     continue;
                 }
-                seenParts[dupKey][partNumber] = true;
+                for (var dp2 = 0; dp2 < parsed.parts.length; dp2++) { seenParts[dupKey][String(parsed.parts[dp2])] = true; }
                 materialData[materialName].partNumbers.push(partNumber);
             }
 
