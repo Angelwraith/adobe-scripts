@@ -3,7 +3,7 @@
 /*@METADATA{
   "name": "Scale and Repeat",
   "description": "Scale artwork by ratio and repeat with spacing",
-  "version": "1.1",
+  "version": "1.2",
   "target": "illustrator",
   "tags": ["scale", "repeat", "production"]
 }@END_METADATA*/
@@ -28,152 +28,83 @@ if (app.documents.length === 0) {
         
         // Show dialog
         var dialog = new Window("dialog", "Scale and Repeat");
-        dialog.alignChildren = "center";
+        dialog.orientation = "column";
+        dialog.alignChildren = "fill";
         dialog.margins = 20;
+        dialog.spacing = 10;
+        
+        var LABEL_W = 70;
+        var FIELD_W = 120;
         
         // Scale preset options
         var scaleOptions = ["1:1", "1:2", "1:4", "1:5", "1:8", "1:10", "1:16", "1:20", "1:40", "1:50", "1:100", "2:1", "4:1", "8:1", "10:1", "100:2", "Custom"];
         
-        // Labels row
-        var labelRow = dialog.add("group");
-        labelRow.alignment = "center";
+        // Helper: one row with label on the left, controls on the right
+        var addRow = function(labelText) {
+            var row = dialog.add("group");
+            row.orientation = "row";
+            row.alignChildren = ["left", "center"];
+            var lbl = row.add("statictext", undefined, labelText);
+            lbl.preferredSize.width = LABEL_W;
+            lbl.justify = "right";
+            return row;
+        };
         
-        var currentLabel = labelRow.add("statictext", undefined, "Current");
-        currentLabel.preferredSize.width = 120;
-        currentLabel.justify = "center";
+        // Helper: ratio row (dropdown + custom num:denom fields shown when "Custom")
+        var addRatioRow = function(labelText, defNum, defDenom) {
+            var row = addRow(labelText);
+            var dd = row.add("dropdownlist", undefined, scaleOptions);
+            dd.preferredSize.width = FIELD_W;
+            dd.selection = 0; // Default to 1:1
+            var numField = row.add("edittext", undefined, defNum);
+            numField.characters = 5;
+            var colon = row.add("statictext", undefined, ":");
+            var denomField = row.add("edittext", undefined, defDenom);
+            denomField.characters = 5;
+            var setCustomVisible = function() {
+                var isCustom = (dd.selection.text === "Custom");
+                numField.visible = isCustom;
+                colon.visible = isCustom;
+                denomField.visible = isCustom;
+            };
+            dd.onChange = setCustomVisible;
+            setCustomVisible();
+            return { dropdown: dd, num: numField, denom: denomField };
+        };
         
-        var targetLabel = labelRow.add("statictext", undefined, "Target");
-        targetLabel.preferredSize.width = 120;
-        targetLabel.justify = "center";
+        var currentRow = addRatioRow("Current:", "1", "10");
+        var targetRow = addRatioRow("Target:", "1", "1");
+        var currentDropdown = currentRow.dropdown;
+        var targetDropdown = targetRow.dropdown;
         
-        var qtyLabel = labelRow.add("statictext", undefined, "Qty");
-        qtyLabel.preferredSize.width = 120;
-        qtyLabel.justify = "center";
-        
-        var spacingLabel = labelRow.add("statictext", undefined, "Spacing");
-        spacingLabel.preferredSize.width = 120;
-        spacingLabel.justify = "center";
-        
-        // Main row with dropdowns and separators
-        var mainRow = dialog.add("group");
-        mainRow.alignment = "center";
-        
-        var currentDropdown = mainRow.add("dropdownlist", undefined, scaleOptions);
-        currentDropdown.preferredSize.width = 120;
-        currentDropdown.selection = 0; // Default to 1:1
-        
-        var separator1 = mainRow.add("statictext", undefined, "|");
-        separator1.preferredSize.width = 20;
-        separator1.justify = "center";
-        
-        var targetDropdown = mainRow.add("dropdownlist", undefined, scaleOptions);
-        targetDropdown.preferredSize.width = 120;
-        targetDropdown.selection = 0; // Default to 1:1
-        
-        var separator2 = mainRow.add("statictext", undefined, "x");
-        separator2.preferredSize.width = 20;
-        separator2.justify = "center";
-        
+        // Qty row: preset dropdown + always-visible entry field (entry wins if filled)
+        var qtyRow = addRow("Qty:");
         var qtyOptions = [];
         for (var i = 1; i <= 20; i++) {
             qtyOptions.push(i.toString());
         }
-        qtyOptions.push("Custom");
-        
-        var qtyDropdown = mainRow.add("dropdownlist", undefined, qtyOptions);
-        qtyDropdown.preferredSize.width = 120;
+        var qtyDropdown = qtyRow.add("dropdownlist", undefined, qtyOptions);
+        qtyDropdown.preferredSize.width = FIELD_W;
         qtyDropdown.selection = 0; // Default to 1
+        var qtyField = qtyRow.add("edittext", undefined, "");
+        qtyField.characters = 6;
+        qtyField.helpTip = "Type a quantity to override the dropdown";
         
-        var separator3 = mainRow.add("statictext", undefined, "|");
-        separator3.preferredSize.width = 20;
-        separator3.justify = "center";
-        
+        // Spacing row
+        var spacingRow = addRow("Spacing:");
         var spacingOptions = ["No Spacing", "1\" Spacing"];
-        var spacingDropdown = mainRow.add("dropdownlist", undefined, spacingOptions);
-        spacingDropdown.preferredSize.width = 120;
+        var spacingDropdown = spacingRow.add("dropdownlist", undefined, spacingOptions);
+        spacingDropdown.preferredSize.width = FIELD_W;
         spacingDropdown.selection = 0; // Default to No Spacing
-        
-        // Custom input row (hidden by default, shows fields as needed)
-        var customRow = dialog.add("group");
-        customRow.alignment = "center";
-        customRow.visible = false;
-        
-        // Current custom fields
-        var currentNumField = customRow.add("edittext", undefined, "1");
-        currentNumField.characters = 5;
-        currentNumField.visible = false;
-        
-        var currentColon = customRow.add("statictext", undefined, ":");
-        currentColon.visible = false;
-        
-        var currentDenomField = customRow.add("edittext", undefined, "10");
-        currentDenomField.characters = 5;
-        currentDenomField.visible = false;
-        
-        var customSeparator1 = customRow.add("statictext", undefined, "|");
-        customSeparator1.preferredSize.width = 20;
-        customSeparator1.justify = "center";
-        customSeparator1.visible = false;
-        
-        // Target custom fields
-        var targetNumField = customRow.add("edittext", undefined, "1");
-        targetNumField.characters = 5;
-        targetNumField.visible = false;
-        
-        var targetColon = customRow.add("statictext", undefined, ":");
-        targetColon.visible = false;
-        
-        var targetDenomField = customRow.add("edittext", undefined, "1");
-        targetDenomField.characters = 5;
-        targetDenomField.visible = false;
-        
-        var customSeparator2 = customRow.add("statictext", undefined, "x");
-        customSeparator2.preferredSize.width = 20;
-        customSeparator2.justify = "center";
-        customSeparator2.visible = false;
-        
-        // Qty custom field
-        var qtyCustomField = customRow.add("edittext", undefined, "1");
-        qtyCustomField.characters = 5;
-        qtyCustomField.visible = false;
-        
-        // Event handlers for dropdowns
-        var updateCustomRow = function() {
-            var currentIsCustom = (currentDropdown.selection.text === "Custom");
-            var targetIsCustom = (targetDropdown.selection.text === "Custom");
-            var qtyIsCustom = (qtyDropdown.selection.text === "Custom");
-            
-            // Show/hide current custom fields
-            currentNumField.visible = currentIsCustom;
-            currentColon.visible = currentIsCustom;
-            currentDenomField.visible = currentIsCustom;
-            customSeparator1.visible = currentIsCustom || targetIsCustom || qtyIsCustom;
-            
-            // Show/hide target custom fields
-            targetNumField.visible = targetIsCustom;
-            targetColon.visible = targetIsCustom;
-            targetDenomField.visible = targetIsCustom;
-            customSeparator2.visible = (currentIsCustom || targetIsCustom) && qtyIsCustom;
-            
-            // Show/hide qty custom field
-            qtyCustomField.visible = qtyIsCustom;
-            
-            // Show/hide entire custom row
-            customRow.visible = currentIsCustom || targetIsCustom || qtyIsCustom;
-            
-            dialog.layout.layout(true);
-        };
-        
-        currentDropdown.onChange = updateCustomRow;
-        targetDropdown.onChange = updateCustomRow;
-        qtyDropdown.onChange = updateCustomRow;
         
         // Add buttons
         var buttonGroup = dialog.add("group");
         buttonGroup.alignment = "center";
         buttonGroup.spacing = 10;
-        var okButton = buttonGroup.add("button", undefined, "OK");
-        var cancelButton = buttonGroup.add("button", undefined, "Cancel");
+        var okButton = buttonGroup.add("button", undefined, "OK", { name: "ok" });
+        var cancelButton = buttonGroup.add("button", undefined, "Cancel", { name: "cancel" });
+        
+        qtyField.active = true;
         
         // Show dialog and get result
         if (dialog.show() === 1) {
@@ -181,8 +112,8 @@ if (app.documents.length === 0) {
             
             // Parse current scale
             if (currentDropdown.selection.text === "Custom") {
-                currentNum = parseFloat(currentNumField.text);
-                currentDenom = parseFloat(currentDenomField.text);
+                currentNum = parseFloat(currentRow.num.text);
+                currentDenom = parseFloat(currentRow.denom.text);
             } else {
                 var currentParts = currentDropdown.selection.text.split(":");
                 currentNum = parseFloat(currentParts[0]);
@@ -191,19 +122,20 @@ if (app.documents.length === 0) {
             
             // Parse target scale
             if (targetDropdown.selection.text === "Custom") {
-                targetNum = parseFloat(targetNumField.text);
-                targetDenom = parseFloat(targetDenomField.text);
+                targetNum = parseFloat(targetRow.num.text);
+                targetDenom = parseFloat(targetRow.denom.text);
             } else {
                 var targetParts = targetDropdown.selection.text.split(":");
                 targetNum = parseFloat(targetParts[0]);
                 targetDenom = parseFloat(targetParts[1]);
             }
             
-            // Parse quantity
-            if (qtyDropdown.selection.text === "Custom") {
-                qty = parseInt(qtyCustomField.text);
+            // Parse quantity: typed value wins if anything was entered
+            var qtyTyped = qtyField.text.replace(/^\s+|\s+$/g, "");
+            if (qtyTyped !== "") {
+                qty = parseInt(qtyTyped, 10);
             } else {
-                qty = parseInt(qtyDropdown.selection.text);
+                qty = parseInt(qtyDropdown.selection.text, 10);
             }
             
             // Validate inputs
