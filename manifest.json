@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-11-24T11:49:22.140205",
+  "last_updated": "2026-11-25T10:39:50.392161",
   "deployer_version": "3.0",
   "total_scripts": 35,
   "launcher_version": "4.0",
@@ -245,7 +245,7 @@
       "filename": "Optimal PRIME transformer.js",
       "metadata": {
         "name": "Optimal PRIME Transformer",
-        "version": "2.1",
+        "version": "2.2",
         "description": "Generate Production Files From a PRIME",
         "author": "Unknown",
         "target": "illustrator",
@@ -256,10 +256,10 @@
           "scaleFactor"
         ]
       },
-      "hash": "eb0ee4e40b12bf7c22140d80533c8edb",
+      "hash": "44fb9bab964711b00283341ebee6cd7f",
       "local_path": "C:\\Dev\\Illustrator Scripts\\Optimal PRIME transformer.js",
-      "file_size": 73240,
-      "last_modified": "2026-11-09T14:35:58.805455",
+      "file_size": 73779,
+      "last_modified": "2026-11-24T16:22:14.856368",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/Optimal%20PRIME%20transformer.js"
     },
@@ -330,7 +330,7 @@
       "filename": "scale_repeat_script.js",
       "metadata": {
         "name": "Scale and Repeat",
-        "version": "1.1",
+        "version": "1.2",
         "description": "Scale artwork by ratio and repeat with spacing",
         "author": "Unknown",
         "target": "illustrator",
@@ -340,10 +340,10 @@
           "production"
         ]
       },
-      "hash": "aee024f5eb14b326c2230d735fd505d7",
-      "local_path": "C:\\Users\\angel\\OneDrive\\Desktop\\HTTFULL DL\\Illustrator Scripts\\scale_repeat_script.js",
-      "file_size": 11506,
-      "last_modified": "2025-12-23T15:15:59.829884",
+      "hash": "b01c662c0b5a9a2ad5e40c9838d1ab9b",
+      "local_path": "C:\\Dev\\Illustrator Scripts\\scale_repeat_script.js",
+      "file_size": 8824,
+      "last_modified": "2026-11-25T10:33:31.370641",
       "download_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_repeat_script.js",
       "raw_url": "https://raw.githubusercontent.com/Angelwraith/adobe-scripts/main/scale_repeat_script.js"
     },
